@@ -1,0 +1,6 @@
+{
+  // Cloudflare Workers 靜態網站設定：public/ 裡的檔案直接當網站
+  "name": "square-mode-1f4a",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" }
+}

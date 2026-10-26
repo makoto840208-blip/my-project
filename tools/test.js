@@ -38,13 +38,14 @@ async function shot(p, name) { if (!SHOTS) return; fs.mkdirSync(SHOTS, { recursi
 async function newPage(b, vp) {
   const ctx = await b.newContext({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: 2.5, hasTouch: true, isMobile: true, geolocation: { latitude: 24.0705, longitude: 121.2950, accuracy: 10 }, permissions: ['geolocation'] });
   const p = await ctx.newPage(); p._err = [];
-  p.on('pageerror', e => p._err.push(e.message));
+  p.on('pageerror', e => p._err.push(e.message + (process.env.DBG ? ' @ ' + (e.stack || '').split('\n').slice(1, 3).join(' ').replace(/https:\/\/app.test\/\?gptest/g, '') : '')));
   p.on('dialog', d => { p._dlg = (p._dlg || []).concat(d.message()); d.dismiss().catch(() => {}); });
   await p.route('https://app.test/**', r => { let u = new URL(r.request().url()).pathname; if (u === '/') u = '/index.html'; const f = path.join(PUB, u); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); const ty = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.txt': 'text/plain' }[path.extname(u)] || 'application/octet-stream'; r.fulfill({ body: fs.readFileSync(f), contentType: ty }); });
   await p.route(/elevation-tiles-prod|amazonaws\.com/, r => { const m = r.request().url().match(/(\d+)\/(\d+)\/(\d+)\.png/); if (!m) return r.abort(); r.fulfill({ body: demTile(+m[1], +m[2], +m[3]), contentType: 'image/png' }); });
   if (!TILES) await p.route(/wmts\.nlsc\.gov\.tw|tile\.opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com/, r => r.fulfill({ body: BLANK, contentType: 'image/png' }));
   await p.route(/brouter\.de/, r => (p._brouter ? p._brouter(r) : r.abort()));
   await p.route(/firebasedatabase\.app|googleapis\.com/, r => r.abort());
+  await p.route(/overpass/, r => r.fulfill({ body: JSON.stringify({ elements: FAKE_PEAKS.map((q, i) => ({ type: 'node', id: i + 1, lat: q[1], lon: q[2], tags: Object.assign({ natural: 'peak', name: q[0] }, q[3] ? { ele: String(q[3]) } : {}) })) }), contentType: 'application/json' }));
   return { ctx, p };
 }
 const idle = p => p.evaluate(() => new Promise(r => { const m = window.__gp && window.__gp.MAP.m; if (!m) return r(); let d = false; const f = () => { if (!d) { d = true; r(); } }; if (!m.isMoving() && m.loaded()) setTimeout(f, 120); else m.once('idle', f); setTimeout(f, 3000); }));
@@ -86,6 +87,11 @@ async function planTwoPoints(p) {
   await p.evaluate(async ([A, B]) => { const G = window.__gp, g = G.S.route.segs[G.S.route.segs.length - 1]; await G.fn('setEnd')(g, 'from', { name: '甲登山口', lat: A.lat, lon: A.lon, ele: 2000 }); await G.fn('setEnd')(g, 'to', { name: '乙營地', lat: B.lat, lon: B.lon, ele: 2060 }); }, [RA, RB]);
   await p.waitForFunction(() => { const g = window.__gp.S.route.segs.slice(-1)[0]; return g && g.alts && g.lp; }, null, { timeout: 15000 });
 }
+
+
+// 假的 OpenStreetMap 山頭（在測試路線附近）
+const FAKE_PEAKS = [['北測峰', 24.1155, 121.2950, 3200], ['東測山', 24.0705, 121.3540, 3100], ['西南測山', 24.0450, 121.2680, 2900], ['小測山', 24.0800, 121.3100, 2400], ['無高度山', 24.0600, 121.3000, null], ['遠方山', 24.5000, 121.6000, 3500]];
+const ME = { la: 24.0705, lo: 121.2950 };
 
 const VPS = [{ n: '直式', w: 412, h: 915 }, { n: '橫式', w: 915, h: 412 }];
 const TESTS = [];
@@ -258,6 +264,42 @@ T('3D 地形：開關、導航時自動 2D、離開導航恢復', async p => {
   r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: Math.round(m.getPitch()) }; }); ok(r.t && r.pitch > 30, '離開導航沒恢復 3D ' + JSON.stringify(r));
   await p.evaluate(() => { document.querySelector('.lyrctl>button').click(); document.querySelector('.lyrmenu [data-3d]').click(); }); await p.waitForTimeout(800);
   r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: m.getPitch(), mp: m.getMaxPitch() }; }); ok(!r.t && r.pitch < 1 && r.mp === 0, '關掉 3D 沒還原成平面');
+});
+T('對山定位：交會數學（三座山、加 ±3° 雜訊）', async p => {
+  const r = await p.evaluate(([pk, me]) => { const f = window.__gp.fn, brg = f('brg'), res = f('pkResect'), hav = f('hav');
+    const obs = pk.slice(0, 3).map(q => ({ n: q[0], la: q[1], lo: q[2], b: brg([me.la, me.lo], [q[1], q[2]]) }));
+    const a = res(obs), noisy = res(obs.map((o, i) => Object.assign({}, o, { b: o.b + [3, -3, 2][i] })));
+    return { e0: hav({ lat: a.la, lon: a.lo }, { lat: me.la, lon: me.lo }) * 1000, e1: hav({ lat: noisy.la, lon: noisy.lo }, { lat: me.la, lon: me.lo }) * 1000, est: noisy.err, behind: a.behind }; }, [FAKE_PEAKS, ME]);
+  ok(r.e0 < 15, `方位完全準時應該幾乎零誤差，結果 ${r.e0.toFixed(1)} m`); ok(!r.behind, '誤判山在背後');
+  ok(r.e1 < r.est * 1.2, `有雜訊時實際偏 ${r.e1.toFixed(0)} m，但只報誤差 ${r.est.toFixed(0)} m（報太小會誤導）`);
+}, { vp: '直式' });
+T('對山定位：只對一座山＋在路線上', async p => {
+  await loadGpx(p);
+  const r = await p.evaluate(pk => { const G = window.__gp, P = G.MAP.P, at = 300, f = G.fn, q = pk[1]; const b = f('brg')([P[at][0], P[at][1]], [q[1], q[2]]);
+    const c = f('pkOnRoute')([{ la: q[1], lo: q[2], b }], P); return { want: P[at][3], got: c.map(o => o.km) }; }, FAKE_PEAKS);
+  ok(r.got.length >= 1, '路線上找不到符合的位置'); ok(r.got.some(k => Math.abs(k - r.want) < 0.3), `應該在 ${r.want.toFixed(2)} km 附近，找到 ${r.got.map(k => k.toFixed(2)).join('、')}`);
+}, { vp: '直式' });
+T('對山定位：選山、記下三座、算出位置、黑屏與導航板顯示', async p => {
+  await loadGpx(p); await p.waitForFunction(() => window.__gp.fn('PK').list.length > 3, null, { timeout: 8000 }).catch(() => {});
+  ok(await p.evaluate(() => window.__gp.fn('PK').list.length === 6), '沒有從 OpenStreetMap 抓到山頭');
+  await openNav(p); await navBtn(p, 'center'); await p.waitForFunction(() => window.__gp.GPS.last, null, { timeout: 8000 });
+  await navBtn(p, 'menu'); await navBtn(p, 'peakfix'); await p.waitForSelector('#pkFix', { timeout: 3000 });
+  for (const q of FAKE_PEAKS.slice(0, 3)) {
+    await p.evaluate(([q, me]) => { const f = window.__gp.fn; f('BK').hd = f('brg')([me.la, me.lo], [q[1], q[2]]); }, [q, ME]); await p.waitForTimeout(600);
+    const sel = await p.evaluate(() => { const b = document.querySelector('#pkLs .pki.on b'); return b && b.textContent; }); ok(sel === q[0], `對準「${q[0]}」時，自動選的是「${sel}」`);
+    await p.click('#pkFix [data-pk="rec"]'); await p.waitForTimeout(150);
+  }
+  await shot(p, 'pkfix');
+  const r = await p.evaluate(me => { const x = window.__gp.NB.fix, hav = window.__gp.fn('hav'); return { x, d: x ? hav({ lat: x.la, lon: x.lo }, { lat: me.la, lon: me.lo }) * 1000 : null, txt: document.getElementById('pkRes').textContent }; }, ME);
+  ok(r.x && r.x.mode === 'tri', '三座山後沒有算出交會位置'); ok(r.d < 30, `推算位置偏 ${r.d && r.d.toFixed(0)} m`); ok(/TWD97/.test(r.txt) && /TWD67/.test(r.txt) && /紅色/.test(r.txt), '結果沒有列 TWD97／TWD67');
+  // 手動輸入磁北方位：應該換算成真北（−4.5°）
+  await p.fill('#pkMan', '100'); await p.waitForTimeout(500); const hd = await p.evaluate(() => document.getElementById('pkHd').textContent); ok(hd === '96°' || hd === '95°', `磁北 100° 應該換成真北約 95.5°，顯示 ${hd}`);
+  await p.click('#pkFix [data-pk="x"]'); await p.waitForTimeout(200);
+  await p.evaluate(([q, me]) => { const f = window.__gp.fn; f('BK').hd = f('brg')([me.la, me.lo], [q[1], q[2]]); f('navBoard')(); }, [FAKE_PEAKS[1], ME]);
+  ok(/正前方：東測山/.test(await p.evaluate(() => document.getElementById('navCard').textContent)), '導航板沒有顯示正前方的山');
+  await navBtn(p, 'black'); await p.waitForTimeout(400); await shot(p, 'black');
+  const bk = await p.evaluate(() => ({ t: document.getElementById('nbkTxt').textContent, tri: document.querySelectorAll('#bkRose path[d^="M0,-3.2"]').length }));
+  ok(/推算位置/.test(bk.t), '黑屏沒有顯示推算位置'); ok(bk.tri >= 3, `黑屏雷達應該標出附近的山，只有 ${bk.tri} 個`);
 });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);

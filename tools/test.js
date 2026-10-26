@@ -70,6 +70,23 @@ const visArea = p => p.evaluate(() => {
 });
 const routeBox = p => p.evaluate(() => { const m = window.__gp.MAP.m, P = window.__gp.MAP.P; let a = 1e9, b = 1e9, c = -1e9, d = -1e9; for (const q of P) { const s = m.project([q[1], q[0]]); a = Math.min(a, s.x); b = Math.min(b, s.y); c = Math.max(c, s.x); d = Math.max(d, s.y); } return { l: a, t: b, r: c, b: d }; });
 
+
+// 假的 BRouter：路線 1 短但有一段 60% 陡坡、路線 2 繞遠但緩、路線 3 跟 1 重複、第 4 條沒有
+const RA = { lat: 24.0560, lon: 121.2470 }, RB = { lat: 24.0700, lon: 121.2700 };
+function fakeAlt(k) {
+  if (k === 3) return null; const n = 200, c = [];
+  for (let i = 0; i <= n; i++) { const t = i / n; let la = RA.lat + (RB.lat - RA.lat) * t, lo = RA.lon + (RB.lon - RA.lon) * t, e;
+    if (k === 1) { la += 0.012 * Math.sin(Math.PI * t); e = 2000 + 60 * t; } else { const L = 2.67, x = t * L; e = 2000 + (x < 1.2 ? 0 : x < 1.3 ? (x - 1.2) / 0.1 * 60 : 60); }
+    c.push([+lo.toFixed(6), +la.toFixed(6), +e.toFixed(1)]); }
+  return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: c } }] };
+}
+const brouterFake = r => { const k = +((r.request().url().match(/alternativeidx=(\d)/) || [])[1] || 0), j = fakeAlt(k); return j ? r.fulfill({ body: JSON.stringify(j), contentType: 'application/json' }) : r.fulfill({ status: 400, body: 'no alt' }); };
+async function planTwoPoints(p) {
+  p._brouter = brouterFake; await p.click('#addSeg');
+  await p.evaluate(async ([A, B]) => { const G = window.__gp, g = G.S.route.segs[G.S.route.segs.length - 1]; await G.fn('setEnd')(g, 'from', { name: '甲登山口', lat: A.lat, lon: A.lon, ele: 2000 }); await G.fn('setEnd')(g, 'to', { name: '乙營地', lat: B.lat, lon: B.lon, ele: 2060 }); }, [RA, RB]);
+  await p.waitForFunction(() => { const g = window.__gp.S.route.segs.slice(-1)[0]; return g && g.alts && g.lp; }, null, { timeout: 15000 });
+}
+
 const VPS = [{ n: '直式', w: 412, h: 915 }, { n: '橫式', w: 915, h: 412 }];
 const TESTS = [];
 const T = (name, fn, o = {}) => TESTS.push({ name, fn, o });
@@ -197,6 +214,39 @@ T('配速倍率：長休息不算進去', async p => {
     G.GPS.trail = tr; const m = G.fn('paceMultiplier')(P); return { m, want: T / 60 / h }; });
   ok(r.m != null && Math.abs(r.m - r.want) < 0.08, `倍率 ${r.m}，應該約 ${r.want.toFixed(2)}（休息被算進去了？）`);
 }, { vp: '直式' });
+T('A 路線：抓多條、剔除重複、超過坡度上限不選', async p => {
+  await planTwoPoints(p); await p.evaluate(() => document.querySelector('.alts').scrollIntoView({ block: 'center' })); await p.waitForTimeout(300); await shot(p, 'alts');
+  const r = await p.evaluate(() => { const g = window.__gp.S.route.segs.slice(-1)[0]; return { n: g.alts.length, sel: g.altSel, st: g.alts.map(o => o.st), km: g.km, rows: document.querySelectorAll('.alts tr[data-alt]').length, over: [...document.querySelectorAll('.alts tr[data-alt]')].map(t => t.classList.contains('over')), }; });
+  const ma = await p.waitForFunction(() => { const M = window.__gp.MAP; return M.loaded && M.m.getSource('alts')._data.features.length === 1; }, null, { timeout: 15000 }).then(() => true, () => false);
+  ok(r.n === 2, `應該剩 2 條（重複的剔掉），結果 ${r.n} 條`); ok(r.st[0].maxUp >= 50 && r.st[0].maxUp <= 70, `路線 1 最陡上坡應該約 60%，算出 ${r.st[0].maxUp}%`);
+  ok(r.st[1].maxUp < 10, `路線 2 應該很緩，算出 ${r.st[1].maxUp}%`); ok(r.sel === 1, `一般模式應該選路線 2，選了 ${r.sel + 1}`);
+  ok(r.rows === 2 && r.over[0] && !r.over[1], '比較表沒有把路線 1 標成超過上限'); ok(Math.abs(r.km - r.st[1].km) < 0.05, '路段距離沒有用選到的那條');
+  ok(ma, '地圖上沒有畫出另一條候選路線（虛線）');
+}, { vp: '直式' });
+T('A 路線：點表格換路線、探勘模式要先同意說明', async p => {
+  await planTwoPoints(p);
+  await p.click('.alts tr[data-alt="0"]'); await p.waitForTimeout(200);
+  let r = await p.evaluate(() => { const g = window.__gp.S.route.segs.slice(-1)[0]; return { sel: g.altSel, man: g.altManual, km: g.km, k0: g.alts[0].st.km }; });
+  ok(r.sel === 0 && r.man && Math.abs(r.km - r.k0) < 0.05, '點路線 1 沒換過去');
+  await p.click('#gradeBar [data-gm="explore"]'); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => !!document.querySelector('.modal [data-dc="ok"]')), '切探勘模式沒有先跳說明');
+  await p.click('.modal [data-dc="ok"]'); await p.waitForTimeout(200);
+  r = await p.evaluate(() => ({ mode: window.__gp.fn('gradeCfg')(), over: [...document.querySelectorAll('.alts tr[data-alt]')].map(t => t.classList.contains('over')), warn: !!document.querySelector('#gradeBar .xw') }));
+  ok(r.mode.mode === 'explore' && r.mode.max === 70, '探勘模式上限應該預設 70%'); ok(!r.over[0], '探勘模式下 60% 不該再標超過上限'); ok(r.warn, '探勘模式沒有顯示提醒');
+  await p.fill('#gradeMax', ''); await p.dispatchEvent('#gradeMax', 'change'); await p.waitForTimeout(100);
+  ok(await p.evaluate(() => window.__gp.fn('gradeCfg')().max === Infinity), '探勘模式清空應該是無上限');
+}, { vp: '直式' });
+T('A 路線：第一次規劃要先同意說明，取消就不規劃', async p => {
+  await p.evaluate(() => localStorage.removeItem('gearPlanner.disc'));
+  p._brouter = brouterFake; await p.click('#addSeg');
+  const pr = p.evaluate(async ([A, B]) => { const G = window.__gp, g = G.S.route.segs.slice(-1)[0]; await G.fn('setEnd')(g, 'from', { name: '甲', lat: A.lat, lon: A.lon, ele: 2000 }); await G.fn('setEnd')(g, 'to', { name: '乙', lat: B.lat, lon: B.lon, ele: 2060 }); return { alts: !!g.alts, est: g.est }; }, [RA, RB]);
+  await p.waitForSelector('.modal [data-dc="x"]', { timeout: 5000 }); await p.click('.modal [data-dc="x"]');
+  const r = await pr; ok(!r.alts && r.est, '取消後還是去規劃了');
+}, { vp: '直式' });
+T('路線卡片：坡度列不跟其他欄位疊在一起', async p => {
+  const r = await p.evaluate(() => { const g = document.getElementById('gradeBar'), w = g.nextElementSibling, a = g.getBoundingClientRect(), c = w.getBoundingClientRect(), kids = [...g.children].map(e => e.getBoundingClientRect().bottom); return { h: a.height, gap: c.top - a.bottom, inside: Math.max(...kids) <= a.bottom + 1 }; });
+  ok(r.h > 20 && r.inside, `坡度列高度不對（${r.h}px），內容溢出`); ok(r.gap >= 0, '坡度列跟下一排疊在一起');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

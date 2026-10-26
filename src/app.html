@@ -216,6 +216,10 @@ details.fmt td{border-bottom:1px solid var(--line);padding:3px 6px;vertical-alig
 .psug button{display:block;width:100%;text-align:left;padding:8px 10px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--txt);font-size:13px;cursor:pointer}
 .psug button:hover{background:var(--hov)}.psug small{color:var(--mut);margin-left:6px}.psug .ps{color:var(--coy2)}
 .gst{font-size:12px;color:var(--coy2);margin:2px 0 6px}
+.alts{margin:2px 0 8px;border:1px solid var(--line);border-radius:5px;padding:6px 8px;background:var(--deep)}.altsh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--coy2);margin-bottom:4px}.altsh span{color:var(--mut);font-size:12px}
+.alts table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)}.alts th{color:var(--mut);font-weight:400;font-size:11px;text-align:center;padding:2px 4px;line-height:1.2}.alts td{text-align:center;padding:4px;border-top:1px solid var(--line);line-height:1.25;white-space:nowrap}.alts td:first-child{text-align:left;font-family:inherit}
+.alts tr[data-alt]{cursor:pointer}.alts tr.on td{background:rgba(168,134,90,.14)}.alts tr.on td:first-child{color:var(--coy2)}.alts tr.over td{opacity:.75}.alts td small{color:#8fae7a;font-size:10.5px}.altsn{font-size:11px;color:var(--mut);margin-top:4px}
+.gradebar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 6px}.gradebar .seg2{display:flex}.gradebar .seg2 button{border-radius:0}.gradebar .seg2 button:first-child{border-radius:4px 0 0 4px}.gradebar .seg2 button:last-child{border-radius:0 4px 4px 0;margin-left:-1px}.gradebar input{width:78px}.gradebar small{color:var(--mut);font-size:12px}.gradebar .xw{color:#e0a070;font-size:12px;flex-basis:100%}
 .seg .sh span{color:var(--mut);text-align:center}
 .seg .sg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
 @media (min-width:640px){.seg .sg{grid-template-columns:repeat(6,minmax(0,1fr))}}
@@ -577,7 +581,7 @@ html.oled .card{border-color:#1c2118}
             <div><div id="prof"></div><div id="profRead" class="proflbl" style="min-height:18px"></div></div>
           </div>
         </div>
-        <div class="wxbar" style="margin:0 0 6px"><label class="f" style="flex-direction:row;align-items:center;gap:6px;color:var(--txt)">我的上河倍數 ×<input type="number" id="myMul" min="0.3" max="3" step="0.05" inputmode="decimal" placeholder="自動" style="width:90px"></label><span style="font-size:12px;color:var(--mut)">熟悉上河圖的人才填：1.0＝照上河時間走、0.8＝快 20%；空白＝不用上河（沒紀錄用通用時間，有紀錄照你的速度）</span></div>
+        <div class="gradebar" id="gradeBar"></div><div class="wxbar" style="margin:0 0 6px"><label class="f" style="flex-direction:row;align-items:center;gap:6px;color:var(--txt)">我的上河倍數 ×<input type="number" id="myMul" min="0.3" max="3" step="0.05" inputmode="decimal" placeholder="自動" style="width:90px"></label><span style="font-size:12px;color:var(--mut)">熟悉上河圖的人才填：1.0＝照上河時間走、0.8＝快 20%；空白＝不用上河（沒紀錄用通用時間，有紀錄照你的速度）</span></div>
         <div id="paceHint" style="font-size:12px;color:var(--mut);margin:-2px 0 8px"></div>
         <div id="segList"></div>
         <div class="btnrow"><button class="btn" id="addSeg">＋新增路段</button><button class="btn pri" id="bTxt">貼上計畫書文字</button><button class="btn" id="bExpTxt">匯出計畫文字</button><button class="btn pri" id="bGpx">匯入 GPX／KML</button><button class="btn" id="bDraw"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>在地圖上畫路線</button><input type="file" id="gpxFile" accept=".gpx,application/gpx+xml" hidden><button class="btn" id="bRPrompt">複製路線查詢提示詞</button><button class="btn" id="bRImpShow">匯入路線</button></div>
@@ -1508,6 +1512,12 @@ const STN={u:'未確認',hut:'山屋',tent:'搭帳篷',none:'下山／不過夜'
 function guessStay(g){const n=g.to||'';if(/山屋|山莊|避難|小屋|工寮|hut/i.test(n))return 'hut';if(/營地|營|camp/i.test(n))return 'tent';if(/登山口|停車|入口|派出所|遊樂區|林道口|車站/.test(n))return 'none';return 'u';}
 function nightsInfo(){const L=S.route.segs;if(!L.length)return [];const mx=Math.max(...L.map(g=>g.day)),R=[];
   for(let d=1;d<mx;d++){const ds=L.filter(g=>g.day===d);if(!ds.length)continue;const g=ds[ds.length-1];const st=g.stay||guessStay(g);if(st!=='none')R.push({day:d,name:g.to,st,auto:!g.stay});}return R;}
+function altsHTML(g){if(!g.alts||!g.alts.length||!g.lp)return '';const C=gradeCfg(),pk=altPick(g.alts,C.max),n=g.alts.length,pc=v=>`<span style="color:${gradeTier(v)[2]}">${v}%</span>`;
+  const rows=g.alts.map((o,k)=>{const t=o.st,sp=Math.max(t.maxUp,t.maxDn),over=sp>C.max,tr=gradeTier(sp);
+    return `<tr class="${k===g.altSel?'on':''}${over?' over':''}"${n>1?` data-alt="${k}"`:''}><td>${n>1?(k===g.altSel?'● ':'○ '):''}${n>1?'路線 '+(k+1):'這條路'}${k===pk&&n>1?'<br><small>坡度最平均</small>':''}</td><td>${t.km}</td><td>↑${t.up}<br>↓${t.down}</td><td>${t.avgUp}%<br>${t.avgDn}%</td><td>${pc(t.maxUp)}<br>${pc(t.maxDn)}</td><td>${t.climbs}</td><td>${over?'<b style="color:#e0715f">超過上限<br>不建議</b>':`<span style="color:${tr[2]}">${tr[1]}</span>`}</td></tr>`;}).join('');
+  return `<div class="alts"><div class="altsh">${n>1?`找到 ${n} 條路線，${g.altManual?'你選了路線 '+(g.altSel+1):'已自動選坡度最平均的'}（點一列可以換）`:'這段路的坡度'}<span>${C.mode==='explore'?'探勘模式':'一般模式'}・上限 ${C.max===Infinity?'無':C.max+'%'}</span></div>
+    <div style="overflow-x:auto"><table><tr><th></th><th>km</th><th>爬升<br>下降</th><th>平均<br>上／下坡</th><th>最陡<br>上／下坡</th><th>起伏<br>次數</th><th>判斷</th></tr>${rows}</table></div>
+    <div class="altsn">最陡＝連續 100 m 的坡度；起伏＝爬超過 50 m 的上坡有幾段。地形資料解析度約 30 m，很短的陡坡（拉繩段）會算得比實際緩。僅供參考。</div></div>`;}
 function segHTML(g){
   const ro=!!g.ret;
   const nf=(k,l,st,dis)=>`<label>${l}<input type="number" min="0" step="${st||1}" inputmode="decimal" data-s="${k}" value="${g[k]||''}"${dis?' disabled':''}></label>`;
@@ -1518,7 +1528,7 @@ function segHTML(g){
     ${ro?`<div class="retlbl">↩ 第 ${g.day} 天回程：${esc(g.from)} → ${esc(g.to)}（由去程自動反算；距離與高度要改請改去程）</div>`:''}
     <div class="sh">${ro?`<span class="retday">第 ${g.day} 天</span>`:`<select data-s="day">${[1,2,3,4,5,6,7].map(d=>`<option value="${d}"${g.day===d?' selected':''}>第 ${d} 天</option>`).join('')}</select>`}
     <input data-s="from" autocomplete="off" placeholder="起點（打字搜尋）" value="${esc(g.from)}"${ro?' disabled':''}><span>→</span><input data-s="to" autocomplete="off" placeholder="終點／營地（打字搜尋）" value="${esc(g.to)}"${ro?' disabled':''}>${ro?'<span></span>':'<button class="x" data-s="del" aria-label="刪除路段">✕</button>'}</div>
-    ${ro?'':`<div class="psug" data-sug hidden></div><div class="gst" data-gst${g.gst?'':' hidden'}>${esc(g.gst||'')}</div>`}
+    ${ro?'':`<div class="psug" data-sug hidden></div><div class="gst" data-gst${g.gst?'':' hidden'}>${esc(g.gst||'')}</div>${altsHTML(g)}`}
     <div class="sg sg4">${nf('km','距離 km',0.1,ro)}${nf('start','起點海拔 m',10,ro)}${nf('camp','終點海拔 m',10,ro)}${nf('top','最高點 m',10,ro)}${nf('up','爬升 m',10,ro)}${nf('down','下降 m',10,ro)}${nf('sh','上河圖時間 h',0.1)}${mulF}${hrsF}<label data-hrw hidden>強度（平均心率）<select data-s="hrI"><option value="">自動</option>${Object.entries(HRLV).map(([k,t])=>`<option value="${k}"${g.hrI===k?' selected':''}>${t}</option>`).join('')}</select></label></div>
     ${(()=>{const fst=S.route.segs.find(x=>x.day===g.day);if(fst!==g)return '';const ds=S.route.segs.filter(x=>x.day===g.day),t0=(ds.find(x=>x.t0)||{}).t0||'',t1=(ds.find(x=>x.t1)||{}).t1||'';
       return `<div class="sg" style="grid-template-columns:1fr 1fr;margin-top:6px"><label>第 ${g.day} 天啟登時間<input type="time" data-s="t0" value="${esc(t0)}"></label><label>預計結束時間<input type="time" data-s="t1" value="${esc(t1)}" data-t1auto></label></div><div class="pnote" data-tn></div>`;})()}
@@ -1528,13 +1538,18 @@ function segHTML(g){
     <input class="nt" data-s="note" placeholder="撤退點／備註（例：大武祠可下撤）" value="${esc(g.note)}">
   </div>`;
 }
-function renderSegs(){if(typeof renderModeHint==='function')try{renderModeHint();}catch(e){}const L=S.route.segs;$('#segList').innerHTML=L.length?L.map(segHTML).join(''):'<div style="color:var(--mut);font-size:13px;margin-bottom:8px">還沒有路段。照登山計畫書逐段填，或用「複製路線查詢提示詞」請 Gemini 整理後匯入。路況不確定就留「?」，App 會給預防建議。</div>';}
+function renderSegs(){if(typeof renderModeHint==='function')try{renderModeHint();}catch(e){}try{renderGradeBar();}catch(e){}const L=S.route.segs;$('#segList').innerHTML=L.length?L.map(segHTML).join(''):'<div style="color:var(--mut);font-size:13px;margin-bottom:8px">還沒有路段。照登山計畫書逐段填，或用「複製路線查詢提示詞」請 Gemini 整理後匯入。路況不確定就留「?」，App 會給預防建議。</div>';}
 const segEl=$('#segList');
+$('#gradeBar').addEventListener('click',async e=>{const b=e.target.closest('[data-gm]');if(!b)return;const m=b.dataset.gm,G=S.route.grade=Object.assign({},S.route.grade||{});if((G.mode||'normal')===m)return;
+  if(m==='explore'&&!(await disclaim('explore')))return;G.mode=m;setDirty(true);altRepick();renderGradeBar();syncReturn();renderSegs();renderProfile();compute();});
+$('#gradeBar').addEventListener('change',e=>{if(e.target.id!=='gradeMax')return;const G=S.route.grade=Object.assign({},S.route.grade||{}),v=e.target.value.trim(),C=gradeCfg();
+  if(C.mode==='normal')G.nmax=v?Math.max(10,Math.min(45,+v||45)):45;else G.xmax=v?Math.max(25,+v||70):0;setDirty(true);altRepick();renderGradeBar();syncReturn();renderSegs();renderProfile();compute();});
+segEl.addEventListener('click',e=>{const tr=e.target.closest('[data-alt]');if(!tr)return;const g=findG(tr);if(!g)return;const k=+tr.dataset.alt;if(k===g.altSel)return;altUse(g,k,true);syncReturn();renderSegs();renderProfile();setDirty(true);compute();});
 segEl.addEventListener('focusout',e=>{if(e.target.dataset&&(e.target.dataset.s==='hrs'||e.target.dataset.s==='mul'))setTimeout(compute,0);});
 const findG=el=>{const r=el.closest('.seg');return r?S.route.segs.find(x=>x.id===r.dataset.id):null;};
 segEl.addEventListener('input',e=>{const g=findG(e.target),k=e.target.dataset.s;if(!g||!k)return;
   if(k==='t0'||k==='t1'){S.route.segs.filter(x=>x.day===g.day).forEach(x=>{delete x[k];});g[k]=e.target.value;setDirty(true);compute();return;}
-  if(k==='from'||k==='to'){g[k]=e.target.value;delete g.lp;if(k==='from'){delete g.fromP;}else{delete g.toP;}showSug(e.target,g,k);}
+  if(k==='from'||k==='to'){g[k]=e.target.value;delete g.lp;delete g.alts;if(k==='from'){delete g.fromP;}else{delete g.toP;}showSug(e.target,g,k);}
   else if(k==='note')g[k]=e.target.value;
   else if(k==='hrs'){g.hrsManual=e.target.value!=='';g.hrs=Math.max(0,num(e.target.value));e.target.classList.toggle('autov',!g.hrsManual);}
   else if(k==='mul'){g.mulManual=e.target.value!=='';g.mul=Math.max(0,num(e.target.value));e.target.classList.toggle('autov',!g.mulManual);}
@@ -1893,6 +1908,45 @@ async function routeLeg(a,b){
   }
   return null;
 }
+// ===== 兩點之間多條路線：比坡度、挑「坡度最平均」=====
+// 坡度 % ＝ 爬升 ÷ 水平距離（100% ＝ 45°）。「最陡」取連續 100 m 的坡度，不看單點，避免雜訊
+const GRADE_TIERS=[[25,'好走','#8fae7a'],[45,'陡，重裝還能走','#c9ab55'],[70,'很陡，要手腳並用、拉繩','#d9894a'],[Infinity,'攀爬','#e0715f']];
+const gradeTier=v=>GRADE_TIERS.find(t=>v<=t[0]);
+function gradeCfg(){const g=S.route.grade||{},mode=g.mode==='explore'?'explore':'normal';
+  const max=mode==='normal'?Math.min(45,g.nmax>0?g.nmax:45):(g.xmax===0?Infinity:(g.xmax>0?g.xmax:70));return {mode,max};}
+function gradeStats(pts){const n=pts.length;if(n<2)return null;const D=(pts[n-1].d||0)*1000;if(!(D>40))return null;
+  const st=20,E=[];let j=0;for(let x=0;x<=D;x+=st){while(j<n-2&&pts[j+1].d*1000<x)j++;const a=pts[j],b=pts[j+1],da=a.d*1000,db=b.d*1000;
+    E.push(isFinite(a.ele)&&isFinite(b.ele)?(db>da?a.ele+(b.ele-a.ele)*Math.min(1,Math.max(0,(x-da)/(db-da))):a.ele):isFinite(a.ele)?a.ele:isFinite(b.ele)?b.ele:null);}
+  for(let i=0;i<E.length;i++)if(E[i]==null)E[i]=i?E[i-1]:(E.find(v=>v!=null)??0);
+  const W=Math.min(5,E.length-1);let maxUp=0,maxDn=0;for(let i=0;i+W<E.length;i++){const g=(E[i+W]-E[i])/(W*st)*100;if(g>maxUp)maxUp=g;if(-g>maxDn)maxDn=-g;}
+  let ru=0,du=0,rd=0,dd=0,ss=0,cnt=0;for(let i=0;i+W<E.length;i+=W){const r=E[i+W]-E[i],g=r/(W*st)*100;ss+=g*g;cnt++;if(g>2){ru+=r;du+=W*st;}else if(g<-2){rd-=r;dd+=W*st;}}
+  let climbs=0,lo=E[0],hi=E[0],inC=false;for(const e of E){if(!inC){if(e<lo)lo=e;if(e-lo>=50){climbs++;inC=true;hi=e;}}else{if(e>hi)hi=e;if(hi-e>=30){inC=false;lo=e;}}}
+  return {avgUp:du?Math.round(ru/du*100):0,avgDn:dd?Math.round(rd/dd*100):0,maxUp:Math.round(maxUp),maxDn:Math.round(maxDn),rms:+(cnt?Math.sqrt(ss/cnt):0).toFixed(1),climbs};}
+// 兩條路是不是幾乎一樣（BRouter 的替代路線有時只差一點點）
+function altSame(A,B){const la=A[A.length-1].d,lb=B[B.length-1].d;if(Math.abs(la-lb)>Math.max(la,lb)*0.05)return false;
+  const sb=Math.max(1,Math.floor(B.length/300)),Bs=B.filter((q,i)=>i%sb===0);let hit=0,N=25;
+  for(let k=0;k<N;k++){const p=A[Math.round(k*(A.length-1)/(N-1))];if(Bs.some(q=>hav(p,q)<0.05))hit++;}return hit/N>0.9;}
+// 自動挑：沒超過坡度上限的路線裡，整體坡度起伏最小（每 100 m 坡度的均方根）；都超過就挑最陡那段最緩的
+function altPick(alts,max){const steep=o=>Math.max(o.st.maxUp||0,o.st.maxDn||0),ok=alts.map((o,i)=>i).filter(i=>steep(alts[i])<=max);
+  if(!ok.length)return alts.map((o,i)=>i).sort((a,b)=>steep(alts[a])-steep(alts[b]))[0];
+  return ok.sort((a,b)=>(alts[a].st.rms-alts[b].st.rms)||(alts[a].st.km-alts[b].st.km))[0];}
+const lpOf=pts=>{const n=pts.length,stp=Math.max(1,Math.ceil(n/300)),o=[];for(let i=0;i<n;i+=stp)o.push(i);if(o[o.length-1]!==n-1)o.push(n-1);return o.map(i=>[+pts[i].lat.toFixed(5),+pts[i].lon.toFixed(5),isFinite(pts[i].ele)?Math.round(pts[i].ele):null,+pts[i].d.toFixed(3)]);};
+async function routeAlts(a,b){const get=async k=>{try{const r=await fetch(`https://brouter.de/brouter?lonlats=${a.lon.toFixed(5)},${a.lat.toFixed(5)}|${b.lon.toFixed(5)},${b.lat.toFixed(5)}&profile=hiking-mountain&alternativeidx=${k}&format=geojson`);if(!r.ok)return null;
+      const j=await r.json(),C=j.features&&j.features[0]&&j.features[0].geometry.coordinates;if(!C||C.length<2)return null;
+      const pts=C.map(c=>({lat:c[1],lon:c[0],ele:c.length>2&&isFinite(c[2])?c[2]:NaN,t:NaN}));let d=0;pts[0].d=0;for(let i=1;i<pts.length;i++){d+=hav(pts[i-1],pts[i]);pts[i].d=d;}return pts;}catch(e){return null;}};
+  const R=await Promise.all([0,1,2,3].map(get)),out=[];
+  for(let k=0;k<R.length;k++){const pts=R[k];if(!pts||hav(pts[0],a)>1||hav(pts[pts.length-1],b)>1)continue;if(out.some(o=>altSame(o.pts,pts)))continue;out.push({k,pts});}
+  if(!out.length)return null;
+  for(const o of out){if(o.pts.filter(p=>isFinite(p.ele)).length<o.pts.length*0.8){try{await fillElevation(o.pts,()=>{});}catch(e){}}const t=segStats(o.pts,0,o.pts.length-1);o.st=Object.assign({km:t.km,up:t.up,down:t.down},gradeStats(o.pts)||{avgUp:0,avgDn:0,maxUp:0,maxDn:0,rms:0,climbs:0});}
+  return out;}
+const lpPts=lp=>lp.map(q=>({lat:q[0],lon:q[1],ele:q[2]==null?NaN:q[2],d:q[3],t:NaN}));
+// 免責說明：第一次自動規劃路線、第一次切探勘模式各跳一次，按「我了解」才繼續
+function disclaim(kind){const key=kind==='explore'?'gearPlanner.discX':'gearPlanner.disc';try{if(localStorage.getItem(key)==='1')return Promise.resolve(true);}catch(e){}
+  return new Promise(res=>{const m=document.createElement('div');m.className='modal';m.style.zIndex=9600;
+    const body=kind==='explore'?`<p><b>探勘模式會放寬坡度上限，甚至不設上限。</b>它會列出很陡、可能要攀爬的路線，這些路線可能需要繩索、攀爬技術或特殊裝備，也可能根本走不了。</p><p>坡度是用約 30 m 解析度的地形資料推算的：短的陡坡、崩塌、斷崖都可能看不出來。是否能走，請以實地狀況、最新路況與你自己的能力判斷。</p>`
+      :`<p>這個 App 的路線、距離、坡度與時間，都是用公開地形資料和步道資料自動推算的，<b>僅供參考</b>，不代表路況、步道是否存在或是否安全。</p><p>資料可能過時或有誤（崩塌、改道、封閉）。出發前請查最新路況、做好準備、遵守入山規定，並自行判斷。使用本 App 造成的任何後果由使用者自行承擔。</p>`;
+    m.innerHTML=`<div class="sheet" style="max-width:440px"><div class="sh2"><span>${kind==='explore'?'切換到探勘模式前':'使用路線規劃前'}</span></div><div style="font-size:14px;line-height:1.7">${body}</div><div class="btnrow" style="margin-top:12px"><button class="btn pri" data-dc="ok">我了解</button><button class="btn" data-dc="x">取消</button></div></div>`;
+    document.body.appendChild(m);m.addEventListener('click',e=>{const b=e.target.closest('[data-dc]');if(!b)return;const ok=b.dataset.dc==='ok';if(ok){try{localStorage.setItem(key,'1');}catch(err){}}m.remove();res(ok);});});}
 async function calcDay(g,k){
   const a=endP(g,'from'),b=endP(g,'to'),T=S.route.trk;
   // 軌跡上的天：改終點＝移動分天點
@@ -1907,14 +1961,25 @@ async function calcDay(g,k){
   let pts=null,how='';
   const ia=snapTrk(a,0,true),ib=snapTrk(b,0,true);
   if(T&&ia!=null&&ib!=null&&ia!==ib){const P=trkPts(T).slice(0,T.p.length);pts=(ia<ib?P.slice(ia,ib+1):P.slice(ib,ia+1).reverse());let d=0;pts=pts.map((q,j)=>{const o=Object.assign({},q);if(j)d+=hav(pts[j-1],q);o.d=d;return o;});how='沿你匯入的軌跡';}
-  if(!pts){g.gst='沿步道計算這天的距離與爬升中…';renderGst(g);pts=await routeLeg(a,b);how='沿登山步道';}
-  if(pts){const st=segStats(pts,0,pts.length-1);{const n=pts.length,stp=Math.max(1,Math.ceil(n/300)),o=[];for(let i=0;i<n;i+=stp)o.push(i);if(o[o.length-1]!==n-1)o.push(n-1);g.lp=o.map(i=>[+pts[i].lat.toFixed(5),+pts[i].lon.toFixed(5),isFinite(pts[i].ele)?Math.round(pts[i].ele):null,+pts[i].d.toFixed(3)]);}Object.assign(g,{km:st.km,up:st.up,down:st.down,top:Math.max(st.top,a.ele||0,b.ele||0),tlat:st.tlat,tlon:st.tlon});
-    if(isFinite(pts[0].ele)&&!a.ele)g.start=Math.round(pts[0].ele);if(st.camp&&!b.ele)g.camp=st.camp;g.est=false;
-    g.gst=`✓ 已${how}算好：${st.km} km、↑${st.up} ↓${st.down}`;}
+  if(pts)delete g.alts;
+  if(!pts&&await disclaim('plan')){g.gst='沿步道找路線、比較坡度中…';renderGst(g);const alts=await routeAlts(a,b);
+    if(alts){const C=gradeCfg(),pk=altPick(alts,C.max);pts=alts[pk].pts;g.alts=alts.map(o=>({lp:lpOf(o.pts),st:o.st}));g.altSel=pk;g.altManual=false;how=alts.length>1?`沿登山步道（${alts.length} 條路線裡坡度最平均的）`:'沿登山步道';}
+    else{delete g.alts;pts=await routeLeg(a,b);how='沿登山步道';}}
+  if(pts){legApply(g,pts,how,a,b);}
   else{delete g.lp;const km=+(hav(a,b)*1.6).toFixed(1),df=(b.ele||0)-(a.ele||0);Object.assign(g,{km,up:Math.max(0,df),down:Math.max(0,-df),top:Math.max(a.ele||0,b.ele||0)});g.est=true;
     g.gst=`⚠︎ 沒辦法沿步道算（離線或附近沒有步道資料），先用直線距離×1.6 粗估 ${km} km；中間的上上下下沒算進去，可以自己改數字`;}
   syncReturn();renderSegs();renderProfile();setDirty(true);compute();
 }
+function legApply(g,pts,how,a,b){const st=segStats(pts,0,pts.length-1);g.lp=lpOf(pts);a=a||{};b=b||{};Object.assign(g,{km:st.km,up:st.up,down:st.down,top:Math.max(st.top,a.ele||0,b.ele||0),tlat:st.tlat,tlon:st.tlon});
+  if(isFinite(pts[0].ele)&&!a.ele)g.start=Math.round(pts[0].ele);if(st.camp&&!b.ele)g.camp=st.camp;g.est=false;
+  g.gst=`✓ 已${how}算好：${st.km} km、↑${st.up} ↓${st.down}`;}
+// 換路線（點比較表）或改坡度上限後重挑
+function altUse(g,k,manual){if(!g.alts||!g.alts[k])return;g.altSel=k;if(manual)g.altManual=true;const n=g.alts.length;legApply(g,lpPts(g.alts[k].lp),n>1?`沿登山步道（路線 ${k+1}／${n}）`:'沿登山步道',endP(g,'from'),endP(g,'to'));}
+function renderGradeBar(){const el=$('#gradeBar');if(!el)return;const C=gradeCfg(),g=S.route.grade||{};
+  el.innerHTML=`<span style="font-size:13px">自動規劃路線的坡度上限</span><span class="seg2"><button class="btn sm${C.mode==='normal'?' pri':''}" type="button" data-gm="normal">一般</button><button class="btn sm${C.mode==='explore'?' pri':''}" type="button" data-gm="explore">探勘</button></span>
+    <label class="f" style="flex-direction:row;align-items:center;gap:4px"><input type="number" id="gradeMax" inputmode="numeric" min="${C.mode==='normal'?10:25}" max="${C.mode==='normal'?45:300}" step="5" value="${C.max===Infinity?'':C.max}" placeholder="${C.mode==='explore'?'無上限':''}">%</label>
+    <small>${C.mode==='normal'?'一般：最多 45%（約 24°，重裝還能走）':'探勘：空白＝無上限'}　25% 以下好走・45% 以上要手腳並用・70% 以上算攀爬</small>${C.mode==='explore'?'<div class="xw">⚠︎ 探勘模式會列出很陡、可能要攀爬的路線；能不能走請依實地狀況與自己的能力判斷，僅供參考。</div>':''}`;}
+function altRepick(){const C=gradeCfg();(S.route.segs||[]).forEach(g=>{if(g.alts&&g.alts.length>1&&!g.altManual){const pk=altPick(g.alts,C.max);if(pk!==g.altSel)altUse(g,pk,false);}});}
 function virtualTrk(){const L=S.route.segs,out=L.filter(g=>!g.ret);if(!out.length||!out.every(g=>g.lp&&g.lp.length>1))return null;
   const P=[],wps=[];let off=0;out.forEach((g,k)=>{if(!k)wps.push({n:g.from||'起點',i:0});g.lp.forEach((q,j)=>{if(k&&!j)return;P.push([q[0],q[1],q[2],+(off+q[3]).toFixed(3)]);});off=P[P.length-1][3];wps.push({n:g.to||'',i:P.length-1});});
   const nOut=P.length-1,D=off;
@@ -1966,7 +2031,7 @@ function mapStyle(){const R=(url,max,attr)=>({type:'raster',tiles:[url],tileSize
   const ln={'line-join':'round','line-cap':'round'};
   return {version:8,sources:{nlsc:R(TPL.nlsc,18,'通用版電子地圖（含等高線）© 內政部國土測繪中心'),topo:R(TPL.topo,17,'© OpenTopoMap (CC-BY-SA) © OpenStreetMap'),osm:R(TPL.osm,19,'© OpenStreetMap'),
       sat:R(TPL.sat,18,'Esri World Imagery'),ctr:{type:'raster',tiles:['ctr://{z}/{x}/{y}'],tileSize:256,minzoom:9,maxzoom:17,attribution:'等高線：由 AWS Terrain Tiles 高度資料即時繪製'},esrihs:R(TPL.esrihs,16,'Esri World Hillshade'),dem:{type:'raster-dem',tiles:[TPL.dem],tileSize:256,encoding:'terrarium',maxzoom:15,attribution:'地形：Mapzen／AWS Terrain Tiles'},
-      route:{type:'geojson',data:EMPTY},trim:{type:'geojson',data:EMPTY},draw:{type:'geojson',data:EMPTY},drawpt:{type:'geojson',data:EMPTY},acc:{type:'geojson',data:EMPTY},rec:{type:'geojson',data:EMPTY},meas:{type:'geojson',data:EMPTY},measpt:{type:'geojson',data:EMPTY},sel:{type:'geojson',data:EMPTY},selpt:{type:'geojson',data:EMPTY},pin:{type:'geojson',data:EMPTY}},
+      route:{type:'geojson',data:EMPTY},alts:{type:'geojson',data:EMPTY},trim:{type:'geojson',data:EMPTY},draw:{type:'geojson',data:EMPTY},drawpt:{type:'geojson',data:EMPTY},acc:{type:'geojson',data:EMPTY},rec:{type:'geojson',data:EMPTY},meas:{type:'geojson',data:EMPTY},measpt:{type:'geojson',data:EMPTY},sel:{type:'geojson',data:EMPTY},selpt:{type:'geojson',data:EMPTY},pin:{type:'geojson',data:EMPTY}},
     layers:[{id:'bg',type:'background',paint:{'background-color':'#5f7f45'}},
       {id:'b-ctr',type:'raster',source:'ctr',layout:{visibility:'none'},paint:{'raster-fade-duration':0}},
       ...['nlsc','topo','osm','sat'].map(k=>({id:'b-'+k,type:'raster',source:k,layout:{visibility:'none'}})),
@@ -1974,6 +2039,7 @@ function mapStyle(){const R=(url,max,attr)=>({type:'raster',tiles:[url],tileSize
       {id:'s-dem',type:'hillshade',source:'dem',paint:{'hillshade-exaggeration':.55}},
       {id:'s-topo',type:'raster',source:'topo',paint:{'raster-opacity':.55}},
       {id:'acc',type:'fill',source:'acc',paint:{'fill-color':'#2f8cff','fill-opacity':.14}},
+      {id:'alts',type:'line',source:'alts',layout:{'line-join':'round'},paint:{'line-color':'#c9c2a8','line-width':2.5,'line-opacity':.8,'line-dasharray':[1.5,1.5]}},
       {id:'r-shadow',type:'line',source:'route',layout:ln,paint:{'line-color':'#000','line-width':7,'line-opacity':.35}},
       {id:'r-line',type:'line',source:'route',filter:['!=',['get','ret'],1],layout:ln,paint:{'line-color':['get','color'],'line-width':4}},
       {id:'r-ret',type:'line',source:'route',filter:['==',['get','ret'],1],layout:{'line-join':'round'},paint:{'line-color':['get','color'],'line-width':4,'line-dasharray':[2,1.6]}},
@@ -2006,7 +2072,8 @@ function mapApplyStyle(){const m=MAP.m;if(!m||!MAP.loaded)return;const base=mapB
   if(chg&&MAP.lastRoute)mapSetRoute(...MAP.lastRoute);if(chg){try{drawRender();trimDraw();}catch(e){}}
   document.querySelectorAll('.lyrmenu [data-base]').forEach(b=>b.classList.toggle('on',b.dataset.base===base));}
 function mapSetRoute(P,idx,nTurn){MAP.lastRoute=[P,idx,nTurn];const feats=[];for(let k=0;k<idx.length-1;k++){const a=idx[k],b=idx[k+1],c=P.slice(a,b+1).map(q=>[q[1],q[0]]);if(c.length>1)feats.push({type:'Feature',properties:{color:COL(DAYC[k%DAYC.length]),ret:nTurn>=0&&a>=nTurn?1:0,day:k+1},geometry:{type:'LineString',coordinates:c}});}
-  mapSrc('route',{type:'FeatureCollection',features:feats});}
+  mapSrc('route',{type:'FeatureCollection',features:feats});altsMap();}
+function altsMap(){const f=[];let nav=false;try{nav=NAV.on;}catch(e){}if(!nav)(S.route.segs||[]).forEach(g=>{if(!g.ret&&g.alts&&g.alts.length>1)g.alts.forEach((o,k)=>{if(k!==g.altSel)f.push({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:o.lp.map(q=>[q[1],q[0]])}});});});try{mapSrc('alts',{type:'FeatureCollection',features:f});}catch(e){}}
 function mapSetBase(k){try{localStorage.setItem('gearPlanner.mapBase',k);}catch(e){}mapApplyStyle();}
 class LayerCtl{onAdd(){const d=document.createElement('div');d.className='maplibregl-ctrl maplibregl-ctrl-group lyrctl';
     d.innerHTML=`<button type="button" title="切換底圖" aria-label="切換底圖" style="display:flex;align-items:center;justify-content:center"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><div class="lyrmenu" hidden>${Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}">${b.name}</button>`).join('')}</div>`;
@@ -2146,7 +2213,7 @@ function navHud(){if(!NAV.on)return;const g=GPS.last,R=GPS.rec,set=(k,v)=>{const
   set('pos',g?`${g.la.toFixed(5)}, ${g.lo.toFixed(5)}<small> ±${Math.round(g.ac)}m</small>`:'等待 GPS…');
   const rb=$('#navRec');if(rb){rb.classList.toggle('on',!!(R&&R.on));}}
 async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網路一次，或先下載離線地圖）');return;}
-  NAV.on=true;try{mapNavMode(true);}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
+  NAV.on=true;try{mapNavMode(true);}catch(e){}try{altsMap();}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
   NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'),$('#profRead'));try{document.querySelectorAll('#rmap .maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(e=>e.classList.remove('maplibregl-compact-show'));}catch(e){}try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
   NAV.fsByMe=false; // 不再呼叫瀏覽器全螢幕：會跳出系統的「從頂端向下拖曳」通知，地圖本身已經鋪滿整個畫面
   try{if(navigator.wakeLock)GPS.wake=await navigator.wakeLock.request('screen');}catch(e){}
@@ -2154,7 +2221,7 @@ async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網�
   try{OFF.ac=OFF.ac||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
   if(GPS.watch==null&&S.route.trk)gpsStart(); // 只開定位、不自動移動地圖
   setTimeout(()=>{MAP.m.invalidateSize();npSize();renderProfile();},150);NAV.tick=setInterval(()=>{navHud();navBoard();},2000);navHud();navBoard();editUI();try{marksRender();teamLocRender();}catch(e){}}
-function navClose(){NAV.on=false;try{mapNavMode(false);}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
+function navClose(){NAV.on=false;try{mapNavMode(false);}catch(e){}try{altsMap();}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
   if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();}try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}
   if(NAV.profHome){NAV.profHome.append($('#prof'),$('#profRead'));}
   try{if(NAV.fsByMe&&document.fullscreenElement)document.exitFullscreen();}catch(e){}NAV.fsByMe=false;try{if(GPS.wake){GPS.wake.release();GPS.wake=null;}}catch(e){}
@@ -2860,6 +2927,7 @@ function renderTxtPrev(status){
 async function routeTrail(T,msg){
   const seq=[];T.segs.forEach((g,k)=>g.places.forEach((x,j)=>{if(x.lat){const l=seq[seq.length-1];if(!l||Math.abs(l.lat-x.lat)>1e-5||Math.abs(l.lon-x.lon)>1e-5)seq.push({lat:x.lat,lon:x.lon,name:x.name,day:k,last:j===g.places.length-1});else if(j===g.places.length-1){l.day=k;l.last=true;}}}));
   if(seq.length<2)return {err:'可定位的地點不到兩個'};
+  if(!(await disclaim('plan')))return {err:'沒有同意使用說明，先不規劃步道'};
   msg('沿登山步道規劃路線中…');
   let gj=null,lastErr='';
   for(const prof of ['hiking-mountain','trekking']){

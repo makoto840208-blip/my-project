@@ -12,7 +12,7 @@
 ## 發布流程（使用者偏好）
 - **預設**：每次改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他在電腦上拖曳到 Cloudflare 上傳（不耗建置分鐘）。
 - **使用者說「手機用」**：commit 後 `git push origin main`，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
-- 不論哪種，原始碼都要 commit 進 repo，保持最新。目前版本：**v68**。
+- 不論哪種，原始碼都要 commit 進 repo，保持最新。目前版本：**v76**。（v69～v75 是在別的環境改的，v75 從使用者上傳的 Cloudflare zip 還原進 repo）
 
 ## 設計原則（使用者明確要求過）
 - 全 App 低飽和、軍事風；圖示一律單色線條 SVG（`ic('name')`、`ICO2`），**不用彩色 emoji、不用白色**；SOS／偏航警告才用醒目紅。

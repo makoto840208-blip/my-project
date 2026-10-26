@@ -247,6 +247,18 @@ T('路線卡片：坡度列不跟其他欄位疊在一起', async p => {
   const r = await p.evaluate(() => { const g = document.getElementById('gradeBar'), w = g.nextElementSibling, a = g.getBoundingClientRect(), c = w.getBoundingClientRect(), kids = [...g.children].map(e => e.getBoundingClientRect().bottom); return { h: a.height, gap: c.top - a.bottom, inside: Math.max(...kids) <= a.bottom + 1 }; });
   ok(r.h > 20 && r.inside, `坡度列高度不對（${r.h}px），內容溢出`); ok(r.gap >= 0, '坡度列跟下一排疊在一起');
 });
+T('3D 地形：開關、導航時自動 2D、離開導航恢復', async p => {
+  await loadGpx(p); await p.evaluate(() => document.querySelector('.lyrctl>button').click()); await p.evaluate(() => document.querySelector('.lyrmenu [data-3d]').click()); await p.waitForTimeout(900); await idle(p); await p.evaluate(() => document.getElementById('rmap').scrollIntoView({ block: 'center' })); await p.waitForTimeout(1500); await shot(p, '3d');
+  let r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: m.getPitch() }; });
+  ok(r.t && r.pitch > 30, `3D 沒打開（地形 ${r.t}、傾斜 ${r.pitch.toFixed(0)}°）`);
+  await openNav(p); await p.waitForTimeout(300);
+  r = await p.evaluate(() => { const m = window.__gp.MAP.m, b = document.querySelector('.lyrmenu [data-3d]'); return { t: !!m.getTerrain(), pitch: m.getPitch(), btn: getComputedStyle(b).display }; });
+  ok(!r.t && r.pitch < 1, '導航時應該自動回 2D'); ok(r.btn === 'none', '導航時圖層選單不該出現 3D 選項');
+  await navBtn(p, 'close'); await p.waitForFunction(() => window.__gp.MAP.m.getPitch() > 30, null, { timeout: 6000 }).catch(() => {}); // 模擬環境畫 3D 很慢
+  r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: Math.round(m.getPitch()) }; }); ok(r.t && r.pitch > 30, '離開導航沒恢復 3D ' + JSON.stringify(r));
+  await p.evaluate(() => { document.querySelector('.lyrctl>button').click(); document.querySelector('.lyrmenu [data-3d]').click(); }); await p.waitForTimeout(800);
+  r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: m.getPitch(), mp: m.getMaxPitch() }; }); ok(!r.t && r.pitch < 1 && r.mp === 0, '關掉 3D 沒還原成平面');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

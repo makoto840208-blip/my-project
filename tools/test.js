@@ -258,8 +258,8 @@ T('3D 地形：開關、導航時自動 2D、離開導航恢復', async p => {
   let r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: m.getPitch() }; });
   ok(r.t && r.pitch > 30, `3D 沒打開（地形 ${r.t}、傾斜 ${r.pitch.toFixed(0)}°）`);
   await openNav(p); await p.waitForTimeout(300);
-  r = await p.evaluate(() => { const m = window.__gp.MAP.m, b = document.querySelector('.lyrmenu [data-3d]'); return { t: !!m.getTerrain(), pitch: m.getPitch(), btn: getComputedStyle(b).display }; });
-  ok(!r.t && r.pitch < 1, '導航時應該自動回 2D'); ok(r.btn === 'none', '導航時圖層選單不該出現 3D 選項');
+  r = await p.evaluate(() => { const m = window.__gp.MAP.m, b = document.querySelector('.lyrmenu [data-3d]'); return { t: !!m.getTerrain(), pitch: m.getPitch(), lbl: b.textContent }; });
+  ok(!r.t && r.pitch < 1, '導航的 3D 預設關，應該是 2D'); ok(/導航/.test(r.lbl), '導航時圖層選單的 3D 開關應該標明是導航用：' + r.lbl);
   await navBtn(p, 'close'); await p.waitForFunction(() => window.__gp.MAP.m.getPitch() > 30, null, { timeout: 6000 }).catch(() => {}); // 模擬環境畫 3D 很慢
   r = await p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pitch: Math.round(m.getPitch()) }; }); ok(r.t && r.pitch > 30, '離開導航沒恢復 3D ' + JSON.stringify(r));
   await p.evaluate(() => { document.querySelector('.lyrctl>button').click(); document.querySelector('.lyrmenu [data-3d]').click(); }); await p.waitForTimeout(800);
@@ -301,6 +301,21 @@ T('對山定位：選山、記下三座、算出位置、黑屏與導航板顯�
   const bk = await p.evaluate(() => ({ t: document.getElementById('nbkTxt').textContent, tri: document.querySelectorAll('#bkRose path[d^="M0,-3.2"]').length }));
   ok(/推算位置/.test(bk.t), '黑屏沒有顯示推算位置'); ok(bk.tri >= 3, `黑屏雷達應該標出附近的山，只有 ${bk.tri} 個`);
 });
+T('導航 3D：耗電提醒＋不再顯示、跟隨時降解析度、黑屏關地形', async p => {
+  await loadGpx(p); await openNav(p);
+  const tog = () => p.evaluate(() => { document.querySelector('.lyrctl>button').click(); document.querySelector('.lyrmenu [data-3d]').click(); });
+  await tog(); await p.waitForSelector('.modal [data-w3="ok"]', { timeout: 3000 });
+  await p.check('#w3dSkip'); await p.click('.modal [data-w3="ok"]'); await p.waitForFunction(() => !!window.__gp.MAP.m.getTerrain(), null, { timeout: 5000 }).catch(() => {});
+  const st = () => p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pr: m.getPixelRatio() }; });
+  let r = await st(); ok(r.t, '導航 3D 沒打開'); ok(r.pr === 2, `平常解析度應該是 2，現在 ${r.pr}`);
+  await navBtn(p, 'follow'); await p.waitForTimeout(300); r = await st(); ok(r.pr === 1, `跟隨模式時應該降到 1，現在 ${r.pr}`);
+  await navBtn(p, 'follow'); await p.waitForTimeout(300); r = await st(); ok(r.pr === 2, `關跟隨後應該回到 2，現在 ${r.pr}`);
+  await navBtn(p, 'black'); await p.waitForTimeout(300); r = await st(); ok(!r.t, '黑屏時應該關掉 3D 地形');
+  await p.dispatchEvent('#navBlack', 'dblclick'); await p.waitForTimeout(400); r = await st(); ok(r.t, '離開黑屏應該恢復 3D');
+  await tog(); await p.waitForTimeout(300); r = await st(); ok(!r.t, '再按一次沒關掉');
+  await tog(); await p.waitForTimeout(300); ok(!(await p.$('.modal [data-w3]')), '勾了不再顯示，還是跳提醒'); r = await st(); ok(r.t, '第二次打開失敗');
+  await navBtn(p, 'close'); await p.waitForTimeout(500); r = await st(); ok(!r.t, '規劃畫面的 3D 是另一個開關（沒開），離開導航應該回 2D');
+}, { vp: '橫式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

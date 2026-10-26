@@ -2085,17 +2085,33 @@ function mapSetBase(k){try{localStorage.setItem('gearPlanner.mapBase',k);}catch(
 class LayerCtl{onAdd(){const d=document.createElement('div');d.className='maplibregl-ctrl maplibregl-ctrl-group lyrctl';
     d.innerHTML=`<button type="button" title="切換底圖" aria-label="切換底圖" style="display:flex;align-items:center;justify-content:center"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><div class="lyrmenu" hidden>${Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}">${b.name}</button>`).join('')}<button type="button" data-3d style="border-top:1px solid var(--line)">3D 地形</button><button type="button" data-pks>山頭名稱</button></div>`;
     const menu=d.querySelector('.lyrmenu');d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);}catch(err){}};
-    menu.onclick=e=>{if(e.target.closest('[data-3d]')){map3dSet(!M3D.want);menu.hidden=true;return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);menu.hidden=true;return;}const b=e.target.closest('[data-base]');if(b){mapSetBase(b.dataset.base);menu.hidden=true;}};this._d=d;return d;}onRemove(){this._d.remove();}}
-// 3D 地形：規劃時看用；導航一律 2D（省電），離開導航會恢復
-const M3D={want:false,on:false};try{M3D.want=localStorage.getItem('gearPlanner.map3d')==='1';}catch(e){}
-function map3dApply(){const m=MAP.m;if(!m||!MAP.loaded)return;let nav=false;try{nav=NAV.on;}catch(e){}const on=M3D.want&&!nav;
-  document.querySelectorAll('.lyrmenu [data-3d]').forEach(b=>{b.style.setProperty('display',nav?'none':'block','important');b.classList.toggle('on',M3D.want);b.textContent=M3D.want?'3D 地形：開（點一下關）':'3D 地形';});
-  if(on===M3D.on)return;M3D.on=on;
-  try{if(on){if(!m.getSource('dem3d'))m.addSource('dem3d',{type:'raster-dem',tiles:[TPL.dem],tileSize:256,encoding:'terrarium',maxzoom:15});
-      m.setMaxPitch(70);m.setTerrain({source:'dem3d',exaggeration:1.3});m.dragRotate.enable();m.touchPitch.enable();m.easeTo({pitch:55,duration:600});
-      setTimeout(()=>{try{if(M3D.on&&m.getPitch()<5)m.easeTo({pitch:55,duration:500});}catch(e){}},350);}// 剛離開導航時地圖會重排，傾斜動畫可能被打斷，補一次
-    else{m.setTerrain(null);m.easeTo({pitch:0,duration:nav?0:400});setTimeout(()=>{try{if(!M3D.on){m.setMaxPitch(0);m.touchPitch.disable();if(!nav)m.dragRotate.disable();}}catch(e){}},nav?0:450);}}catch(e){}}
+    menu.onclick=e=>{if(e.target.closest('[data-3d]')){menu.hidden=true;map3dToggle();return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);menu.hidden=true;return;}const b=e.target.closest('[data-base]');if(b){mapSetBase(b.dataset.base);menu.hidden=true;}};this._d=d;return d;}onRemove(){this._d.remove();}}
+// 3D 地形：規劃和導航各自一個開關（導航預設關、打開先提醒耗電）；黑屏時關地形；導航中跟隨／跟著方向轉時降低繪製解析度
+const M3D={want:false,navWant:false,on:false};try{M3D.want=localStorage.getItem('gearPlanner.map3d')==='1';M3D.navWant=localStorage.getItem('gearPlanner.map3dNav')==='1';}catch(e){}
+function map3dApply(){const m=MAP.m;if(!m||!MAP.loaded)return;let nav=false,blk=false;try{nav=NAV.on;blk=!document.getElementById('navBlack').hidden;}catch(e){}
+  const w=nav?M3D.navWant:M3D.want,on=w&&!blk;
+  document.querySelectorAll('.lyrmenu [data-3d]').forEach(b=>{b.classList.toggle('on',w);b.textContent=w?`3D 地形${nav?'（導航）':''}：開（點一下關）`:`3D 地形${nav?'（導航，較耗電）':''}`;});
+  if(on!==M3D.on){M3D.on=on;
+    try{if(on){if(!m.getSource('dem3d'))m.addSource('dem3d',{type:'raster-dem',tiles:[TPL.dem],tileSize:256,encoding:'terrarium',maxzoom:15});
+        m.setMaxPitch(70);m.setTerrain({source:'dem3d',exaggeration:1.3});m.dragRotate.enable();m.touchPitch.enable();m.easeTo({pitch:55,duration:600});
+        setTimeout(()=>{try{if(M3D.on&&m.getPitch()<5)m.easeTo({pitch:55,duration:500});}catch(e){}},350);}
+      else{m.setTerrain(null);m.easeTo({pitch:0,duration:nav?0:400});setTimeout(()=>{try{if(!M3D.on){m.setMaxPitch(0);m.touchPitch.disable();if(!nav)m.dragRotate.disable();}}catch(e){}},nav?0:450);}}catch(e){}}
+  map3dPR();}
+// 導航中 3D 開著、又在跟隨或跟著方向轉（地圖一直重畫）時，繪製解析度降到 1 倍省電
+function map3dPR(){const m=MAP.m;if(!m||typeof m.setPixelRatio!=='function')return;let busy=false;try{busy=NAV.on&&(FOL.on||HEAD.on);}catch(e){}
+  const pr=M3D.on&&busy?1:Math.min(window.devicePixelRatio||1,2);try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
 function map3dSet(v){M3D.want=!!v;try{localStorage.setItem('gearPlanner.map3d',v?'1':'0');}catch(e){}map3dApply();}
+function map3dNavSet(v){M3D.navWant=!!v;try{localStorage.setItem('gearPlanner.map3dNav',v?'1':'0');}catch(e){}map3dApply();}
+async function map3dToggle(){let nav=false;try{nav=NAV.on;}catch(e){}if(!nav){map3dSet(!M3D.want);return;}
+  if(M3D.navWant){map3dNavSet(false);return;}
+  let skip=false;try{skip=localStorage.getItem('gearPlanner.nav3dWarn')==='1';}catch(e){}
+  if(!skip){const ok=await new Promise(res=>{const m=document.createElement('div');m.className='modal';m.style.zIndex=9600;
+      m.innerHTML=`<div class="sheet" style="max-width:420px"><div class="sh2"><span>導航中開 3D</span></div><div style="font-size:14px;line-height:1.7"><p>3D 要即時算地形，<b>比較耗電</b>，尤其開著跟隨模式或「地圖跟著手機方向轉」時（地圖會一直重畫；這時會自動降低解析度省一點電）。進黑屏會自動停止 3D。</p><p>遠處的地形要先在有網路時「下載離線地圖」（3D 開著時會一起抓遠景地形），不然離線時遠方會是平的。</p></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-top:6px;color:var(--mut)"><input type="checkbox" id="w3dSkip"> 不再顯示</label>
+        <div class="btnrow" style="margin-top:12px"><button class="btn pri" data-w3="ok">開啟 3D</button><button class="btn" data-w3="x">取消</button></div></div>`;
+      document.body.appendChild(m);m.addEventListener('click',e=>{const b=e.target.closest('[data-w3]');if(!b)return;const ok=b.dataset.w3==='ok';if(ok&&m.querySelector('#w3dSkip').checked){try{localStorage.setItem('gearPlanner.nav3dWarn','1');}catch(err){}}m.remove();res(ok);});});
+    if(!ok)return;}
+  map3dNavSet(true);}
 const mkEl=(cls,html)=>{const e=document.createElement('div');e.className=cls;if(html)e.innerHTML=html;return e;};
 function mapMarker(lat,lon,el,popup,anchor){const mk=new maplibregl.Marker({element:el,anchor:anchor||'center'}).setLngLat([lon,lat]).addTo(MAP.m);
   if(popup){el.style.cursor='pointer';el.addEventListener('click',e=>{e.stopPropagation();if(DRAW.on||TRIM.on||(typeof MEAS!=='undefined'&&MEAS.on)){MAP.m.fire('click',{lngLat:{lat,lng:lon}});return;}new maplibregl.Popup({closeButton:false,offset:8}).setLngLat([lon,lat]).setHTML(popup).addTo(MAP.m);});}return mk;}
@@ -2140,14 +2156,14 @@ var devHeading=function(e){const b=e.beta,up=b!=null&&Math.abs(b)>50,so=(screen.
 const magDecl=()=>{const g=GPS.last,L=g?{lat:g.la,lon:g.lo}:S.route.loc;if(L&&isFinite(L.lat)&&L.lat>20.5&&L.lat<26.5&&L.lon>118&&L.lon<123)return -4.5;return 0;};
 const _devH=devHeading;devHeading=e=>{const h=_devH(e);return h==null?null:(h+magDecl()+360)%360;};
 const smoothH=(prev,h,k)=>{if(prev==null)return h;const df=((h-prev+540)%360)-180;return (prev+df*(k||0.35)+360)%360;};
-function headStop(){if(!HEAD.on)return;removeEventListener('deviceorientationabsolute',HEAD.h,true);removeEventListener('deviceorientation',HEAD.h,true);HEAD.on=false;const b=document.querySelector('[data-nav=head]');if(b)b.classList.remove('on');}
+function headStop(){if(!HEAD.on)return;removeEventListener('deviceorientationabsolute',HEAD.h,true);removeEventListener('deviceorientation',HEAD.h,true);HEAD.on=false;const b=document.querySelector('[data-nav=head]');if(b)b.classList.remove('on');try{map3dPR();}catch(e){}}
 async function headToggle(){if(HEAD.on){headStop();if(MAP.m)MAP.m.easeTo({bearing:0,duration:300});return;}
   try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){toast('沒有取得方向感測權限');return;}}}catch(e){toast('沒有取得方向感測權限');return;}
   HEAD.got=false;HEAD.h=e=>{let hd=devHeading(e);if(hd==null)return;HEAD.got=true;hd=smoothH(HEAD.last,hd);HEAD.last=hd;
     const now=performance.now();if(now-(HEAD.ts||0)<90)return;if(MAP.m&&Math.abs(((HEAD.last-MAP.m.getBearing()+540)%360)-180)<1.5)return;HEAD.ts=now;
     if(!HEAD.raf)HEAD.raf=requestAnimationFrame(()=>{HEAD.raf=0;if(MAP.m&&HEAD.on&&document.getElementById('navBlack').hidden)MAP.m.setBearing(HEAD.last);});};
   addEventListener('deviceorientationabsolute',HEAD.h,true);addEventListener('deviceorientation',HEAD.h,true);HEAD.on=true;HEAD.last=null;
-  const b=document.querySelector('[data-nav=head]');if(b)b.classList.add('on');
+  const b=document.querySelector('[data-nav=head]');if(b)b.classList.add('on');try{map3dPR();}catch(e){}
   setTimeout(()=>{if(HEAD.on&&!HEAD.got){headStop();toast('這支手機（或瀏覽器）沒有提供電子羅盤方向');}},2500);}
 async function renderMap(P,idx,WP,nTurn,T){const box=$('#rmap');if(!box)return;MAP.P=P;MAP.idx=idx;MAP.WP=WP;
   try{await loadMapLib();}catch(e){if(!MAP.m)box.innerHTML='<div class="rec" style="margin:8px">地圖要連網路才會顯示（高度剖面離線也能看）</div>';return;}
@@ -2275,7 +2291,7 @@ $('#navMode').addEventListener('click',e=>{const b=e.target.closest('[data-nav]'
   else if(a==='mark'){markOpen();}
   else if(a==='meas'){measToggle(!MEAS.on);}
   else if(a==='sos'){sosOpen();}
-  else if(a==='black'){if(GPS.watch==null){gpsStart();}$('#navBlack').hidden=false;bkHeadOn();navBoard();}
+  else if(a==='black'){if(GPS.watch==null){gpsStart();}$('#navBlack').hidden=false;bkHeadOn();navBoard();try{map3dApply();}catch(e){}}
   else if(a==='rec'){const R=GPS.rec;
     if(R&&R.on){if(!confirm(`停止記錄？\n已走 ${R.dist.toFixed(2)} km、↑${Math.round(R.up)} m、移動 ${fmtDur(R.moving)}`))return;R.on=false;saveRec();navHud();
       if(confirm('要把這次記錄存成 GPX 檔嗎？'))recGpx();}
@@ -2533,7 +2549,7 @@ function pkFixOpen(){const P=MAP.P;if(!PK.list.length){toast(P?'還沒有山頭�
 
 // ===== 跟隨模式：以我為中心、前進方向朝上，我在可視範圍下方約 1/3 =====
 const FOL={on:false,t:0,reg:false};
-function folBtn(){const b=document.querySelector('#navMode [data-nav=follow]');if(b)b.classList.toggle('on',FOL.on);}
+function folBtn(){const b=document.querySelector('#navMode [data-nav=follow]');if(b)b.classList.toggle('on',FOL.on);try{map3dPR();}catch(e){}}
 function folToggle(force){const on=force!=null?force:!FOL.on;if(on===FOL.on)return;FOL.on=on;folBtn();if(!MAP.m)return;
   if(!FOL.reg){FOL.reg=true;const off=e=>{if(FOL.on&&e&&e.originalEvent)folToggle(false);};MAP.m.on('dragstart',off);MAP.m.on('rotatestart',off);}
   if(on){if(HEAD.on)headStop();if(GPS.watch==null)gpsStart();bkHeadOn();folApply(true);}
@@ -2556,7 +2572,7 @@ function bigTxt(v){document.getElementById('navMode').classList.toggle('bigtxt',
 try{if(localStorage.getItem('gearPlanner.bigTxt')==='1')setTimeout(()=>bigTxt(true),0);}catch(e){}
 function offSetting(){const v=prompt('偏航提醒距離（公尺）。填 0 關閉。\n離路線超過這個距離、連續兩次定位，就會震動＋嗶聲。\n（離路線 5 km 以上視為不在路線附近，不會提醒）',OFF.on?OFF.thr:0);if(v==null)return;const n=Math.round(num(v));if(n<=0)OFF.on=false;else{OFF.on=true;OFF.thr=Math.max(20,Math.min(500,n));}offSave();toast(OFF.on?`偏航提醒：離路線 ${OFF.thr} m`:'偏航提醒已關閉');navBoard();}
 // ===== 偏航提醒 =====
-(()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;bkHeadOff();try{folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bksos]');
+(()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;bkHeadOff();try{map3dApply();folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bksos]');
   b.addEventListener('click',e=>{if(e.target.closest('[data-bksos]')){sosOpen();return;}if(e.target.closest('[data-bkhl]')){BK.hl=!BK.hl;try{localStorage.setItem('gearPlanner.bkHl',BK.hl?'1':'0');}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(!inArr(e))return;if(e.target.closest('#bkHdg'))bkLAcycle();else bkRadCycle();});b.addEventListener('dblclick',e=>{if(!inArr(e))ex();});b.addEventListener('touchend',e=>{if(inArr(e)){lt=0;return;}const n=Date.now();if(n-lt<400){e.preventDefault();ex();}lt=n;});})();
 const OFF={on:true,thr:50,cnt:0,alerted:false,last:0,ac:null};
 try{const o=JSON.parse(localStorage.getItem('gearPlanner.offRoute')||'null');if(o){OFF.on=o.on!==false;OFF.thr=o.thr||50;}}catch(e){}

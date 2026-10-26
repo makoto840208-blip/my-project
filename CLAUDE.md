@@ -14,7 +14,11 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v78**（線上是使用者手動上傳的 v78；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v79**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+
+## 工作方式（使用者要求）
+- **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
+- 改完先跑 `node tools/test.js --build`，全過才交 zip。
 
 ## 設計原則（使用者明確要求過）
 - 全 App 低飽和、軍事風；圖示一律單色線條 SVG（`ic('name')`、`ICO2`），**不用彩色 emoji、不用白色**；SOS／偏航警告才用醒目紅。
@@ -30,12 +34,20 @@
 - 隊伍房間：Firebase RTDB REST `https://team-35b92-default-rtdb.asia-southeast1.firebasedatabase.app`。規則只允許寫 `rooms/{code}/{members,owner,admins,plan,banned}`，所以隊友位置／平安回報放在 `members/{pid}/loc`、`/safe`，隊員資料用 PATCH 以免覆蓋。
 - 配速：`timeFit()` 個人時間模型（總時間＋平均心率，近期加權、排除異常），`hrFit()` 簡易版，`planFor()` 決定每段時數；Garmin CSV 用「時間」欄（計時器時間）。
 - 方向：`devHeading()` 平放用螢幕上緣、直立（胸掛）用手機背面；台灣磁偏角 −4.5°。
+- 座標：`tm2()` WGS84→TWD97＋TWD67（近似參數），`twd2wgs()`、`twd67to97()` 反解；「前往座標」面板讓人選格式（TWD97／67 數字範圍重疊，不能猜）。上河 2020 版百岳地形圖：TWD97 紅格、TWD67 黑格。
+- 導航板：只有在路線上（`live`）才報到達時刻／日落警告；`paceMultiplier(P)`＝路線上實際前進那段÷同段預計時間（扣 5 分鐘以上長休息，0.6～1.8）；坡度用路線高度算前方 200 m（不用 GPS 高度）。
+- A 路線（兩點之間）：`routeAlts()` 抓 BRouter alternativeidx 0～3、`altSame()` 剔重複、`gradeStats()`（最陡＝連續 100 m）、`altPick()` 上限內 100 m 坡度均方根最小；`gradeCfg()` 一般 ≤45%／探勘預設 70%、0＝無上限；段落存 `g.alts`/`g.altSel`/`g.altManual`；`disclaim('plan'|'explore')` 第一次跳說明。
+- 3D：圖層選單開關（`M3D`、`map3dApply()`），獨立 `dem3d` 來源；導航一律 2D，`navClose` 要在清 padding 之後才 `map3dApply()`。
+- 山頭／對山定位（獨立模組 `PK`、`pk*`）：Overpass 抓 OSM `natural=peak`（路線外推 0.18°），存 `gearPlanner.peaks`；`pkResect()` 最小平方交會、`pkOnRoute()` 一座山＋路線交點、`pkSolve()` → `NB.fix`；黑屏雷達 `.pkrot` 反向旋轉讓山名正向。分家時整塊搬到導航。
+- 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意
-- 這個雲端環境連不到 AWS（DEM）、jsdelivr、unpkg、Cloudflare API；cdnjs、NLSC、OpenTopoMap、Esri、Firebase 可透過 Playwright proxy（`proxy={'server':$HTTPS_PROXY,'bypass':'<-loopback>'}`、`--use-gl=swiftshader`）。DEM 可用 Playwright route 回傳合成 terrarium PNG 測試。
-- 網址加 `?gptest` 會暴露 `window.__gp={drawTap,trimTap,MAP}` 方便測試。
+- **自動測試**：`node tools/test.js --build [--only 名稱片段] [--shots 資料夾] [--tiles]`。模擬直式 412×915、橫式 915×412 手機；DEM 合成、圖磚空白、BRouter／Overpass 用假資料（`fakeAlt`、`FAKE_PEAKS`）；`DBG=1` 會印頁面錯誤的堆疊。新功能一定要加測試。
+- 這個雲端環境連不到 AWS（DEM）、jsdelivr、unpkg、Cloudflare API、OSM／Overpass、Wikipedia；brouter.de 用 curl 連得到（可驗真資料）；cdnjs、NLSC、OpenTopoMap、Esri、Firebase 可透過 Playwright proxy（`proxy={'server':$HTTPS_PROXY,'bypass':'<-loopback>'}`、`--use-gl=swiftshader`）。
+- 網址加 `?gptest` 會暴露 `window.__gp`（MAP、S、PROF、NAV、GPS、FOL、MEAS、RED、NB，`fn('名稱')` 可取內部函式）。
 
 ## 之前提過、還沒做
+- **導航分家**（下一輪，使用者同意）：導航獨立成第二個頁面／圖示，同網址共用 localStorage／IndexedDB（資料即時同步、離線可用），地圖／高度圖／畫線拆成共用程式由 build 組進兩頁；導航只有地圖但可編輯。山頭定位模組整塊搬過去。現在導航是「借」首頁的 #rmap、#prof、#profRead 搬來搬去，容易漏搬（v75 的控制列消失就是這樣）。
 - 騎車模式（路線規劃／偏航／時間改騎車設定）
 - 走路時用 GPS 行進方向自動校正羅盤偏差
 - 每天用當天背負重量算時間（使用者說先不用）

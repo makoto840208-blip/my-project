@@ -254,14 +254,13 @@ svg.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;str
 .navbtns button.on{background:var(--coy);color:#111}
 #navProf{position:absolute;left:0;right:0;bottom:0;z-index:1001;background:rgba(17,21,15,.96);border-top:1px solid var(--line);padding:0 calc(8px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(8px + env(safe-area-inset-left))}
 #navProf .nph{all:unset;display:flex;gap:10px;align-items:center;width:100%;padding:6px 4px;color:var(--coy2);font-size:13px;cursor:pointer;box-sizing:border-box}#navProf .nph i{font-style:normal;color:var(--mut);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#navProf .nph b{color:var(--mut)}
-#navProfBody{height:30vh;max-height:220px;min-height:120px;display:flex;flex-direction:row;gap:8px}#navProfMain{flex:1;min-width:0;display:flex;flex-direction:column}#navProfMain #prof{flex:1;min-height:0}#prof{position:relative}.profsplit{position:absolute;top:2px;right:4px;background:rgba(17,21,15,.85);border:1px solid var(--line);color:var(--mut);border-radius:12px;padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer}.profsplit.on{color:#111;background:#ffe14d;border-color:#ffe14d}
-#navProfMain .phint{display:none}#navProfMain .pbtns button{height:26px;min-width:30px;padding:0 6px;font-size:11.5px}#navProfMain .pbar [data-pcur]{font-size:11px}
+#navProfBody{height:30vh;max-height:220px;min-height:120px;display:flex;flex-direction:row;gap:8px}#navProfMain{flex:1;min-width:0;display:flex;flex-direction:column}#navProfMain #prof{flex:1;min-height:0;overflow:hidden}#prof{position:relative}.profsplit{position:absolute;top:2px;right:4px;background:rgba(17,21,15,.85);border:1px solid var(--line);color:var(--mut);border-radius:12px;padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer}.profsplit.on{color:#111;background:#ffe14d;border-color:#ffe14d}
+#navMode #profRead .phint{display:none}#navMode #profRead .pbtns button{height:26px;min-width:30px;padding:0 6px;font-size:11.5px}#navMode #profRead .pbar [data-pcur]{font-size:11px}
 @media (orientation:portrait){#navProfBody{min-height:170px;height:32vh}}
 .pbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;justify-content:space-between}.pbar [data-pcur]{font-family:var(--mono);font-size:12px}.pbtns{display:flex;gap:4px;flex-wrap:wrap}.pbtns button{min-width:36px;height:30px;padding:0 8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font:inherit;font-size:12.5px;cursor:pointer}.pbtns button[data-pb=a],.pbtns button[data-pb=b]{border-color:#ff3cdc;color:#ff7be8}
-#navProfInfo.warn{color:#ff7b6b!important;font-weight:700}#navProfMain #prof svg{height:100%;margin:0}#navProfMain #profRead{color:#ddd;min-height:16px;font-size:12px}
-#navProf.min #navProfBody{display:none}#navProf.min .nph b{transform:rotate(180deg)}
+#navProfInfo.warn{color:#ff7b6b!important;font-weight:700}#navProfMain #prof svg{height:100%;margin:0}#navProfMain #profRead{color:#ddd;min-height:16px;font-size:12px}#navProf.min #navProfBody{display:none}#navProf.min .nph b{transform:rotate(180deg)}
 @media (orientation:landscape) and (max-height:560px){#navProfBody{height:34vh;min-height:90px}}
-#navMode #navProg,#navMode #navEdit{bottom:calc(var(--npb,180px) + 10px)}#navMode .navbtns{top:calc(10px + env(safe-area-inset-top));transform:none;flex-wrap:wrap;max-height:calc(100vh - var(--npb,180px) - 20px);max-height:calc(100dvh - var(--npb,180px) - 20px);align-content:flex-start;gap:10px}
+#navMode #navProg,#navMode #navEdit{bottom:calc(var(--npb,180px) + 10px)}#navMode .navbtns{top:calc(10px + env(safe-area-inset-top));transform:none;flex-wrap:wrap;max-height:calc(100vh - var(--npb,180px) - 185px);max-height:calc(100dvh - var(--npb,180px) - 185px);align-content:flex-start;gap:10px}
 @media (max-height:560px){#navMode .navbtns button{width:42px;height:42px;font-size:17px}}
 #navProg:empty{display:none}
 .bkT,.bkL,.bkR{display:flex;flex-direction:column;align-items:center;gap:4px}
@@ -307,10 +306,11 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 #navBlack{position:fixed;inset:0;z-index:9550;background:#000;color:#777;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px;user-select:none}#navBlack .n{font-size:20px;color:#8a7a5a}#navBlack .v{font-size:26px;font-family:var(--mono);color:#9a9a9a}#navBlack .t{font-size:18px;color:#6f8f66;font-family:var(--mono)}#navBlack .s{font-size:13px;color:#555;margin-top:8px}#navBlack .w{font-size:22px;color:#c0392b;font-weight:700;margin-bottom:8px}#navBlack .nbkHint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));font-size:12px;color:#333}
 #navCard{flex:0 0 clamp(150px,38%,320px);overflow:auto;color:#fff;border-left:1px solid rgba(207,170,112,.35);padding:2px 0 2px 8px;font-size:13px;cursor:pointer}#navCard .btnrow{margin-top:6px}#navCard .btn{color:var(--txt)}
 #navMode .navbtns{z-index:1003}.navmenu svg.ic{width:20px;height:20px;color:#cfaa70;flex:none}.navmenu{position:absolute;left:calc(100% + 8px);top:0;border-radius:8px!important;max-height:calc(100vh - 24px - env(safe-area-inset-top));max-height:calc(100dvh - 24px - env(safe-area-inset-top));overflow:auto;display:flex;flex-direction:column;background:rgba(17,21,15,.96);border:1px solid rgba(207,170,112,.5);border-radius:12px;padding:6px;min-width:210px;box-shadow:0 4px 16px rgba(0,0,0,.6)}#navMode .navbtns .navmenu button{all:unset;width:auto;height:auto;color:#d9ccb0;display:flex;align-items:center;gap:10px;font-size:15px;padding:10px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}#navMode .navbtns .navmenu button:hover,#navMode .navbtns .navmenu button.on{background:rgba(207,170,112,.25)}
-.navbig{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(var(--npb,180px) + 14px);z-index:1000;display:flex;flex-direction:column;gap:14px}
+.navblk{position:absolute;left:calc(12px + env(safe-area-inset-left));bottom:calc(var(--npb,180px) + 14px);z-index:1000}
+.navsos{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(var(--npb,180px) + 14px);z-index:1000}
 .navbig .bigb{width:76px;height:76px;border-radius:12px;font-family:var(--mono);letter-spacing:1px;border:2px solid rgba(207,170,112,.55);background:rgba(16,19,14,.9);color:#cfaa70;font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 3px 12px rgba(0,0,0,.6);cursor:pointer}.navbig .bigb span{font-size:26px;line-height:1}
 .navbig .sosb{background:#a3140a;border-color:#e0715f;color:#ffd9d2}.navbig .bigb svg.ic{width:28px;height:28px}.navbig .sosb span{font-size:22px;font-weight:900;letter-spacing:1px}
-@media (max-height:560px){.navbig{flex-direction:row;right:calc(70px + env(safe-area-inset-right));bottom:calc(var(--npb,180px) + 10px)}.navbig .bigb{width:62px;height:62px}.navbig .bigb span{font-size:21px}}
+@media (max-height:560px){.navblk,.navsos{bottom:calc(var(--npb,180px) + 6px)}.navbig .bigb{width:62px;height:62px}.navbig .bigb span{font-size:21px}}
 #navBlack .n2{font-size:15px;margin-top:10px}#navBlack .v2{font-size:19px}#navBlack .t2{font-size:14px}#navCard .nbrest .nbn{color:#ffe14d}#navCard .nbsel{color:#ff7be8;font-size:12.5px;margin:2px 0 4px}#navCard .nbx{all:unset;color:#aaa;font-size:12px;padding:0 4px;cursor:pointer}
 #navBlack .arr{width:130px;height:130px;margin:6px 0 4px;cursor:pointer}#navBlack .hdg{cursor:pointer;padding:4px}#navBlack .clk{font-size:30px;font-family:var(--mono);color:#8a8a8a;margin-bottom:6px}#navBlack .clk small{font-size:14px;color:#666}#navBlack .sun{font-size:14px;color:#8a7a5a;margin-top:6px;line-height:1.5}#navBlack .w2{font-size:14px;color:#8a6a3a}#navBlack .w3{color:#c0392b;font-weight:700}#navBlack .hdg{font-size:12px;color:#555}
 #navCard .nbtop{display:flex;justify-content:space-between;gap:6px;margin-bottom:2px}#navCard .nbtg{all:unset;font-size:12px;color:#cfaa70;padding:1px 4px;cursor:pointer}
@@ -735,8 +735,8 @@ html.oled .card{border-color:#1c2118}
 <div id="navMode" hidden>
   <div class="navmap"></div>
   <div class="navbtns"><button data-nav="close" title="離開全螢幕"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button data-nav="center" title="定位到我的位置（只移動一次）"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="7.5"/></svg></button><button data-nav="follow" title="跟隨：以我為中心、前進方向朝上"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l6 16-6-4-6 4z"/></svg></button><button data-nav="route" title="整條路線放到最大"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></button><button data-nav="lock" title="鎖定觸控（防誤觸）"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button><button data-nav="menu" title="更多功能"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <div class="navmenu" hidden><button data-nav="mark"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>標記這裡（水源、岔路…）</span></button><button data-nav="meas"><svg class="ic" viewBox="0 0 24 24"><path d="M3 16L16 3l5 5L8 21z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg><span>量距離／高差</span></button><button data-nav="head"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6l3 7-3-1.6L9 13z"/></svg><span>地圖跟著手機方向轉</span></button><button data-nav="dark"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg><span>暗色／亮色地圖</span></button><button data-nav="draw"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg><span>畫路線</span></button><button data-nav="trim"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg><span>刪減路線</span></button><button data-nav="undo" hidden><svg class="ic" viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/></svg><span>復原上一次修改</span></button><button data-nav="bigtxt"><svg class="ic" viewBox="0 0 24 24"><path d="M3 19L8 5l5 14M5 14h6"/><path d="M15 19l3-8 3 8M16 16.5h4"/></svg><span>大字模式</span></button><button data-nav="offset"><svg class="ic" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span>偏航提醒設定</span></button><button data-nav="offtest"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span>測試偏航提醒</span></button></div></div>
-  <div class="navbig"><button data-nav="black" class="bigb"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>黑屏</button><button data-nav="sos" class="bigb sosb"><span>SOS</span>求救</button></div>
+    <div class="navmenu" hidden><button data-nav="mark"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>標記這裡（水源、岔路…）</span></button><button data-nav="meas"><svg class="ic" viewBox="0 0 24 24"><path d="M3 16L16 3l5 5L8 21z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg><span>量距離／高差</span></button><button data-nav="head"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6l3 7-3-1.6L9 13z"/></svg><span>地圖跟著手機方向轉</span></button><button data-nav="dark"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg><span>暗色／亮色地圖</span></button><button data-nav="draw"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg><span>畫路線</span></button><button data-nav="trim"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg><span>刪減路線</span></button><button data-nav="undo" hidden><svg class="ic" viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/></svg><span>復原上一次修改</span></button><button data-nav="bigtxt"><svg class="ic" viewBox="0 0 24 24"><path d="M3 19L8 5l5 14M5 14h6"/><path d="M15 19l3-8 3 8M16 16.5h4"/></svg><span>大字模式</span></button><button data-nav="offset"><svg class="ic" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span>偏航提醒設定</span></button><button data-nav="offtest"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span>測試偏航提醒</span></button><button data-nav="goto"><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg><span>輸入座標目標</span></button></div></div>
+  <div class="navbig navblk"><button data-nav="black" class="bigb"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>黑屏</button></div><div class="navbig navsos"><button data-nav="sos" class="bigb sosb"><span>SOS</span>求救</button></div>
   <div id="navLock" hidden><div class="lockb"><span class="lockfill"></span><b>已鎖定</b><small>長按 1.5 秒解鎖</small></div><button class="lockSos" type="button">SOS</button></div>
   <div id="navBlack" hidden><div id="nbkTxt"></div><div class="nbkHint">連點兩下回到地圖</div><button type="button" class="bkSos" data-bksos>SOS</button></div>
   <div id="navEdit" hidden></div>
@@ -1966,7 +1966,7 @@ function mapStyle(){const R=(url,max,attr)=>({type:'raster',tiles:[url],tileSize
   const ln={'line-join':'round','line-cap':'round'};
   return {version:8,sources:{nlsc:R(TPL.nlsc,18,'通用版電子地圖（含等高線）© 內政部國土測繪中心'),topo:R(TPL.topo,17,'© OpenTopoMap (CC-BY-SA) © OpenStreetMap'),osm:R(TPL.osm,19,'© OpenStreetMap'),
       sat:R(TPL.sat,18,'Esri World Imagery'),ctr:{type:'raster',tiles:['ctr://{z}/{x}/{y}'],tileSize:256,minzoom:9,maxzoom:17,attribution:'等高線：由 AWS Terrain Tiles 高度資料即時繪製'},esrihs:R(TPL.esrihs,16,'Esri World Hillshade'),dem:{type:'raster-dem',tiles:[TPL.dem],tileSize:256,encoding:'terrarium',maxzoom:15,attribution:'地形：Mapzen／AWS Terrain Tiles'},
-      route:{type:'geojson',data:EMPTY},trim:{type:'geojson',data:EMPTY},draw:{type:'geojson',data:EMPTY},drawpt:{type:'geojson',data:EMPTY},acc:{type:'geojson',data:EMPTY},rec:{type:'geojson',data:EMPTY},meas:{type:'geojson',data:EMPTY},measpt:{type:'geojson',data:EMPTY},sel:{type:'geojson',data:EMPTY},selpt:{type:'geojson',data:EMPTY}},
+      route:{type:'geojson',data:EMPTY},trim:{type:'geojson',data:EMPTY},draw:{type:'geojson',data:EMPTY},drawpt:{type:'geojson',data:EMPTY},acc:{type:'geojson',data:EMPTY},rec:{type:'geojson',data:EMPTY},meas:{type:'geojson',data:EMPTY},measpt:{type:'geojson',data:EMPTY},sel:{type:'geojson',data:EMPTY},selpt:{type:'geojson',data:EMPTY},pin:{type:'geojson',data:EMPTY}},
     layers:[{id:'bg',type:'background',paint:{'background-color':'#5f7f45'}},
       {id:'b-ctr',type:'raster',source:'ctr',layout:{visibility:'none'},paint:{'raster-fade-duration':0}},
       ...['nlsc','topo','osm','sat'].map(k=>({id:'b-'+k,type:'raster',source:k,layout:{visibility:'none'}})),
@@ -1985,7 +1985,8 @@ function mapStyle(){const R=(url,max,attr)=>({type:'raster',tiles:[url],tileSize
       {id:'sel',type:'line',source:'sel',layout:ln,paint:{'line-color':['get','c'],'line-width':7}},
       {id:'selpt',type:'circle',source:'selpt',paint:{'circle-radius':7,'circle-color':['get','c'],'circle-stroke-color':['get','s'],'circle-stroke-width':2.5}},
       {id:'meas',type:'line',source:'meas',layout:ln,paint:{'line-color':['get','c'],'line-width':3,'line-dasharray':[1.5,1.2]}},
-      {id:'measpt',type:'circle',source:'measpt',paint:{'circle-radius':['get','r'],'circle-color':['get','c'],'circle-stroke-color':['get','s'],'circle-stroke-width':2}}]};}
+      {id:'measpt',type:'circle',source:'measpt',paint:{'circle-radius':['get','r'],'circle-color':['get','c'],'circle-stroke-color':['get','s'],'circle-stroke-width':2}},
+      {id:'pin',type:'circle',source:'pin',paint:{'circle-radius':9,'circle-color':'#ff7be8','circle-stroke-color':'#ffffff','circle-stroke-width':2.5}}]};}
 function mapBaseKey(){let b='shade';try{b=localStorage.getItem('gearPlanner.mapBase')||'shade';}catch(e){}return BASES[b]?b:'shade';}
 // 暗色：整張畫布 invert＋hue-rotate(180°)（底色變暗、文字和等高線變亮、色相大致不變）；路線等顏色先做反向補償，畫出來才會是原本的顏色
 const DARKS=.55,DARKF=`invert(1) hue-rotate(180deg) brightness(.85) saturate(${DARKS})`,DARKB=.85;
@@ -2097,6 +2098,7 @@ function onPos(pos){const c=pos.coords,la=c.latitude,lo=c.longitude,now=pos.time
   {const L=GPS.last,F=GPS.flt||(GPS.flt={rej:0});let ok=true;if(L){if(c.accuracy>50)ok=false;else{const d=hav({lat:L.la,lon:L.lo},{lat:la,lon:lo})*1000,dt=Math.max(1,(now-L.t)/1000);const v=Math.max(4,(c.speed!=null&&c.speed>0?c.speed:0)*1.6,(L.sp!=null&&L.sp>0?L.sp:0)*1.6);if(d>Math.max(40,v*dt)+c.accuracy+(L.ac||0))ok=false;}}else if(c.accuracy>150)ok=false;
     if(!ok&&F.rej<3){F.rej++;GPS.weak={ac:Math.round(c.accuracy),t:now};try{navBoard();}catch(e){}return;}F.rej=0;GPS.weak=c.accuracy>50?{ac:Math.round(c.accuracy),t:now}:null;}
   GPS.last={la,lo,ac:c.accuracy,al:c.altitude,sp:c.speed,hd:c.heading,t:now};
+  if(!GPS.trail)GPS.trail=[];GPS.trail.push({la,lo,al:c.altitude,t:now});const _tc=now-20*60000;while(GPS.trail.length>2&&GPS.trail[0].t<_tc)GPS.trail.shift();
   if(MAP.m&&MAP.loaded){if(!GPS.me)GPS.me=new maplibregl.Marker({element:mkEl('mk-me')}).setLngLat([lo,la]).addTo(MAP.m);else GPS.me.setLngLat([lo,la]);
     const rr=c.accuracy/1000,ring=[];for(let k=0;k<=48;k++){const t=k/48*2*Math.PI;ring.push([lo+rr/(111.32*Math.cos(la*Math.PI/180))*Math.cos(t),la+rr/110.57*Math.sin(t)]);}
     mapSrc('acc',{type:'FeatureCollection',features:[{type:'Feature',properties:{},geometry:{type:'Polygon',coordinates:[ring]}}]});
@@ -2137,7 +2139,7 @@ function navHud(){if(!NAV.on)return;const g=GPS.last,R=GPS.rec,set=(k,v)=>{const
   const rb=$('#navRec');if(rb){rb.classList.toggle('on',!!(R&&R.on));}}
 async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網路一次，或先下載離線地圖）');return;}
   NAV.on=true;try{mapNavMode(true);}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
-  NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'),$('#profRead'));try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
+  NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'));try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
   NAV.fsByMe=false; // 不再呼叫瀏覽器全螢幕：會跳出系統的「從頂端向下拖曳」通知，地圖本身已經鋪滿整個畫面
   try{if(navigator.wakeLock)GPS.wake=await navigator.wakeLock.request('screen');}catch(e){}
   if(GPS.rec&&GPS.rec.pts.length)mapSrc('rec',lineFC(GPS.rec.pts.map(p=>[p[1],p[0]])));
@@ -2146,7 +2148,7 @@ async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網�
   setTimeout(()=>{MAP.m.invalidateSize();npSize();renderProfile();},150);NAV.tick=setInterval(()=>{navHud();navBoard();},2000);navHud();navBoard();editUI();try{marksRender();teamLocRender();}catch(e){}}
 function navClose(){NAV.on=false;try{mapNavMode(false);}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
   if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}}
-  if(NAV.profHome){NAV.profHome.append($('#prof'),$('#profRead'));}
+  if(NAV.profHome){NAV.profHome.append($('#prof'));}
   try{if(NAV.fsByMe&&document.fullscreenElement)document.exitFullscreen();}catch(e){}NAV.fsByMe=false;try{if(GPS.wake){GPS.wake.release();GPS.wake=null;}}catch(e){}
   if(!GPS.byBtn&&!(GPS.rec&&GPS.rec.on))gpsStop();bkHeadOff();setTimeout(()=>MAP.m&&MAP.m.invalidateSize(),120);try{renderProfile();}catch(e){}}
 document.addEventListener('visibilitychange',async()=>{if(NAV.on&&!document.hidden){try{if(navigator.wakeLock)GPS.wake=await navigator.wakeLock.request('screen');}catch(e){}}});
@@ -2175,6 +2177,7 @@ $('#navMode').addEventListener('click',e=>{const b=e.target.closest('[data-nav]'
   else if(a==='menu'){const mn=document.querySelector('#navMode .navmenu');mn.hidden=!mn.hidden;return;}
   else if(a==='offset'){offSetting();}
   else if(a==='offtest'){OFF.test=Date.now();try{navigator.vibrate&&navigator.vibrate([400,150,400,150,400]);}catch(e){}beep([[880,.18],[660,.18],[880,.3]]);toast('這就是偏航提醒的聲音'+(navigator.vibrate?'和震動':'（iPhone 網頁不能震動，只有聲音）'));navBoard();}
+  else if(a==='goto'){goToCoord();}
   else if(a==='mark'){markOpen();}
   else if(a==='meas'){measToggle(!MEAS.on);}
   else if(a==='sos'){sosOpen();}
@@ -2188,7 +2191,7 @@ function recGpx(){const R=GPS.rec;if(!R||!R.pts.length)return;const nm=`記錄_$
   const g=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="登山負重規劃師" xmlns="http://www.topografix.com/GPX/1/1">${marksGpx()}<trk><name>${nm}</name><trkseg>${R.pts.map(p=>`<trkpt lat="${p[0]}" lon="${p[1]}">${p[2]!=null?`<ele>${Math.round(p[2])}</ele>`:''}<time>${new Date(p[3]).toISOString()}</time></trkpt>`).join('')}</trkseg></trk></gpx>`;
   download(g,nm+'.gpx','application/gpx+xml');}
 // ===== 導航板：下一站、剩餘距離／爬升／下降、預計到達、節點表 =====
-const NB={open:false,pi:null,pmT:0,pm:null,cumKey:null,cu:null,cd:null};
+const NB={open:false,pi:null,pmT:0,pm:null,cumKey:null,cu:null,cd:null,pin:null};
 try{NB.open=localStorage.getItem('gearPlanner.nbOpen')==='1';}catch(e){}
 function nbPM(){if(!NB.pm||Date.now()-NB.pmT>30000){NB.pm=paceModel();NB.pmT=Date.now();}return NB.pm;}
 function nbCum(P){if(NB.cumKey===P)return;NB.cumKey=P;const n=P.length,cu=new Float64Array(n),cd=new Float64Array(n);let ref=null,u=0,d=0;
@@ -2212,35 +2215,54 @@ function nbLegH(P,a,b){const km=Math.max(0,P[b][3]-P[a][3]),up=NB.cu[b]-NB.cu[a]
   try{return planFor(g,C?C.pack/1000:10,nbPM()).h||0;}catch(e){return naismith(km,up,dn);}}
 const hm2=h=>{const m=Math.round(h*60);return m>=60?`${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`:`${m} 分`;};
 const clk=h=>{const d=new Date(Date.now()+h*3600e3);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+// 即時配速倍率：最近 15 分鐘 GPS 實際速度 ÷ Naismith 預測速度
+function paceMultiplier(){const tr=GPS.trail;if(!tr||tr.length<4)return null;const WIN=15*60000,MIN_DIST=0.15,now=Date.now(),cutT=now-WIN;let si=0;while(si<tr.length-3&&tr[si].t<cutT)si++;const wnd=tr.slice(si);if(wnd.length<3)return null;const dt=(wnd[wnd.length-1].t-wnd[0].t)/3600000;if(dt<0.08)return null;let dist=0,up=0,ref=wnd[0].al;for(let i=1;i<wnd.length;i++){dist+=hav({lat:wnd[i-1].la,lon:wnd[i-1].lo},{lat:wnd[i].la,lon:wnd[i].lo});if(wnd[i].al!=null&&ref!=null){const d=wnd[i].al-ref;if(d>4){up+=d;ref=wnd[i].al;}else if(d<-4)ref=wnd[i].al;}else if(wnd[i].al!=null)ref=wnd[i].al;}if(dist<MIN_DIST)return null;const dn_=Math.max(0,(wnd[wnd.length-1].al||0)-(wnd[0].al||0)<0?-((wnd[wnd.length-1].al||0)-(wnd[0].al||0)):0);const exp=naismith(dist,up,dn_);if(!exp||exp<0.01)return null;return Math.min(3.5,Math.max(0.3,dt/exp));}
+// 當前坡度：最近 200m GPS 軌跡中位平滑（%）
+function currentSlope(){const tr=GPS.trail;if(!tr||tr.length<3)return null;let d=0,i=tr.length-1;while(i>0&&d<0.2){i--;d+=hav({lat:tr[i].la,lon:tr[i].lo},{lat:tr[i+1].la,lon:tr[i+1].lo});}if(d<0.05)return null;const wnd=tr.slice(i);const slopes=[];for(let j=1;j<wnd.length;j++){const sd=hav({lat:wnd[j-1].la,lon:wnd[j-1].lo},{lat:wnd[j].la,lon:wnd[j].lo})*1000;if(sd<5||wnd[j].al==null||wnd[j-1].al==null)continue;slopes.push((wnd[j].al-wnd[j-1].al)/sd*100);}if(slopes.length<2)return null;slopes.sort((a,b)=>a-b);return +slopes[Math.floor(slopes.length/2)].toFixed(0);}
 function navBoard(){const el=$('#navCard');if(!el||!NAV.on)return;const P=MAP.P,inf=$('#navProfInfo');
   if(!P||P.length<2){el.hidden=true;return;}el.hidden=false;if(MEAS.on)return;nbCum(P);
   const g=GPS.last,fresh=g&&Date.now()-g.t<120000;let i0=0,off=null,far=false;
   if(g){const [i,d]=nbLocate(P,g.la,g.lo);off=d;far=d>5000;if(d<300)NB.pi=i;i0=d<300?i:(far?0:(NB.pi!=null?NB.pi:i));}
   const nodes=nbNodes(P).filter(o=>o.i>i0+1);
   const fmtK=k=>k<1?`${Math.round(k*1000)} m`:`${k.toFixed(k<10?2:1)} km`;
-  const row=o=>{const km=P[o.i][3]-P[i0][3],up=NB.cu[o.i]-NB.cu[i0],dn=NB.cd[o.i]-NB.cd[i0],h=nbLegH(P,i0,o.i);return {o,km,up,dn,h};};
+  const live=g&&!far;
+  const pmul=live?(paceMultiplier()||1):1;
+  const slopeNow=g?currentSlope():null;
+  const row=o=>{const km=P[o.i][3]-P[i0][3],up=NB.cu[o.i]-NB.cu[i0],dn=NB.cd[o.i]-NB.cd[i0],h=nbLegH(P,i0,o.i)*pmul;return {o,km,up,dn,h};};
   let rr=null,rrS='';if(S.restKm!=null){let ri=0;while(ri<P.length-1&&P[ri][3]<S.restKm)ri++;
     if(g&&(far||off>300)){const dk=hav({lat:g.la,lon:g.lo},{lat:P[ri][0],lon:P[ri][1]}),b=brg([g.la,g.lo],P[ri]);rrS=`◆ 休息點：直線 ${dk<1?Math.round(dk*1000)+' m':dk.toFixed(dk<10?2:1)+' km'}，往${['北','東北','東','東南','南','西南','西','西北'][Math.round(b/45)%8]}（${Math.round(b)}°）${P[ri][2]!=null?`，海拔 ${P[ri][2]} m${g.al!=null?`（差 ${P[ri][2]-Math.round(g.al)>=0?'+':''}${P[ri][2]-Math.round(g.al)} m）`:''}`:''}`;}
     else if(ri>i0+1)rr=row({i:ri,n:'◆ 休息點'});}
   const selL=PROF.a!=null&&PROF.b!=null&&PROF.a!==PROF.b&&PROF.key===P?`<div class="nbsel">區段 ${PROF.rt.replace(/<[^>]+>/g,'')}</div>`:'';
   const R=nodes.map(row),nx=R[0],last=R[R.length-1],tst=OFF.test&&Date.now()-OFF.test<4000,isOff=!!(g&&!far&&off>Math.max(OFF.thr,(g.ac||0)));
-  const live=g&&!far;
   const offTxt=off==null?'':off<1000?Math.round(off)+' m':(off/1000).toFixed(1)+' km';
   const head=tst?`<div class="nbwarn">⚠︎ 偏離路線（測試）</div>`:isOff?`<div class="nbwarn">⚠︎ 偏離路線 ${offTxt}${OFF.on?'':'（提醒已關）'}</div>`:far?`<div class="nbsub">離路線 ${offTxt}，不在路線附近（不偏航提醒），先從起點算</div>`:!g?`<div class="nbsub">${GPS.watch!=null?'等待 GPS 定位…（先從起點算）':'還沒定位，先從起點算'}</div>`:'';
   const weak=GPS.weak&&Date.now()-GPS.weak.t<20000?`<div class="nbsub" style="color:#d9bf6e">GPS 不穩（有一筆跳太遠或誤差 ±${GPS.weak.ac} m），先用上一個可靠的位置</div>`:'';
   const stale=g&&!fresh?`<div class="nbsub">${ic('clock')}定位 ${Math.round((Date.now()-g.t)/60000)} 分鐘沒更新（螢幕關過？）</div>`:'';
-  const main=nx?`<div class="nbmain"><span class="nbn">${esc(nx.o.n)}</span><span class="nbv"><b>${fmtK(nx.km)}</b> ↑${Math.round(nx.up)} ↓${Math.round(nx.dn)}</span><span class="nbt">${nx.h?`約 ${hm2(nx.h)}${live?` → <b>${clk(nx.h)}</b>`:''}`:''}</span></div>`:`<div class="nbmain"><span class="nbn">已到終點附近</span></div>`;
-  const list=R.length>1?`<div class="nblist"><table><tr><th>節點</th><th>海拔</th><th>距離</th><th>↑</th><th>↓</th><th>${live?'預計':'時間'}</th></tr>${R.map(r=>`<tr class="${r.o.camp?'camp':r.o.end?'end':''}"><td>${esc(r.o.n)}</td><td>${P[r.o.i][2]!=null?P[r.o.i][2]:'–'}</td><td>${fmtK(r.km)}</td><td>${Math.round(r.up)}</td><td>${Math.round(r.dn)}</td><td>${r.h?(live?clk(r.h):hm2(r.h)):'–'}</td></tr>`).join('')}</table></div>`:'';
-  const restL=rr?`<div class="nbmain nbrest"><span class="nbn">◆ 休息點</span><span class="nbv"><b>${fmtK(rr.km)}</b> ↑${Math.round(rr.up)} ↓${Math.round(rr.dn)}</span><span class="nbt">${rr.h?`約 ${hm2(rr.h)}${live?` → <b>${clk(rr.h)}</b>`:''}`:''}</span> <button type="button" class="nbx" data-restx>✕</button></div>`:'';
-  const html=`${head}${weak}${stale}${rrS?`<div class="nbsub" style="color:#ffe14d">${rrS}</div>`:''}${restL}${selL}${main}${list}`;
+  const slopeL=slopeNow!=null?`<div class="nbsub" style="color:#7ecbff">▲ 當前坡度 ${slopeNow>=0?'+':''}${slopeNow}%${pmul!==1?`　配速 ×${pmul.toFixed(2)}`:''}</div>`:(pmul!==1?`<div class="nbsub" style="color:#7ecbff">配速 ×${pmul.toFixed(2)}</div>`:'');
+  const main=nx?`<div class="nbmain"><span class="nbn">${esc(nx.o.n)}</span><span class="nbv"><b>${fmtK(nx.km)}</b> ↑${Math.round(nx.up)} ↓${Math.round(nx.dn)}</span><span class="nbt">${nx.h?`約 ${hm2(nx.h)}${g?` → <b>${clk(nx.h)}</b>`:''}`:''}</span></div>`:`<div class="nbmain"><span class="nbn">已到終點附近</span></div>`;
+  const list=R.length>1?`<div class="nblist"><table><tr><th>節點</th><th>海拔</th><th>距離</th><th>↑</th><th>↓</th><th>時間</th></tr>${R.map(r=>`<tr class="${r.o.camp?'camp':r.o.end?'end':''}"><td>${esc(r.o.n)}</td><td>${P[r.o.i][2]!=null?P[r.o.i][2]:'–'}</td><td>${fmtK(r.km)}</td><td>${Math.round(r.up)}</td><td>${Math.round(r.dn)}</td><td>${r.h?(hm2(r.h)+(g?'<br><small>'+clk(r.h)+'</small>':'')):'–'}</td></tr>`).join('')}</table></div>`:'';
+  const restL=rr?`<div class="nbmain nbrest"><span class="nbn">◆ 休息點</span><span class="nbv"><b>${fmtK(rr.km)}</b> ↑${Math.round(rr.up)} ↓${Math.round(rr.dn)}</span><span class="nbt">${rr.h?`約 ${hm2(rr.h)}${g?` → <b>${clk(rr.h)}</b>`:''}`:''}</span> <button type="button" class="nbx" data-restx>✕</button></div>`:'';
+  // 目標點（座標輸入）
+  let pinL='';
+  if(NB.pin){const p=NB.pin,dk=g?hav({lat:g.la,lon:g.lo},{lat:p.la,lon:p.lo}):null,bg=g?brg([g.la,g.lo],[p.la,p.lo]):null,dir=bg!=null?['北','東北','東','東南','南','西南','西','西北'][Math.round(bg/45)%8]:'';
+    const ks=dk!=null?(dk<1?Math.round(dk*1000)+' m':dk.toFixed(dk<10?2:1)+' km'):'–';
+    pinL=`<div class="nbmain" style="border-top:1px solid rgba(255,123,232,.35);margin-top:3px;padding-top:3px"><span class="nbn" style="color:#ff7be8">◎ ${esc(p.n)}</span><span class="nbv">${dk!=null?`直線 <b>${ks}</b>　往${dir}（${Math.round(bg)}°）`:''}</span><button type="button" class="nbx" data-pinx>✕</button></div>`;}
+  // 日落警告（navCard 版，不含黑屏已有的部分）
+  let sunWarn='';
+  {const pos=g?{lat:g.la,lon:g.lo}:(S.route.loc||null);if(pos&&isFinite(pos.lat)&&g){const sn=sunCalc(new Date(),pos.lat,pos.lon);if(sn){const now2=new Date(),m=now2.getHours()*60+now2.getMinutes(),left=sn.set-m;
+    if(left>0&&nx&&nx.h&&nx.h*60>left)sunWarn=`<div class="nbwarn">⚠︎ 到${esc(nx.o.n)}前會天黑（日落 ${m2hm(sn.set)}）</div>`;
+    else if(left>0&&last&&last!==nx&&last.h&&last.h*60>left)sunWarn=`<div class="nbsub" style="color:#d9bf6e">⚠︎ 今日終點預計天黑後才到（日落 ${m2hm(sn.set)}）</div>`;}}}
+  const html=`${head}${weak}${stale}${slopeL}${rrS?`<div class="nbsub" style="color:#ffe14d">${rrS}</div>`:''}${restL}${selL}${sunWarn}${main}${list}${pinL}`;
   if(el._h!==html){el._h=html;el.innerHTML=html;}
-  if(inf){const t=(tst||isOff?`⚠︎ 偏離 ${tst?'（測試）':offTxt}　`:'')+(rr?`◆ ${fmtK(rr.km)}${rr.h&&live?' → '+clk(rr.h):''}　`:'')+(nx?`${nx.o.n} ${fmtK(nx.km)} ↑${Math.round(nx.up)} ↓${Math.round(nx.dn)}${nx.h&&live?' → '+clk(nx.h):''}`:'');inf.textContent=t;inf.classList.toggle('warn',!!(tst||isOff));}
+  if(inf){const t=(tst||isOff?`⚠︎ 偏離 ${tst?'（測試）':offTxt}　`:'')+(rr?`◆ ${fmtK(rr.km)}${rr.h&&g?' → '+clk(rr.h):''}　`:'')+(nx?`${nx.o.n} ${fmtK(nx.km)} ↑${Math.round(nx.up)} ↓${Math.round(nx.dn)}${nx.h&&g?' → '+clk(nx.h):''}`:'');inf.textContent=t;inf.classList.toggle('warn',!!(tst||isOff));}
   const bk=$('#nbkTxt');if(bk&&!$('#navBlack').hidden){NB.tgt=null;let farTxt='';if(g&&!far){const la=bkLA(g)/1000;let k=i0;while(k<P.length-1&&P[k][3]-P[i0][3]<la)k++;NB.tgt=isOff?P[i0]:P[k];}
     else if(g){const [ni]=nearestIdx(P,g.la,g.lo);NB.tgt=P[ni];farTxt=`<div class="w2">路線在 ${offTxt} 外，箭頭指向最近的路線點</div>`;}
     const now=new Date(),hhmm=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;let sunT='';
-    {const pos=g?{lat:g.la,lon:g.lo}:S.route.loc;if(pos&&isFinite(pos.lat)){const sn=sunCalc(now,pos.lat,pos.lon);if(sn){const m=now.getHours()*60+now.getMinutes(),left=sn.set-m;sunT=left>0?`日落 ${m2hm(sn.set)}（還有 ${hm2(left/60)}）`:`日落 ${m2hm(sn.set)}，已天黑`;if(nx&&nx.h&&live&&left>0&&nx.h*60>left)sunT+=`<br><span class="w3">⚠︎ 到${esc(nx.o.n)}前會天黑</span>`;}}}
+    {const pos=g?{lat:g.la,lon:g.lo}:S.route.loc;if(pos&&isFinite(pos.lat)){const sn=sunCalc(now,pos.lat,pos.lon);if(sn){const m=now.getHours()*60+now.getMinutes(),left=sn.set-m;sunT=left>0?`日落 ${m2hm(sn.set)}（還有 ${hm2(left/60)}）`:`日落 ${m2hm(sn.set)}，已天黑`;if(nx&&nx.h&&g&&left>0&&nx.h*60>left)sunT+=`<br><span class="w3">⚠︎ 到${esc(nx.o.n)}前會天黑</span>`;}}}
     const bat=BAT.lv!=null?`　電量 ${Math.round(BAT.lv*100)}%${BAT.ch?ic('bolt'):''}`:'';
-    const t=`<div class="bkT"><div class="clk">${hhmm}<small>${bat}</small></div>`+(tst||isOff?`<div class="w">⚠︎ 偏離路線 ${tst?'（測試）':offTxt}</div>`:'')+farTxt+(rrS?`<div class="w2" style="color:#8a7a3a">${rrS}</div>`:'')+`</div><div class="bkL"><svg class="arr" viewBox="-62 -62 124 124"><defs><clipPath id="bkClip"><circle r="50"/></clipPath></defs><g id="bkRose"><g clip-path="url(#bkClip)">${bkRadar(P,g,rr)}</g><circle r="52" fill="none" stroke="#333" stroke-width="2"/>${[0,90,180,270].map(a=>`<line x1="0" y1="-52" x2="0" y2="-44" stroke="#444" stroke-width="2" transform="rotate(${a})"/>`).join('')}<text x="0" y="-36" text-anchor="middle" font-size="15" font-weight="700" fill="#a3170b">N</text><text x="0" y="46" text-anchor="middle" font-size="13" fill="#555">S</text><text x="42" y="5" text-anchor="middle" font-size="12" fill="#444">E</text><text x="-42" y="5" text-anchor="middle" font-size="12" fill="#444">W</text></g>${NB.tgt?`<g id="bkArr">${BK.hl?'<path d="M0,-62 L13,-41 L-13,-41 Z" fill="#ff3b1f" stroke="#ffb3a6" stroke-width="1.5"/>':'<path d="M0,-61 L8,-47 L-8,-47 Z" fill="#c0180c"/>'}</g>`:''}${g?(BK.hd!=null?'<path d="M0,-7 L5,5 L0,2 L-5,5 Z" fill="#9aa8ff"/>':'<circle r="3.5" fill="#9aa8ff"/>'):''}</svg><div class="hdg" id="bkHdg"></div><button type="button" class="bkHl${BK.hl?' on':''}" data-bkhl>${BK.hl?'紅標：高亮':'紅標：一般'}</button></div><div class="bkR">`+[rr||nx,(rr||nx)!==last?last:null].filter(Boolean).map((x,k)=>`<div class="n${k?' n2':''}">${esc(x.o.n)}${live?'':'<small>（從起點算）</small>'}</div><div class="v${k?' v2':''}"><b>${fmtK(x.km)}</b><span class="ud">↑${Math.round(x.up)} ↓${Math.round(x.dn)}</span></div>${x.h&&live?`<div class="t${k?' t2':''}">約 ${hm2(x.h)} → ${clk(x.h)}</div>`:''}`).join('')+(sunT?`<div class="sun">${sunT}</div>`:'')+(g?`<div class="s">${g.al!=null?Math.round(g.al)+' m・':''}定位 ${Math.round((Date.now()-g.t)/1000)} 秒前</div>`:'<div class="s">等待 GPS…</div>')+'</div>';
+    const slopeStr=slopeNow!=null?`　坡 ${slopeNow>=0?'+':''}${slopeNow}%`:'';
+    const mulStr=pmul!==1?`　×${pmul.toFixed(2)}`:'';
+    const t=`<div class="bkT"><div class="clk">${hhmm}<small>${bat}</small></div>`+(tst||isOff?`<div class="w">⚠︎ 偏離路線 ${tst?'（測試）':offTxt}</div>`:'')+farTxt+(rrS?`<div class="w2" style="color:#8a7a3a">${rrS}</div>`:'')+`</div><div class="bkL"><svg class="arr" viewBox="-62 -62 124 124"><defs><clipPath id="bkClip"><circle r="50"/></clipPath></defs><g id="bkRose"><g clip-path="url(#bkClip)">${bkRadar(P,g,rr)}</g><circle r="52" fill="none" stroke="#333" stroke-width="2"/>${[0,90,180,270].map(a=>`<line x1="0" y1="-52" x2="0" y2="-44" stroke="#444" stroke-width="2" transform="rotate(${a})"/>`).join('')}<text x="0" y="-36" text-anchor="middle" font-size="15" font-weight="700" fill="#a3170b">N</text><text x="0" y="46" text-anchor="middle" font-size="13" fill="#555">S</text><text x="42" y="5" text-anchor="middle" font-size="12" fill="#444">E</text><text x="-42" y="5" text-anchor="middle" font-size="12" fill="#444">W</text></g>${NB.tgt?`<g id="bkArr">${BK.hl?'<path d="M0,-62 L13,-41 L-13,-41 Z" fill="#ff3b1f" stroke="#ffb3a6" stroke-width="1.5"/>':'<path d="M0,-61 L8,-47 L-8,-47 Z" fill="#c0180c"/>'}</g>`:''}${g?(BK.hd!=null?'<path d="M0,-7 L5,5 L0,2 L-5,5 Z" fill="#9aa8ff"/>':'<circle r="3.5" fill="#9aa8ff"/>'):''}</svg><div class="hdg" id="bkHdg"></div><button type="button" class="bkHl${BK.hl?' on':''}" data-bkhl>${BK.hl?'紅標：高亮':'紅標：一般'}</button></div><div class="bkR">`+[rr||nx,(rr||nx)!==last?last:null].filter(Boolean).map((x,k)=>`<div class="n${k?' n2':''}">${esc(x.o.n)}${live?'':'<small>（從起點算）</small>'}</div><div class="v${k?' v2':''}"><b>${fmtK(x.km)}</b><span class="ud">↑${Math.round(x.up)} ↓${Math.round(x.dn)}</span></div>${x.h&&g?`<div class="t${k?' t2':''}">約 ${hm2(x.h)} → ${clk(x.h)}</div>`:''}`).join('')+(sunT?`<div class="sun">${sunT}</div>`:'')+(g?`<div class="s">${g.al!=null?Math.round(g.al)+' m'+slopeStr+mulStr+'　':''}定位 ${Math.round((Date.now()-g.t)/1000)} 秒前</div>`:'<div class="s">等待 GPS…</div>')+'</div>';
     if(bk._h!==t){bk._h=t;bk.innerHTML=t;}bkArrow();}}
 // 黑屏指向箭頭：指向路線前方約 80 m 的點（偏航時指向最近的路線點）
 const BK={hd:null,h:null,on:false,la:'auto',rad:500,hl:false};try{BK.hl=localStorage.getItem('gearPlanner.bkHl')==='1';}catch(e){}try{const v=+localStorage.getItem('gearPlanner.bkRad');if(v)BK.rad=v;}catch(e){}
@@ -2264,6 +2286,27 @@ async function bkHeadOn(){if(BK.on)return;try{if(typeof DeviceOrientationEvent!=
   BK.h=e=>{const h=devHeading(e);if(h==null)return;BK.hd=smoothH(BK.hd,h,0.3);bkArrow();folApply(false);};
   addEventListener('deviceorientationabsolute',BK.h,true);addEventListener('deviceorientation',BK.h,true);BK.on=true;}
 function bkHeadOff(){if(!BK.on||FOL.on)return;removeEventListener('deviceorientationabsolute',BK.h,true);removeEventListener('deviceorientation',BK.h,true);BK.on=false;BK.hd=null;}
+function goToCoord(){
+  const v=prompt('輸入目標座標（兩個格式都支援）\nWGS84：緯度 經度（例：23.47 121.02）\nTWD97 二度分帶：X Y（例：302000 2600000）\n\n留空清除目標點');
+  if(v===null)return;
+  if(!v.trim()){NB.pin=null;mapSrc('pin',EMPTY);navBoard();toast('已清除目標點');return;}
+  const parts=v.trim().replace(/[,，\/、;；]/g,' ').split(/\s+/).map(Number).filter(n=>isFinite(n));
+  if(parts.length<2){toast('格式不對，請輸入兩個數字');return;}
+  let la,lo;
+  // TWD97判斷：X在100000~400000，Y在2400000~3000000
+  if(parts[0]>100000&&parts[0]<500000&&parts[1]>2000000&&parts[1]<3200000){const r=twd2wgs(parts[0],parts[1]);la=r.lat;lo=r.lon;}
+  else if(parts[1]>100000&&parts[1]<500000&&parts[0]>2000000&&parts[0]<3200000){const r=twd2wgs(parts[1],parts[0]);la=r.lat;lo=r.lon;}
+  // WGS84
+  else if(parts[0]>=20&&parts[0]<=27&&parts[1]>=118&&parts[1]<=123){la=parts[0];lo=parts[1];}
+  else if(parts[1]>=20&&parts[1]<=27&&parts[0]>=118&&parts[0]<=123){la=parts[1];lo=parts[0];}
+  else{toast('無法判斷格式——請用 WGS84（緯度 經度）或 TWD97（X Y）');return;}
+  if(!isFinite(la)||!isFinite(lo)){toast('座標計算失敗');return;}
+  const nm=(prompt('目標名稱（可空白，按取消也沒關係）')||'').trim()||'目標';
+  NB.pin={la,lo,n:nm};
+  mapSrc('pin',{type:'FeatureCollection',features:[{type:'Feature',properties:{n:nm},geometry:{type:'Point',coordinates:[lo,la]}}]});
+  const g=GPS.last;
+  if(MAP.m){if(g){try{MAP.m.fitBounds([[Math.min(g.lo,lo)-0.003,Math.min(g.la,la)-0.003],[Math.max(g.lo,lo)+0.003,Math.max(g.la,la)+0.003]],{padding:60,maxZoom:15,duration:800});}catch(e){MAP.m.flyTo({center:[lo,la],zoom:14});}}else MAP.m.flyTo({center:[lo,la],zoom:14});}
+  navBoard();toast(`目標：${nm}（${la.toFixed(5)}, ${lo.toFixed(5)}）`);}
 // ===== 跟隨模式：以我為中心、前進方向朝上，我在可視範圍下方約 1/3 =====
 const FOL={on:false,t:0,reg:false};
 function folBtn(){const b=document.querySelector('#navMode [data-nav=follow]');if(b)b.classList.toggle('on',FOL.on);}
@@ -2299,7 +2342,10 @@ function beep(seq){try{const A=OFF.ac||(OFF.ac=new (window.AudioContext||window.
 function offCheck(la,lo,ac){const P=MAP.P;if(!OFF.on||!NAV.on||!P||P.length<2)return;const [,d]=nbLocate(P,la,lo),thr=Math.max(OFF.thr,Math.min(ac||0,80));if(d>5000){OFF.cnt=0;OFF.alerted=false;return;}
   if(d>thr){OFF.cnt++;if(OFF.cnt>=2&&(!OFF.alerted||Date.now()-OFF.last>60000)){OFF.alerted=true;OFF.last=Date.now();try{navigator.vibrate&&navigator.vibrate([400,150,400,150,400]);}catch(e){}beep([[880,.18],[660,.18],[880,.3]]);toast(`⚠︎ 偏離路線約 ${Math.round(d)} m`);}}
   else if(d<thr*0.6){if(OFF.alerted){beep([[660,.08],[990,.12]]);try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}toast('✓ 回到路線上');}OFF.cnt=0;OFF.alerted=false;}}
-$('#navCard').addEventListener('click',e=>{if(MEAS.on)return;});
+$('#navCard').addEventListener('click',e=>{if(MEAS.on)return;
+  if(e.target.closest('[data-pinx]')){NB.pin=null;mapSrc('pin',EMPTY);navBoard();toast('已清除目標點');return;}
+  if(e.target.closest('[data-restx]')){NB.pm=null;navBoard();toast('已清除休息點');return;}
+});
 // ===== 量距 =====
 const MEAS={on:false,pts:[],ele:{}};
 function measRender(){if(!MAP.m)return;if(!MEAS.on){mapSrc('meas',EMPTY);mapSrc('measpt',EMPTY);return;}
@@ -2357,6 +2403,13 @@ function tm2(lat,lon){const a=6378137,f=1/298.257222101,k0=0.9999,e2=f*(2-f),ep2
   const x=250000+k0*N*(A+(1-T+Cc)*A**3/6+(5-18*T+T*T+72*Cc-58*ep2)*A**5/120);
   const y=k0*(M+N*Math.tan(ph)*(A*A/2+(5-T+9*Cc+4*Cc*Cc)*A**4/24+(61-58*T+T*T+600*Cc-330*ep2)*A**6/720));
   const B1=0.00001549,B2=0.000006521,x67=x-807.8-B1*x-B2*y,y67=y+248.6-B1*y-B2*x;return {x:Math.round(x),y:Math.round(y),x67:Math.round(x67),y67:Math.round(y67)};}
+function twd2wgs(x,y){const a=6378137,f=1/298.257222101,k0=0.9999,e2=f*(2-f),e4=e2*e2,e6=e4*e2,ep2=e2/(1-e2);
+  const M=y/k0,mu=M/(a*(1-e2/4-3*e4/64-5*e6/256)),e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1**2/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const sp=Math.sin(phi1),cp=Math.cos(phi1),tp=Math.tan(phi1),N1=a/Math.sqrt(1-e2*sp**2),R1=a*(1-e2)/Math.pow(1-e2*sp**2,1.5),T1=tp**2,C1=ep2*cp**2,D=(x-250000)/(N1*k0);
+  const lat=phi1-(N1*tp/R1)*(D**2/2-(5+3*T1+10*C1-4*C1**2-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1**2-252*ep2-3*C1**2)*D**6/720);
+  const lon=121*Math.PI/180+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1**2+8*ep2+24*T1**2)*D**5/120)/cp;
+  return {lat:lat*180/Math.PI,lon:lon*180/Math.PI};}
 const dms=(v,p,n)=>{const s=v<0?n:p;v=Math.abs(v);const d=Math.floor(v),m=Math.floor((v-d)*60),sec=((v-d)*60-m)*60;return `${s}${d}°${m}'${sec.toFixed(1)}"`;};
 function sosText(g){const t=tm2(g.la,g.lo),P=MAP.P;let near='';if(P){const [i,d]=nearestIdx(P,g.la,g.lo);near=`，路線 ${P[i][3].toFixed(1)} km 附近（離路線約 ${Math.round(d*1000)} m）`;}
   const r=S.route;return `【山域求救】${r.name||'登山'}${r.team>1?`，${r.team} 人`:''}${near}。\n座標 WGS84：${g.la.toFixed(5)}, ${g.lo.toFixed(5)}\nTWD97：${t.x}, ${t.y}\n海拔約 ${g.al!=null?Math.round(g.al):'?'} m（±${Math.round(g.ac)} m）　${new Date(g.t).toLocaleString('zh-TW',{hour12:false})}\n狀況：`;}
@@ -2531,11 +2584,12 @@ function trimClick(e){const sd=e.target.closest('[data-side]');if(sd){TRIM.side=
   const b=e.target.closest('[data-trim]');if(!b)return;const a=b.dataset.trim;if(a==='do')trimDo();else if(a==='cancel'){TRIM.on=false;TRIM.a=TRIM.b=null;renderProfile();trimBar();trimDraw();}else{TRIM.a=TRIM.b=null;renderProfile();trimBar();trimDraw();}}
 $('#trimBar').addEventListener('click',trimClick);$('#navEdit').addEventListener('click',e=>{if(TRIM.on)trimClick(e);else if(DRAW.on)drawClick(e);});
 $('#trimUndo').addEventListener('click',()=>{const T=S.route.trk;if(!T||!T.undo)return;const u=JSON.parse(T.undo);T.p=u.p;T.wps=u.wps;T.cuts=u.cuts;S.route.mode=u.mode;delete T.undo;fillRoute();rebuildFromTrk({renameEnds:true});trimBar();toast('已復原');});
-const PROF={split:false,a:null,b:null,rt:'',key:null};
+const PROF={split:false,a:null,b:null,rt:'',key:null,zoom:1,vS:0};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-psplit]');if(!b)return;PROF.split=!PROF.split;PROF.a=PROF.b=null;PROF.rt='';renderProfile();});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pb]');if(!b||!PROF.fn)return;const F=PROF.fn,P=F.P,k=b.dataset.pb,c=PROF.cur||0;
   if(k==='l'||k==='r'){const step=Math.max(0.02,F.D/300),t=P[c][3]+(k==='r'?step:-step);let i=c;if(k==='r')while(i<F.n&&P[i][3]<t)i++;else while(i>0&&P[i][3]>t)i--;F.setCur(i);return;}
   if(k==='rest'){const km=+P[c][3].toFixed(3);if(S.restKm!=null&&Math.abs(S.restKm-km)<0.05){S.restKm=null;}else{S.restKm=km;}setDirty(true);try{navBoard();}catch(err){}F.profRange();return;}
+  if(k==='zoom'){PROF.zoom=PROF.zoom===1?2:PROF.zoom===2?4:1;renderProfile();return;}
   if(k==='a')PROF.a=c;else if(k==='b')PROF.b=c;else{PROF.a=PROF.b=null;}F.profRange();try{navBoard();}catch(err){}});
 document.addEventListener('click',e=>{if(!e.target.closest('[data-restx]'))return;e.stopPropagation();S.restKm=null;setDirty(true);navBoard();try{PROF.fn&&PROF.fn.profRange();}catch(err){}},true);
 function renderProfile(){
@@ -2545,7 +2599,8 @@ function renderProfile(){
   const P=trkFull(T),WP=trkWps(T),pl=36,pb=18,pt=8,n=P.length-1,D=P[n][3]||1,mir=mirOn(),nTurn=T.p.length-1;
   const es=P.map(x=>x[2]).filter(v=>v!=null);if(!es.length){$('#prof').innerHTML='<div class="rec">這條軌跡沒有高度資料</div>';return;}
   let lo=Math.min(...es),hi=Math.max(...es);const pad=Math.max(30,(hi-lo)*0.08);lo=Math.floor((lo-pad)/100)*100;hi=Math.ceil((hi+pad)/100)*100;
-  const X=d=>pl+(W-pl-6)*d/D,Y=e=>pt+(H-pt-pb)*(1-(e-lo)/((hi-lo)||1));
+  const zoom=PROF.zoom||1,visD=D/zoom,curD=PROF.cur!=null&&P[PROF.cur]?P[PROF.cur][3]:0,vS=Math.max(0,Math.min(D-visD,curD-visD/2));PROF.vS=vS;
+  const X=d=>pl+(W-pl-6)*(d-vS)/visD,Y=e=>pt+(H-pt-pb)*(1-(e-lo)/((hi-lo)||1));
   const st=Math.max(1,Math.floor(P.length/700));let path='';for(let i=0;i<=n;i+=st){const e=P[i][2];if(e==null)continue;path+=(path?'L':'M')+X(P[i][3]).toFixed(1)+','+Y(e).toFixed(1);}
   if(P[n][2]!=null)path+='L'+X(D).toFixed(1)+','+Y(P[n][2]).toFixed(1);
   const area=path+`L${X(D).toFixed(1)},${H-pb}L${X(0).toFixed(1)},${H-pb}Z`;
@@ -2573,9 +2628,9 @@ function renderProfile(){
   $('#profInfo').textContent=virt?`${D.toFixed(1)} km｜依你輸入的起終點沿步道算出｜分天請在下面每天的終點改`:`${D.toFixed(1)} km${mir?'（含鏡射回程）':''}｜${T.src==='route'?'依步道自動規劃':T.src==='draw'?'手繪路線':'GPX 軌跡'}｜點兩個位置看兩點間距離與爬升；要改分天按右上「編輯分天」`;
   if(NAV.on)npSize();
   const svg=$('#profSvg');
-  const at=ev=>{const r=svg.getBoundingClientRect(),x=(ev.clientX-r.left)*W/r.width,d=Math.max(0,Math.min(D,(x-pl)/(W-pl-6)*D));let lo=0,hi=n;while(lo<hi){const m=(lo+hi)>>1;if(P[m][3]<d)lo=m+1;else hi=m;}return lo>0&&Math.abs(P[lo-1][3]-d)<Math.abs(P[lo][3]-d)?lo-1:lo;};
+  const at=ev=>{const r=svg.getBoundingClientRect(),x=(ev.clientX-r.left)*W/r.width,d=Math.max(0,Math.min(D,(PROF.vS||0)+(x-pl)/(W-pl-6)*D/(PROF.zoom||1)));let lo=0,hi=n;while(lo<hi){const m=(lo+hi)>>1;if(P[m][3]<d)lo=m+1;else hi=m;}return lo>0&&Math.abs(P[lo-1][3]-d)<Math.abs(P[lo][3]-d)?lo-1:lo;};
   const curEl=$('#profCur'),readEl=$('#profRead');let raf=0,lastEv=null;
-  readEl.innerHTML=`<div data-prt></div><div class="pbar"><span data-pcur></span><span class="pbtns"><button type="button" data-pb="l" aria-label="往前">◀</button><button type="button" data-pb="r" aria-label="往後">▶</button><button type="button" data-pb="a">設起點</button><button type="button" data-pb="b">設終點</button><button type="button" data-pb="c">清除</button><button type="button" data-pb="rest">◆ 休息點</button></span></div>`;
+  readEl.innerHTML=`<div data-prt></div><div class="pbar"><span data-pcur></span><span class="pbtns"><button type="button" data-pb="l" aria-label="往前">◀</button><button type="button" data-pb="r" aria-label="往後">▶</button><button type="button" data-pb="zoom" title="水平放大（×1→×2→×4）">${PROF.zoom>1?'×'+PROF.zoom:'×1'}</button><button type="button" data-pb="a">設起點</button><button type="button" data-pb="b">設終點</button><button type="button" data-pb="c">清除</button><button type="button" data-pb="rest">◆ 休息點</button></span></div>`;
   const setCur=i=>{i=Math.max(0,Math.min(n,i));PROF.cur=i;const x=X(P[i][3]);curEl.setAttribute('x1',x);curEl.setAttribute('x2',x);
     if(MAP.m&&MAP.loaded)mapCursor(P[i][0],P[i][1]);
     let w=null;for(const q of WP){if(Math.abs(P[q.i][3]-P[i][3])<0.15){w=q;break;}}const el=readEl.querySelector('[data-pcur]');if(el)el.textContent=`${P[i][3].toFixed(2)} km　${P[i][2]!=null?P[i][2]+' m':''}${w?'　'+w.n:''}`;};
@@ -2584,13 +2639,14 @@ function renderProfile(){
     {const rl=$('#profRest'),rt=$('#profRestT'),ok=S.restKm!=null&&S.restKm<=D,x=ok?X(S.restKm):-30;if(rl){rl.setAttribute('x1',x);rl.setAttribute('x2',x);}if(rt)rt.setAttribute('x',x+2);}
     la.setAttribute('x1',A!=null?X(P[A][3]):-10);la.setAttribute('x2',A!=null?X(P[A][3]):-10);lb.setAttribute('x1',B!=null?X(P[B][3]):-10);lb.setAttribute('x2',B!=null?X(P[B][3]):-10);
     if(A!=null&&B!=null&&A!==B){const i=Math.min(A,B),j=Math.max(A,B);ab.setAttribute('x',X(P[i][3]));ab.setAttribute('width',X(P[j][3])-X(P[i][3]));nbCum(P);const h=nbLegH(P,i,j);
-      PROF.rt=`<b style="color:#ff7be8">${P[i][3].toFixed(2)} → ${P[j][3].toFixed(2)} km：${(P[j][3]-P[i][3]).toFixed(2)} km　↑${Math.round(NB.cu[j]-NB.cu[i])} ↓${Math.round(NB.cd[j]-NB.cd[i])} m　${P[i][2]!=null&&P[j][2]!=null?`${P[i][2]}→${P[j][2]} m　`:''}${h?'約 '+hm2(h):''}</b>`;}
+      {const segD=(P[j][3]-P[i][3])*1000,segE=P[i][2]!=null&&P[j][2]!=null?P[j][2]-P[i][2]:null,sP=segE!=null&&segD>0?`　坡 ${segE>=0?'+':''}${(segE/segD*100).toFixed(1)}%`:'';
+      PROF.rt=`<b style="color:#ff7be8">${P[i][3].toFixed(2)} → ${P[j][3].toFixed(2)} km：${(P[j][3]-P[i][3]).toFixed(2)} km　↑${Math.round(NB.cu[j]-NB.cu[i])} ↓${Math.round(NB.cd[j]-NB.cd[i])} m　${P[i][2]!=null&&P[j][2]!=null?`${P[i][2]}→${P[j][2]} m　`:''}${h?'約 '+hm2(h):''}${sP}</b>`;}}
     else{ab.setAttribute('width',0);PROF.rt=A!=null?`<span style="color:#ff7be8">起點 ${P[A][3].toFixed(2)} km　移動到終點後按「設終點」</span>`:B!=null?`<span style="color:#ff7be8">終點 ${P[B][3].toFixed(2)} km　移動到起點後按「設起點」</span>`:'<span class="phint" style="color:var(--mut)">在圖上點或滑動選位置（◀ ▶ 微調），再按「設起點」「設終點」看兩點間距離與爬升；「◆ 休息點」會在導航板和黑屏顯示還有多遠</span>';}
     const el=readEl.querySelector('[data-prt]');if(el)el.innerHTML=PROF.rt;
     try{if(MAP.m&&MAP.loaded){const pts=[A,B].filter(v=>v!=null);mapSrc('selpt',{type:'FeatureCollection',features:pts.map((v,k)=>({type:'Feature',properties:{c:COL(v===A?'#ff3cdc':'#b44cff'),s:COL('#ffffff')},geometry:{type:'Point',coordinates:[P[v][1],P[v][0]]}}))});
       if(A!=null&&B!=null&&A!==B){const i=Math.min(A,B),j=Math.max(A,B);mapSrc('sel',lineFC(P.slice(i,j+1).map(q=>[q[1],q[0]]),{c:COL('#ff3cdc'),k:COL('#000000')}));}else mapSrc('sel',EMPTY);}}catch(e){}};
   PROF.fn={setCur,profRange,P,n,D};
-  if(PROF.key!==P){PROF.key=P;PROF.a=PROF.b=null;PROF.rt='';PROF.cur=0;}profRange();setCur(PROF.cur||0);
+  if(PROF.key!==P){PROF.key=P;PROF.a=PROF.b=null;PROF.rt='';PROF.cur=0;PROF.zoom=1;PROF.vS=0;}profRange();setCur(PROF.cur||0);
   svg.addEventListener('pointermove',ev=>{lastEv={clientX:ev.clientX};if(!raf)raf=requestAnimationFrame(upd);},{passive:true});
   svg.addEventListener('click',ev=>{const i=at(ev);if(TRIM.on){trimTap(i);return;}
     if(virt||!PROF.split){setCur(i);return;}
@@ -3242,13 +3298,14 @@ function paceAIPrompt(){return `請把我下面的登山／負重訓練紀錄整
 
 我的紀錄：
 （貼上 Garmin／Strava／健行筆記匯出內容，或自己的筆記）`;}
+let paceExpanded=false;
 function renderPace(){
   const PM=paceModel(),L=PACE.recs;
   $('#paceSum').textContent=L.length?`${L.length} 筆`:'尚無資料';
   $('#paceRest').value=PACE.rest;
-  $('#paceList').innerHTML=L.length?`<div style="overflow-x:auto"><table class="rtab"><tr><th>日期</th><th>名稱</th><th>km</th><th>↑/↓</th><th>背負</th><th>總 h<small style="color:var(--mut)">（行進）</small></th><th>上河</th><th>心率</th><th>爬坡 m/h</th><th>${PM.tm?'實際÷模型':'係數'}</th><th></th></tr>${L.map((r,i)=>{const mv=r.moving>0?r.moving:(r.total>0?r.total/(1+PM.rest):0);const mv2=PM.mv?PM.mv(r):mv,k=mv2&&modelH(r.km||0,r.up||0,r.down||0)?(mv2/modelH(r.km||0,r.up||0,r.down||0)/altF(r.alt||600)).toFixed(2)+(PACE.lthr>0&&r.hr>PACE.lthr+5?' 拚':''):'–';
+  $('#paceList').innerHTML=L.length?`<div style="overflow-x:auto"><table class="rtab"><tr><th>日期</th><th>名稱</th><th>km</th><th>↑/↓</th><th>背負</th><th>總 h<small style="color:var(--mut)">（行進）</small></th><th>上河</th><th>心率</th><th>爬坡 m/h</th><th>${PM.tm?'實際÷模型':'係數'}</th><th style="color:var(--mut)">備註</th><th></th></tr>${L.map((r,i)=>{const mv=r.moving>0?r.moving:(r.total>0?r.total/(1+PM.rest):0);const mv2=PM.mv?PM.mv(r):mv,k=mv2&&modelH(r.km||0,r.up||0,r.down||0)?(mv2/modelH(r.km||0,r.up||0,r.down||0)/altF(r.alt||600)).toFixed(2)+(PACE.lthr>0&&r.hr>PACE.lthr+5?' 拚':''):'–';
     const k2=PM.tm?(isRun(r)?'<small style="color:var(--mut)">跑步不算</small>':PM.tm.bad.includes(r)?`<span style="color:#d9bf6e">${PM.tm.ratio(r).toFixed(2)} 異常</span>`:PM.tm.ratio(r)?PM.tm.ratio(r).toFixed(2):'<small style="color:var(--mut)">太短不算</small>'):k;
-    return `<tr><td>${esc(r.date||'')}</td><td style="text-align:left">${esc(r.name||'')}</td><td>${r.km||'–'}</td><td>${r.up||0}/${r.down||0}</td><td><input type="number" step="0.5" data-ppk="${i}" value="${r.pack||''}" placeholder="?" style="width:58px;padding:3px 4px;text-align:center${r.pack?'':';border-color:#d9bf6e'}"></td><td>${r.total||(r.moving?'–':'–')}${r.moving?`<small style="color:var(--mut)"> (${r.moving})</small>`:''}</td><td>${r.sh||'–'}</td><td>${r.hr||'–'}</td><td>${r.vam?r.vam+(r.hrUp?`<small style="color:var(--mut)"> @${r.hrUp}</small>`:''):'–'}</td><td>${k2}</td><td><button class="x" data-pdel="${i}" style="height:24px;width:24px">✕</button></td></tr>`;}).join('')}</table></div>`:'';
+    return `<tr${!paceExpanded&&i>=10?' style="display:none"':''}><td>${esc(r.date||'')}</td><td style="text-align:left">${esc(r.name||'')}</td><td>${r.km||'–'}</td><td>${r.up||0}/${r.down||0}</td><td><input type="number" step="0.5" data-ppk="${i}" value="${r.pack||''}" placeholder="?" style="width:58px;padding:3px 4px;text-align:center${r.pack?'':';border-color:#d9bf6e'}"></td><td>${r.total||(r.moving?'–':'–')}${r.moving?`<small style="color:var(--mut)"> (${r.moving})</small>`:''}</td><td>${r.sh||'–'}</td><td>${r.hr||'–'}</td><td>${r.vam?r.vam+(r.hrUp?`<small style="color:var(--mut)"> @${r.hrUp}</small>`:''):'–'}</td><td>${k2}</td><td style="font-size:11px;color:var(--mut);white-space:nowrap">${esc(r.note||'')}</td><td><button class="x" data-pdel="${i}" style="height:24px;width:24px">✕</button></td></tr>`;}).join('')}${L.length>10?`<button id="bPaceToggle" class="btn sm" style="width:100%;margin-top:4px">${paceExpanded?'▲ 折疊':'▼ 展開全部（'+L.length+' 筆）'}</button>`:''}</table></div>`:'';
   $('#paceLT').value=PACE.lthr||'';{const pm=paceModel(),hm=pm.tm||pm.hm,el=$('#paceHrPlan');el.value=PACE.hrPlan||'';el.placeholder=hm?`自動 ${hm.tgt}`:'需 4 筆有心率的紀錄';}$('#paceRestT').value=PACE.restT||'';
   $('#paceRes').innerHTML=PM.sh||PM.md?`${PM.md?`<b>你的係數</b>＝實際移動時間 ÷ Naismith 標準時間（已扣掉海拔影響）：小於 1 代表比標準快。${PM.md.n>=3?'已足夠，計畫時數會優先用你的配速。':'再多幾筆（至少 3 筆）才會優先使用。'}<br>`:''}${PM.push&&PM.push.length?`另有 ${PM.push.length} 筆平均心率高於乳酸閾值，視為「拚的速度」，不拿來排行程。<br>`:''}${PM.sh?`<b>上河倍數</b>：${PM.sh.fit?`隨負重變化，每多 1kg 約 +${(PM.sh.b*100).toFixed(1)}%；背 10kg ×${PM.sh.f(10).toFixed(2)}、背 18kg ×${PM.sh.f(18).toFixed(2)}`:`×${PM.sh.f().toFixed(2)}（紀錄不足 3 筆或負重差不到 5kg，先不算負重影響）`}<br>`:''}${PM.md?`<b>沒有上河時的估算係數</b>：${PM.md.fit?`背 10kg ×${PM.md.f(10).toFixed(2)}、背 18kg ×${PM.md.f(18).toFixed(2)}`:'×'+PM.md.f().toFixed(2)}<br>`:''}${PM.hrAvg?`紀錄平均心率 ${PM.hrAvg} bpm${PACE.lthr>0?`；平均心率超過 ${PACE.lthr+5}（乳酸閾值＋5）的紀錄當成「拚的速度」不列入`:'；填乳酸閾值心率後，太拚的紀錄會自動排除'}<br>`:''}<span style="color:var(--mut)">上河倍數 1.00＝跟上河時間一樣；0.85＝比上河快 15%。這裡算出的倍數會自動用在路線（除非你在路線區自己填了倍數）。</span>`:'';
 }
@@ -3301,10 +3358,10 @@ $('#bPackAll').addEventListener('click',()=>{const v=num($('#pacePackAll').value
 $('#paceHrPlan').addEventListener('input',e=>{PACE.hrPlan=Math.max(0,num(e.target.value));savePace();renderPace();compute();});
 $('#paceLT').addEventListener('input',e=>{PACE.lthr=Math.max(0,num(e.target.value));savePace();renderPace();compute();});
 $('#paceRestT').addEventListener('input',e=>{PACE.restT=Math.max(0,Math.min(50,num(e.target.value)));savePace();renderPace();compute();});
-$('#bPaceAdd').addEventListener('click',()=>{const v=id=>$('#pf_'+id).value;const r={date:v('date'),name:v('name'),note:''};['km','up','down','pack','moving','total','sh','hr'].forEach(k=>{r[k]=Math.max(0,num(v(k)))});
+$('#bPaceAdd').addEventListener('click',()=>{const v=id=>$('#pf_'+id).value;const r={date:v('date'),name:v('name'),note:'手動輸入'};['km','up','down','pack','moving','total','sh','hr'].forEach(k=>{r[k]=Math.max(0,num(v(k)))});
   if(!(r.km||r.up)||!(r.moving||r.total)){toast('至少要填距離或爬升，以及行進或總時間');return;}
   PACE.recs.unshift(r);savePace();renderPace();compute();['date','name','km','up','down','pack','moving','total','sh','hr'].forEach(k=>$('#pf_'+k).value='');toast('已加入');});
-$('#paceList').addEventListener('click',e=>{const b=e.target.closest('[data-pdel]');if(!b)return;PACE.recs.splice(+b.dataset.pdel,1);savePace();renderPace();compute();});
+$('#paceList').addEventListener('click',e=>{if(e.target.closest('#bPaceToggle')){paceExpanded=!paceExpanded;renderPace();return;}const b=e.target.closest('[data-pdel]');if(!b)return;PACE.recs.splice(+b.dataset.pdel,1);savePace();renderPace();compute();});
 $('#bPaceClr').addEventListener('click',()=>{if(!PACE.recs.length)return;if(!confirm(`清除 ${PACE.recs.length} 筆訓練紀錄？`))return;PACE.recs=[];savePace();renderPace();compute();});
 $('#paceRest').addEventListener('input',e=>{PACE.rest=Math.max(0,Math.min(60,num(e.target.value,0)));savePace();renderPace();compute();});
 

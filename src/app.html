@@ -579,7 +579,7 @@ html.oled .card{border-color:#1c2118}
           <div class="proflbl"><b>路線地圖・高度剖面</b><button class="btn sm" id="reditBtn" type="button" style="margin-left:8px"><svg class="ic2" viewBox="0 0 24 24"><rect x="3" y="4" width="10" height="16" rx="1"/><path d="M16 7h5M16 12h5M16 17h5"/></svg>路線編輯模式</button><span id="profInfo"></span></div>
           <div class="profgrid">
             <div><div class="mapbox"><div id="rmap"></div><button class="btn sm" id="mapBig" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>全螢幕地圖</button></div>
-            <div class="maptools"><button class="btn" id="mapGps" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5"/></svg>我的位置</button><button class="btn" id="mapOff" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>下載離線地圖</button><button class="btn" id="mapGpx" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></svg>匯出 GPX</button><button class="btn" id="trimBtn" type="button" hidden><svg class="ic2" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg></button><button class="btn" id="trimUndo" type="button" hidden>↶</button><button class="btn" id="mapDarkBtn" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg>暗色地圖</button><button class="btn" id="editOpen" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>編輯路線（全螢幕）</button></div>
+            <div class="maptools"><button class="btn" id="mapGps" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5"/></svg>我的位置</button><button class="btn" id="mapOff" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>下載離線地圖</button><button class="btn" id="pkAll" type="button">下載全台山頭</button><button class="btn" id="mapGpx" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></svg>匯出 GPX</button><button class="btn" id="trimBtn" type="button" hidden><svg class="ic2" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg></button><button class="btn" id="trimUndo" type="button" hidden>↶</button><button class="btn" id="mapDarkBtn" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg>暗色地圖</button><button class="btn" id="editOpen" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>編輯路線（全螢幕）</button></div>
             <div id="trimBar" class="rec" style="margin-top:6px;font-size:13px;border-color:#e0715f" hidden></div>
             <div id="mapMsg" style="font-size:12px;color:var(--mut);margin-top:4px"></div></div>
             <div><div id="prof"></div><div id="profRead" class="proflbl" style="min-height:18px"></div></div>
@@ -2443,19 +2443,31 @@ function goToCoord(){let fmt='97';try{fmt=localStorage.getItem('gearPlanner.coor
 // 資料：手機有網路時向 OpenStreetMap（Overpass）抓路線附近有名字的山頭，存在手機裡，離線可用。
 // 方位角一律用「真北」（手機羅盤已經扣掉台灣磁偏角 −4.5°）；手動輸入可選磁北或真北。
 const PK={list:[],bb:null,ts:0,show:true,busy:false,obs:[],mks:[]};
-try{const o=JSON.parse(localStorage.getItem('gearPlanner.peaks')||'null');if(o&&Array.isArray(o.list)){PK.list=o.list;PK.bb=o.bb;PK.ts=o.ts||0;}}catch(e){}
+// 全台範圍（本島＋澎湖＋綠島蘭嶼）；存檔用精簡格式 [名稱,海拔,緯度,經度]
+const PK_TW=[21.85,119.30,25.35,122.10];
+try{const o=JSON.parse(localStorage.getItem('gearPlanner.peaks')||'null');if(o&&Array.isArray(o.list)){PK.list=o.list.map(q=>Array.isArray(q)?{n:q[0],e:q[1],la:q[2],lo:q[3]}:q);PK.bb=o.bb;PK.ts=o.ts||0;PK.full=!!o.full;}}catch(e){}
+function pkSave(){try{localStorage.setItem('gearPlanner.peaks',JSON.stringify({list:PK.list.map(p=>[p.n,p.e,p.la,p.lo]),bb:PK.bb,ts:PK.ts,full:!!PK.full}));return true;}catch(e){return false;}}
 try{PK.show=localStorage.getItem('gearPlanner.peakShow')!=='0';}catch(e){}
 const PK_OVP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
 const angD=(a,b)=>((a-b+540)%360)-180;
 function pkBB(P){let s=90,w=180,n=-90,e=-180;for(const q of P){if(q[0]<s)s=q[0];if(q[0]>n)n=q[0];if(q[1]<w)w=q[1];if(q[1]>e)e=q[1];}const pd=0.18;return [+(s-pd).toFixed(3),+(w-pd).toFixed(3),+(n+pd).toFixed(3),+(e+pd).toFixed(3)];}
 const pkCovers=bb=>!!(PK.bb&&PK.bb[0]<=bb[0]&&PK.bb[1]<=bb[1]&&PK.bb[2]>=bb[2]&&PK.bb[3]>=bb[3]);
-async function pkFetch(bb){const q=`[out:json][timeout:25];node["natural"="peak"]["name"](${bb.join(',')});out;`;
+async function pkFetch(bb,big){const q=`[out:json][timeout:${big?150:25}]${big?'[maxsize:268435456]':''};node["natural"="peak"]["name"](${bb.join(',')});out;`;
   for(const u of PK_OVP){try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});if(!r.ok)continue;const j=await r.json();
       return (j.elements||[]).filter(x=>isFinite(x.lat)&&x.tags&&x.tags.name).map(x=>{const t=x.tags,e=parseFloat(String(t.ele||'').replace(/[^\d.]/g,''));return {n:String(t['name:zh-Hant']||t['name:zh_TW']||t.name).trim().slice(0,20),e:e>0&&e<4000?Math.round(e):null,la:+x.lat.toFixed(6),lo:+x.lon.toFixed(6)};});}catch(e){}}
   return null;}
 // 路線變了、或第一次用：有網路就把路線附近（外推約 20 km）的山頭抓下來
 async function pkEnsure(P,force){if(PK.busy||!P||P.length<2)return;const bb=pkBB(P);if(!force&&pkCovers(bb))return;if(!navigator.onLine)return;
-  PK.busy=true;try{const L=await pkFetch(bb);if(L){PK.list=L;PK.bb=bb;PK.ts=Date.now();try{localStorage.setItem('gearPlanner.peaks',JSON.stringify({list:L,bb,ts:PK.ts}));}catch(e){}pkMarkers();}}finally{PK.busy=false;}}
+  PK.busy=true;try{const L=await pkFetch(bb);if(L){PK.list=L;PK.bb=bb;PK.ts=Date.now();PK.full=false;pkSave();pkMarkers();pkAllBtn();}}finally{PK.busy=false;}}
+// 一次下載全台有名字的山頭：之後規劃任何路線、對山定位都不用再上網
+async function pkDownloadAll(){if(PK.busy){toast('山頭資料下載中，等一下');return;}if(!navigator.onLine){toast('要有網路才能下載');return;}
+  if(!confirm(`下載全台灣有名字的山頭（OpenStreetMap，約幾千到一萬多座、存起來約 1 MB 以內）\n下載好之後，規劃任何路線、對山定位都不用再上網。\n建議用 Wi-Fi，可能要等半分鐘到一分鐘。`))return;
+  PK.busy=true;const msg=$('#mapMsg'),b=$('#pkAll');if(b)b.disabled=true;if(msg)msg.textContent='下載全台山頭中…（可能要一分鐘）';
+  try{const L=await pkFetch(PK_TW,true);if(!L){if(msg)msg.textContent='全台山頭下載失敗（伺服器忙或網路不穩），等一下再按一次';return;}
+    PK.list=L;PK.bb=PK_TW;PK.ts=Date.now();PK.full=true;const ok=pkSave();pkMarkers();
+    if(msg)msg.textContent=ok?`✓ 全台山頭存好了：${L.length} 座。之後不用網路也能指認山頭、對山定位。`:`⚠︎ 抓到 ${L.length} 座，但手機儲存空間不夠存不下來，這次開著時有效；關掉 App 會不見`;}
+  finally{PK.busy=false;if(b)b.disabled=false;pkAllBtn();}}
+function pkAllBtn(){const b=$('#pkAll');if(!b)return;b.innerHTML=ic('download')+(PK.full?`全台山頭 ✓ ${PK.list.length} 座（點一下更新）`:'下載全台山頭');}
 // 地圖上標山頭：只標路線附近較高的（最多 40 個），避免太亂
 function pkMarkers(){(PK.mks||[]).forEach(m=>m.remove());PK.mks=[];const m=MAP.m;if(!m||!MAP.loaded||!PK.show||!PK.list.length||!MAP.P)return;
   const bb=pkBB(MAP.P),inb=p=>p.la>=bb[0]+0.1&&p.la<=bb[2]-0.1&&p.lo>=bb[1]+0.1&&p.lo<=bb[3]-0.1;
@@ -2498,7 +2510,7 @@ function pkFixMap(){const f=[],x=NB.fix;if(x){const R=x.err/1000,ring=[];for(let
   try{mapSrc('fix',{type:'FeatureCollection',features:f});}catch(e){}}
 const pkFixTxt=x=>`推算位置${x.km!=null?`：路線 ${x.km.toFixed(1)} km 附近`:''}，誤差約 ${x.err<1000?Math.round(x.err/50)*50+' m':(x.err/1000).toFixed(1)+' km'}（${Math.max(0,Math.round((Date.now()-x.ts)/60000))} 分鐘前，對 ${x.n} 座山）`;
 // ---- 定位面板 ----
-function pkFixOpen(){const P=MAP.P;if(!PK.list.length){toast(P?'還沒有山頭資料：要先在有網路時打開路線（會自動下載路線附近的山頭）':'要先有路線，才知道要抓哪一區的山頭');if(P)pkEnsure(P,true);return;}
+function pkFixOpen(){const P=MAP.P;if(!PK.list.length){toast(navigator.onLine?(P?'還沒有山頭資料，正在下載路線附近的山頭，等幾秒再按一次':'還沒有山頭資料：先在路線地圖下面按「下載全台山頭」'):'還沒有山頭資料：要在有網路時按「下載全台山頭」（或打開路線自動下載附近的）');if(P)pkEnsure(P,true);return;}
   bkHeadOn();let man='',manMag=true,sel=null,selMan=false,q='';try{manMag=localStorage.getItem('gearPlanner.pkMag')!=='0';}catch(e){}
   const m=document.createElement('div');m.className='modal';m.id='pkFix';m.style.zIndex=9500;
   m.innerHTML=`<div class="sheet" style="max-width:480px"><div class="sh2"><span>對山定位</span><button class="btn x" data-pk="x">✕</button></div>
@@ -2734,6 +2746,7 @@ function tileList(P,tpl){const T=new Set(),t2=(lat,lon,z)=>{const n=2**z,x=Math.
   for(let z=11;z<=16;z++){const tm=40075016*Math.cos(pts[0][0]*Math.PI/180)/2**z,r=Math.max(1,Math.ceil((z>=14?900:1500)/tm));
     pts.forEach(q=>{const [x,y]=t2(q[0],q[1],z);for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++)T.add(`${z}/${x+dx}/${y+dy}`);});}
   return [...T].map(k=>{const [z,x,y]=k.split('/');return tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y).replace('{s}','a');});}
+$('#pkAll').addEventListener('click',()=>pkDownloadAll());try{pkAllBtn();}catch(e){}
 $('#mapOff').addEventListener('click',async()=>{const P=MAP.P;if(!P||!MAP.m){toast('先等地圖載入');return;}if(!('caches' in window)){toast('這個瀏覽器不支援離線地圖');return;}
   if(MAP.dl){MAP.dl.stop=true;return;}
   const tpls=BASES[mapBaseKey()].tiles,base=[...new Set(tpls.flatMap(([t,mx])=>tileList(P,t).filter(u=>{const z=+(u.match(/\/(\d+)\/\d+\/\d+(?:\.png)?$/)||[])[1];return !z||z<=mx||!/terrarium/.test(t);})))];

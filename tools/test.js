@@ -39,13 +39,13 @@ async function newPage(b, vp) {
   const ctx = await b.newContext({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: 2.5, hasTouch: true, isMobile: true, geolocation: { latitude: 24.0705, longitude: 121.2950, accuracy: 10 }, permissions: ['geolocation'] });
   const p = await ctx.newPage(); p._err = [];
   p.on('pageerror', e => p._err.push(e.message + (process.env.DBG ? ' @ ' + (e.stack || '').split('\n').slice(1, 3).join(' ').replace(/https:\/\/app.test\/\?gptest/g, '') : '')));
-  p.on('dialog', d => { p._dlg = (p._dlg || []).concat(d.message()); d.dismiss().catch(() => {}); });
+  p.on('dialog', d => { p._dlg = (p._dlg || []).concat(d.message()); (p._acceptDlg ? d.accept() : d.dismiss()).catch(() => {}); });
   await p.route('https://app.test/**', r => { let u = new URL(r.request().url()).pathname; if (u === '/') u = '/index.html'; const f = path.join(PUB, u); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); const ty = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.txt': 'text/plain' }[path.extname(u)] || 'application/octet-stream'; r.fulfill({ body: fs.readFileSync(f), contentType: ty }); });
   await p.route(/elevation-tiles-prod|amazonaws\.com/, r => { const m = r.request().url().match(/(\d+)\/(\d+)\/(\d+)\.png/); if (!m) return r.abort(); r.fulfill({ body: demTile(+m[1], +m[2], +m[3]), contentType: 'image/png' }); });
   if (!TILES) await p.route(/wmts\.nlsc\.gov\.tw|tile\.opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com/, r => r.fulfill({ body: BLANK, contentType: 'image/png' }));
   await p.route(/brouter\.de/, r => (p._brouter ? p._brouter(r) : r.abort()));
   await p.route(/firebasedatabase\.app|googleapis\.com/, r => r.abort());
-  await p.route(/overpass/, r => r.fulfill({ body: JSON.stringify({ elements: FAKE_PEAKS.map((q, i) => ({ type: 'node', id: i + 1, lat: q[1], lon: q[2], tags: Object.assign({ natural: 'peak', name: q[0] }, q[3] ? { ele: String(q[3]) } : {}) })) }), contentType: 'application/json' }));
+  await p.route(/overpass/, r => (p._ovp = (p._ovp || 0) + 1, p._ovpBody = r.request().postData() || '') && r.fulfill({ body: JSON.stringify({ elements: FAKE_PEAKS.map((q, i) => ({ type: 'node', id: i + 1, lat: q[1], lon: q[2], tags: Object.assign({ natural: 'peak', name: q[0] }, q[3] ? { ele: String(q[3]) } : {}) })) }), contentType: 'application/json' }));
   return { ctx, p };
 }
 const idle = p => p.evaluate(() => new Promise(r => { const m = window.__gp && window.__gp.MAP.m; if (!m) return r(); let d = false; const f = () => { if (!d) { d = true; r(); } }; if (!m.isMoving() && m.loaded()) setTimeout(f, 120); else m.once('idle', f); setTimeout(f, 3000); }));
@@ -328,6 +328,20 @@ T('離線下載：3D 開著才一起抓遠景地形', async p => {
   ok(/3D 地形/.test(m) && k > 10, '3D 開著時確認框沒列出遠景地形：' + m.slice(0, 120)); ok(n1 === n0 + k, `總張數不對（${n0}＋${k}≠${n1}）`);
   const w = await p.evaluate(() => { const P = window.__gp.MAP.P, L = window.__gp.fn('demWide')(P); return { n: L.length, z: [...new Set(L.map(u => +u.match(/\/(\d+)\/\d+\/\d+\.png/)[1]))].sort() }; });
   ok(w.z.join(',') === '10,11,12', '遠景地形縮放級數應該是 10～12：' + w.z);
+}, { vp: '直式' });
+T('下載全台山頭：之後別區路線不再上網、重開還在', async p => {
+  await loadGpx(p); await p.waitForFunction(() => window.__gp.fn('PK').list.length > 0, null, { timeout: 8000 }).catch(() => {});
+  p._acceptDlg = true; p._ovp = 0; await p.click('#pkAll');
+  await p.waitForFunction(() => window.__gp.fn('PK').full, null, { timeout: 8000 }).catch(() => {});
+  const r = await p.evaluate(() => { const K = window.__gp.fn('PK'); return { full: K.full, bb: K.bb, n: K.list.length, btn: document.getElementById('pkAll').textContent, msg: document.getElementById('mapMsg').textContent, saved: JSON.parse(localStorage.getItem('gearPlanner.peaks')) }; });
+  ok(r.full && r.bb.join(',') === '21.85,119.3,25.35,122.1', '沒有標記成全台資料 ' + JSON.stringify(r.bb)); ok(/21\.85/.test(decodeURIComponent(p._ovpBody)) && /timeout:150/.test(decodeURIComponent(p._ovpBody)), '查詢範圍不是全台');
+  ok(/全台山頭 ✓ 6 座/.test(r.btn), '按鈕沒顯示已下載：' + r.btn); ok(/存好了/.test(r.msg), '沒有提示下載完成');
+  ok(Array.isArray(r.saved.list[0]) && r.saved.full, '沒有用精簡格式存');
+  p._ovp = 0; await p.evaluate(() => window.__gp.fn('pkEnsure')([[22.5, 120.8, 0, 0], [22.6, 120.9, 0, 10]])); await p.waitForTimeout(300);
+  ok(p._ovp === 0, '已經有全台資料，換到別區路線還在上網抓');
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state').textContent === '已載入');
+  const r2 = await p.evaluate(() => { const K = window.__gp.fn('PK'); return { n: K.list.length, full: K.full, first: K.list[0] }; });
+  ok(r2.n === 6 && r2.full && r2.first.n && r2.first.la, '重開 App 後全台山頭不見了');
 }, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);

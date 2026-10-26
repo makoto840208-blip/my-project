@@ -175,6 +175,28 @@ T('路線編輯模式：高度圖下方有控制列，關閉後還原', async p 
   r = await p.evaluate(() => ({ closed: document.getElementById('reditMode').hidden, home: document.getElementById('profWrap').contains(document.getElementById('profRead')) }));
   ok(r.closed && r.home, '關閉後沒還原');
 });
+T('前往座標：App 自己的面板、TWD67 換算正確', async p => {
+  await loadGpx(p); await openNav(p); await navBtn(p, 'menu'); await navBtn(p, 'goto'); await p.waitForTimeout(200);
+  ok(!(p._dlg && p._dlg.length), '還在用瀏覽器跳出的輸入框'); ok(await p.evaluate(() => !!document.getElementById('gcIn')), '座標面板沒出現');
+  await p.click('.modal [data-f="67"]'); await p.fill('#gcIn', '244779 2596537'); await p.fill('#gcNm', '玉山附近'); await p.click('.modal [data-gc="ok"]'); await p.waitForTimeout(300);
+  const r = await p.evaluate(() => window.__gp.NB.pin); ok(r && r.n === '玉山附近', '目標點沒設上');
+  const d = Math.hypot((r.la - 23.47) * 110574, (r.lo - 120.957) * 111320 * Math.cos(23.47 * Math.PI / 180)); ok(d < 5, `TWD67 換算偏了 ${d.toFixed(1)} m`);
+});
+T('離路線很遠時不報預計到達時刻', async p => {
+  await p.context().setGeolocation({ latitude: 22.62, longitude: 120.30, accuracy: 10 });
+  await loadGpx(p); await openNav(p); await navBtn(p, 'center'); await p.waitForFunction(() => window.__gp.GPS.last, null, { timeout: 8000 }); await p.waitForTimeout(2300);
+  const t = await p.evaluate(() => document.getElementById('navCard').textContent + '｜' + document.getElementById('navProfInfo').textContent);
+  ok(/不在路線附近/.test(t), '沒有提示不在路線附近'); ok(!/→\s*\d{1,2}:\d{2}/.test(t), '人在路線外還在報到達時刻：' + t.slice(0, 120));
+}, { vp: '直式' });
+T('配速倍率：長休息不算進去', async p => {
+  await loadGpx(p); await openNav(p);
+  const r = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P; G.fn('nbCum')(P); let a = 50, b = a + 5; while (b < P.length - 1 && (P[b][3] - P[a][3] < 0.45 || G.fn('nbLegH')(P, a, b) < 0.2)) b++;
+    const h = G.fn('nbLegH')(P, a, b), T = h * 60 * 1.25, now = Date.now(), tr = [], n = Math.ceil(T * 3);
+    for (let k = 0; k <= n; k++) { const i = Math.round(a + (b - a) * k / n); tr.push({ la: P[i][0], lo: P[i][1], al: P[i][2], t: now - (T + 8) * 60000 + k * (T * 60000 / n) }); }
+    for (let k = 1; k <= 24; k++) tr.push({ la: P[b][0], lo: P[b][1], al: P[b][2], t: now - 8 * 60000 + k * 20000 }); // 停 8 分鐘
+    G.GPS.trail = tr; const m = G.fn('paceMultiplier')(P); return { m, want: T / 60 / h }; });
+  ok(r.m != null && Math.abs(r.m - r.want) < 0.08, `倍率 ${r.m}，應該約 ${r.want.toFixed(2)}（休息被算進去了？）`);
+}, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

@@ -2023,7 +2023,10 @@ function mapView(lat,lon,minZ){if(!MAP.m)return;MAP.m.easeTo({center:[lon,lat],z
 function mapCursor(lat,lon){if(!MAP.m)return;if(!MAP.cur)MAP.cur=new maplibregl.Marker({element:mkEl('mk-cur')}).setLngLat([lon,lat]).addTo(MAP.m);else MAP.cur.setLngLat([lon,lat]);}
 function mapInsets(pad){const cv=MAP.m.getCanvas().getBoundingClientRect(),I={l:pad,r:pad,t:pad,b:pad},vis=e=>e&&!e.hidden&&e.offsetParent!==null;
   const ct=MAP.m.getContainer().querySelector('.maplibregl-ctrl-top-right');if(ct){const q=ct.getBoundingClientRect();I.r=Math.max(I.r,cv.right-q.left+6);}
-  if(NAV.on){const nb=document.querySelector('#navMode .navbtns');if(vis(nb)){const q=nb.getBoundingClientRect();I.l=Math.max(I.l,q.right-cv.left+8);}
+  if(NAV.on){const nb=document.querySelector('#navMode .navbtns');if(vis(nb)){let q=null;for(const e of nb.children){if(e.hidden||e.offsetParent===null)continue;const r=e.getBoundingClientRect();if(!r.width)continue;q=q?{left:Math.min(q.left,r.left),right:Math.max(q.right,r.right),top:Math.min(q.top,r.top),bottom:Math.max(q.bottom,r.bottom)}:{left:r.left,right:r.right,top:r.top,bottom:r.bottom};}
+      // 按鈕可能是左邊直排或上方橫排（橫式時會換行成一排）：看擋左邊還是擋上面，選剩下地圖面積大的那種
+      if(q){const np=$('#navProf'),bb=vis(np)?Math.max(I.b,cv.bottom-np.getBoundingClientRect().top+10):I.b,L=Math.max(I.l,q.right-cv.left+8),T=Math.max(I.t,q.bottom-cv.top+8);
+        if((cv.width-L-I.r)*(cv.height-I.t-bb)>=(cv.width-I.l-I.r)*(cv.height-T-bb))I.l=L;else I.t=T;}}
     const np=$('#navProf');if(vis(np)){const q=np.getBoundingClientRect();I.b=Math.max(I.b,cv.bottom-q.top+10);}}
   return I;}
 function mapFitBest(P,pad){const m=MAP.m;if(!m||!P||P.length<2)return mapFit(P,pad);const I=mapInsets(pad||24);

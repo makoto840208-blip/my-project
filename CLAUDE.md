@@ -12,7 +12,7 @@
 ## 發布流程（使用者偏好）
 - **預設**：每次改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他在電腦上拖曳到 Cloudflare 上傳（不耗建置分鐘）。
 - **使用者說「手機用」**：commit 後 `git push origin main`，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
-- 不論哪種，原始碼都要 commit 進 repo，保持最新。目前版本：**v76**。（v69～v75 是在別的環境改的，v75 從使用者上傳的 Cloudflare zip 還原進 repo）
+- 不論哪種，原始碼都要 commit 進 repo，保持最新。目前版本：**v77**。（v69～v75 是在別的環境改的，v75 從使用者上傳的 Cloudflare zip 還原進 repo）
 
 ## 設計原則（使用者明確要求過）
 - 全 App 低飽和、軍事風；圖示一律單色線條 SVG（`ic('name')`、`ICO2`），**不用彩色 emoji、不用白色**；SOS／偏航警告才用醒目紅。
@@ -23,7 +23,7 @@
 
 ## 架構重點
 - 地圖：MapLibre GL 4.7.1（cdnjs），底圖 raster；暗色用 canvas CSS filter＋`preDark()` 反向補色；「純黑等高線」底圖用自訂 `ctr://` protocol 從 AWS terrarium DEM 即時畫等高線＋計曲線數字。
-- 全螢幕導航（#navMode）：導航板在高度圖右側、黑屏（羅盤雷達、休息點、日落、電量）、偏航提醒、跟隨模式、量距、標記（照片存 IndexedDB）、SOS（全螢幕、長按 1.5 秒撥號、綁定聯絡人）、觸控鎖。
+- 全螢幕導航（#navMode）：地圖鋪滿全螢幕、高度圖蓋在下方，`navPad()` 把高度圖高度設成地圖 bottom padding（＋／－、定位、整條路線才會以看得到的範圍為中心；橫式特別明顯）；導航板在高度圖右側、黑屏（羅盤雷達、休息點、日落、電量）、偏航提醒、跟隨模式、量距、標記（照片存 IndexedDB）、SOS（全螢幕、長按 1.5 秒撥號、綁定聯絡人）、觸控鎖。
 - 路線編輯模式（#reditMode）：地圖＋高度圖固定、路段捲動；直式上下分。
 - 隊伍房間：Firebase RTDB REST `https://team-35b92-default-rtdb.asia-southeast1.firebasedatabase.app`。規則只允許寫 `rooms/{code}/{members,owner,admins,plan,banned}`，所以隊友位置／平安回報放在 `members/{pid}/loc`、`/safe`，隊員資料用 PATCH 以免覆蓋。
 - 配速：`timeFit()` 個人時間模型（總時間＋平均心率，近期加權、排除異常），`hrFit()` 簡易版，`planFor()` 決定每段時數；Garmin CSV 用「時間」欄（計時器時間）。

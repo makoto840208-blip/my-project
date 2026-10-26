@@ -1,4 +1,4 @@
-const C='planner-v76';
+const C='planner-v77';
 const KEEP=[C,'gp-tiles','gp-lib'];
 const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 const TILE=/(wmts\.nlsc\.gov\.tw|tile\.opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|elevation-tiles-prod)/;

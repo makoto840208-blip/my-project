@@ -2032,7 +2032,7 @@ function mapFitBest(P,pad){const m=MAP.m;if(!m||!P||P.length<2)return mapFit(P,p
   for(let t=-89;t<=90;t++){const r=t*Math.PI/180,co=Math.cos(r),si=Math.sin(r);let a=1e9,b=1e9,c=-1e9,d=-1e9;
     for(const q of X){const x=q[0]*co+q[1]*si,y=-q[0]*si+q[1]*co;if(x<a)a=x;if(x>c)c=x;if(y<b)b=y;if(y>d)d=y;}
     C.push({k:Math.min(W/Math.max(c-a,1e-9),H/Math.max(d-b,1e-9)),t,cx:(a+c)/2,cy:(b+d)/2,co,si});}
-  const km=Math.max(...C.map(o=>o.k)),B0=C.filter(o=>o.k>=km*0.97).sort((p,q)=>Math.abs(p.t)-Math.abs(q.t)||q.k-p.k)[0],B=Object.assign({},B0,{cx:B0.cx-(I.l-I.r)/2/B0.k,cy:B0.cy-(I.t-I.b)/2/B0.k}),x=B.cx*B.co-B.cy*B.si,y=B.cx*B.si+B.cy*B.co,ll=new maplibregl.MercatorCoordinate(x,y).toLngLat();
+  const km=Math.max(...C.map(o=>o.k)),B0=C.filter(o=>o.k>=km*0.97).sort((p,q)=>Math.abs(p.t)-Math.abs(q.t)||q.k-p.k)[0],pd=m.getPadding(),B=Object.assign({},B0,{cx:B0.cx-((I.l-(pd.left||0))-(I.r-(pd.right||0)))/2/B0.k,cy:B0.cy-((I.t-(pd.top||0))-(I.b-(pd.bottom||0)))/2/B0.k}),x=B.cx*B.co-B.cy*B.si,y=B.cx*B.si+B.cy*B.co,ll=new maplibregl.MercatorCoordinate(x,y).toLngLat();
   headStop();m.jumpTo({center:ll,bearing:B.t,zoom:Math.min(16,Math.log2(B.k/512))});return B.t;}
 class FitCtl{onAdd(){const d=document.createElement('div');d.className='maplibregl-ctrl maplibregl-ctrl-group';d.innerHTML='<button type="button" title="整條路線放到最大（自動轉角度）" aria-label="整條路線放到最大" style="font-size:15px">⤢</button>';
     d.firstChild.onclick=e=>{e.stopPropagation();if(MAP.P&&MAP.P.length>1){mapFitBest(MAP.P,NAV.on?40:24);}else toast('還沒有路線');};return d;}onRemove(){}}
@@ -2125,7 +2125,12 @@ $('#mapGps').addEventListener('click',()=>{if(GPS.watch!=null&&GPS.byBtn){GPS.by
   if(gpsStart()){GPS.byBtn=true;GPS.first=true;$('#mapGps').innerHTML=ic('stop')+'停止定位';}});
 // --- 全螢幕導航地圖 ---
 const NAV={on:false,tick:null};
-function npSize(){const el=$('#navProf');if(!el)return;document.getElementById('navMode').style.setProperty('--npb',el.offsetHeight+'px');const inf=$('#profInfo'),ni=$('#navProfInfo');if(!ni.textContent||!(MAP.P&&MAP.P.length>1))ni.textContent=inf?inf.textContent.split('｜')[0]:'';}
+function npSize(){const el=$('#navProf');if(!el)return;document.getElementById('navMode').style.setProperty('--npb',el.offsetHeight+'px');try{navPad();}catch(e){}const inf=$('#profInfo'),ni=$('#navProfInfo');if(!ni.textContent||!(MAP.P&&MAP.P.length>1))ni.textContent=inf?inf.textContent.split('｜')[0]:'';}
+// 導航時高度圖蓋在地圖下方：設 padding 讓「＋／－、定位、整條路線」都以看得到的地圖範圍為準（換 padding 時畫面不動）
+function navPad(){const m=MAP.m;if(!m||!NAV.on||FOL.on)return;const ct=m.getContainer(),H=ct.clientHeight,W=ct.clientWidth;if(!H||!W)return;
+  const b=Math.max(0,Math.min(H-80,Math.round(parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0))),cur=m.getPadding();
+  if(Math.abs((cur.bottom||0)-b)<2&&!cur.top&&!cur.left&&!cur.right)return;
+  const vc=m.unproject([W/2,(H-(cur.bottom||0)+(cur.top||0))/2]);m.jumpTo({center:vc,padding:{top:0,bottom:b,left:0,right:0}});}
 addEventListener('resize',()=>{if(NAV.on){npSize();clearTimeout(NAV.rt);NAV.rt=setTimeout(()=>{renderProfile();MAP.m&&MAP.m.resize();},200);}});
 const fmtDur=s=>{s=Math.round(s||0);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}:${String(m).padStart(2,'0')}`:`${m} 分`;};
 function navHud(){if(!NAV.on)return;const g=GPS.last,R=GPS.rec,set=(k,v)=>{const el=document.querySelector(`#navHud [data-k=${k}] b`);if(el)el.innerHTML=v;};
@@ -2147,7 +2152,7 @@ async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網�
   if(GPS.watch==null&&S.route.trk)gpsStart(); // 只開定位、不自動移動地圖
   setTimeout(()=>{MAP.m.invalidateSize();npSize();renderProfile();},150);NAV.tick=setInterval(()=>{navHud();navBoard();},2000);navHud();navBoard();editUI();try{marksRender();teamLocRender();}catch(e){}}
 function navClose(){NAV.on=false;try{mapNavMode(false);}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
-  if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}}
+  if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();}try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}
   if(NAV.profHome){NAV.profHome.append($('#prof'),$('#profRead'));}
   try{if(NAV.fsByMe&&document.fullscreenElement)document.exitFullscreen();}catch(e){}NAV.fsByMe=false;try{if(GPS.wake){GPS.wake.release();GPS.wake=null;}}catch(e){}
   if(!GPS.byBtn&&!(GPS.rec&&GPS.rec.on))gpsStop();bkHeadOff();setTimeout(()=>MAP.m&&MAP.m.invalidateSize(),120);try{renderProfile();}catch(e){}}
@@ -2313,7 +2318,7 @@ function folBtn(){const b=document.querySelector('#navMode [data-nav=follow]');i
 function folToggle(force){const on=force!=null?force:!FOL.on;if(on===FOL.on)return;FOL.on=on;folBtn();if(!MAP.m)return;
   if(!FOL.reg){FOL.reg=true;const off=e=>{if(FOL.on&&e&&e.originalEvent)folToggle(false);};MAP.m.on('dragstart',off);MAP.m.on('rotatestart',off);}
   if(on){if(HEAD.on)headStop();if(GPS.watch==null)gpsStart();bkHeadOn();folApply(true);}
-  else{MAP.m.easeTo({padding:{top:0,bottom:0,left:0,right:0},duration:300});if($('#navBlack').hidden)bkHeadOff();}}
+  else{const npb=NAV.on?Math.round(parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0):0;MAP.m.easeTo({padding:{top:0,bottom:npb,left:0,right:0},duration:300});if($('#navBlack').hidden)bkHeadOff();}}
 function folApply(force){if(!FOL.on||!MAP.m||!NAV.on||!$('#navBlack').hidden)return;const g=GPS.last;if(!g)return;const now=Date.now();if(!force&&now-FOL.t<300)return;
   if(!force&&FOL.k===g.t&&BK.hd!=null&&Math.abs(((BK.hd-MAP.m.getBearing()+540)%360)-180)<2)return;FOL.k=g.t;FOL.t=now;
   const br=BK.hd!=null?BK.hd:(g.sp!=null&&g.sp>0.6&&g.hd!=null&&isFinite(g.hd)?g.hd:MAP.m.getBearing()),H=MAP.m.getContainer().clientHeight,npb=parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0,Hv=Math.max(100,H-npb);
@@ -2584,12 +2589,12 @@ function trimClick(e){const sd=e.target.closest('[data-side]');if(sd){TRIM.side=
   const b=e.target.closest('[data-trim]');if(!b)return;const a=b.dataset.trim;if(a==='do')trimDo();else if(a==='cancel'){TRIM.on=false;TRIM.a=TRIM.b=null;renderProfile();trimBar();trimDraw();}else{TRIM.a=TRIM.b=null;renderProfile();trimBar();trimDraw();}}
 $('#trimBar').addEventListener('click',trimClick);$('#navEdit').addEventListener('click',e=>{if(TRIM.on)trimClick(e);else if(DRAW.on)drawClick(e);});
 $('#trimUndo').addEventListener('click',()=>{const T=S.route.trk;if(!T||!T.undo)return;const u=JSON.parse(T.undo);T.p=u.p;T.wps=u.wps;T.cuts=u.cuts;S.route.mode=u.mode;delete T.undo;fillRoute();rebuildFromTrk({renameEnds:true});trimBar();toast('已復原');});
-const PROF={split:false,a:null,b:null,rt:'',key:null,zoom:1,vS:0};
+const PROF={split:false,a:null,b:null,rt:'',key:null,zoom:1,vS:0,dragged:false};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-psplit]');if(!b)return;PROF.split=!PROF.split;PROF.a=PROF.b=null;PROF.rt='';renderProfile();});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pb]');if(!b||!PROF.fn)return;const F=PROF.fn,P=F.P,k=b.dataset.pb,c=PROF.cur||0;
   if(k==='l'||k==='r'){const step=Math.max(0.02,F.D/300),t=P[c][3]+(k==='r'?step:-step);let i=c;if(k==='r')while(i<F.n&&P[i][3]<t)i++;else while(i>0&&P[i][3]>t)i--;F.setCur(i,true);return;}
   if(k==='rest'){const km=+P[c][3].toFixed(3);if(S.restKm!=null&&Math.abs(S.restKm-km)<0.05){S.restKm=null;}else{S.restKm=km;}setDirty(true);try{navBoard();}catch(err){}F.profRange();return;}
-  if(k==='zoom'){PROF.zoom=PROF.zoom===1?2:PROF.zoom===2?4:1;renderProfile();return;}
+  if(k==='zoom'){PROF.zoom=PROF.zoom===1?2:PROF.zoom===2?4:1;PROF.vS=P[c][3]-F.D/PROF.zoom/2;renderProfile();return;}
   if(k==='a')PROF.a=c;else if(k==='b')PROF.b=c;else{PROF.a=PROF.b=null;}F.profRange();try{navBoard();}catch(err){}});
 document.addEventListener('click',e=>{if(!e.target.closest('[data-restx]'))return;e.stopPropagation();S.restKm=null;setDirty(true);navBoard();try{PROF.fn&&PROF.fn.profRange();}catch(err){}},true);
 function renderProfile(){
@@ -2599,13 +2604,13 @@ function renderProfile(){
   const P=trkFull(T),WP=trkWps(T),pl=36,pb=18,pt=8,n=P.length-1,D=P[n][3]||1,mir=mirOn(),nTurn=T.p.length-1;
   const es=P.map(x=>x[2]).filter(v=>v!=null);if(!es.length){$('#prof').innerHTML='<div class="rec">這條軌跡沒有高度資料</div>';return;}
   let lo=Math.min(...es),hi=Math.max(...es);const pad=Math.max(30,(hi-lo)*0.08);lo=Math.floor((lo-pad)/100)*100;hi=Math.ceil((hi+pad)/100)*100;
-  const zoom=PROF.zoom||1,visD=D/zoom,curD=PROF.cur!=null&&P[PROF.cur]?P[PROF.cur][3]:0,vS=Math.max(0,Math.min(D-visD,curD-visD/2));PROF.vS=vS;
+  const zoom=PROF.zoom||1,visD=D/zoom,vS=zoom>1?Math.max(0,Math.min(D-visD,PROF.vS||0)):0;PROF.vS=vS;
   const X=d=>pl+(W-pl-6)*(d-vS)/visD,Y=e=>pt+(H-pt-pb)*(1-(e-lo)/((hi-lo)||1));
   const st=Math.max(1,Math.floor(P.length/700));let path='';for(let i=0;i<=n;i+=st){const e=P[i][2];if(e==null)continue;path+=(path?'L':'M')+X(P[i][3]).toFixed(1)+','+Y(e).toFixed(1);}
   if(P[n][2]!=null)path+='L'+X(D).toFixed(1)+','+Y(P[n][2]).toFixed(1);
   const area=path+`L${X(D).toFixed(1)},${H-pb}L${X(0).toFixed(1)},${H-pb}Z`;
   const yt=[];const ystep=(hi-lo)>1500?500:(hi-lo)>600?200:100;for(let v=Math.ceil(lo/ystep)*ystep;v<=hi;v+=ystep)yt.push(v);
-  const xt=[];const xs=visD>30?5:visD>12?2:visD>5?1:0.5;for(let v=Math.ceil(vS/xs)*xs;v<=vS+visD+1e-9;v+=xs)xt.push(+v.toFixed(2));
+  const xt=[];const xs=visD>30?5:visD>12?2:visD>5?1:0.5;for(let v=0;v<=D+1e-9;v+=xs)xt.push(+v.toFixed(2));
   const cuts=T.cuts.map(i=>X(P[i][3]));
   const days=[0,...T.cuts,n];
   const tier=[-1e9,-1e9];const seen=new Set();
@@ -2616,14 +2621,14 @@ function renderProfile(){
     return `<g>${dot}<text x="${x}" y="${Math.max(10,y-(t?26:12))}" font-size="10" fill="var(--txt)" text-anchor="${anc}" paint-order="stroke" stroke="#0e120c" stroke-width="3">${esc(nm)}</text></g>`;}).join('');
   $('#prof').innerHTML=`<svg viewBox="0 0 ${W} ${H}" id="profSvg" role="img" aria-label="高度剖面"><defs><clipPath id="profClip"><rect x="${pl}" y="0" width="${W-6-pl}" height="${H}"/></clipPath></defs>
     ${yt.map(v=>`<line x1="${pl}" x2="${W-6}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="0.6"/><text x="${pl-4}" y="${Y(v)+3}" font-size="9.5" fill="var(--mut)" text-anchor="end">${v}</text>`).join('')}
-    ${xt.map(v=>`<text x="${X(v)}" y="${H-5}" font-size="9.5" fill="var(--mut)" text-anchor="middle">${v}</text>`).join('')}
-    <g clip-path="url(#profClip)"><path d="${area}" fill="rgba(95,174,78,.18)"/><path d="${path}" fill="none" stroke="#8fae7a" stroke-width="1.6"/>
+    <g clip-path="url(#profClip)"><g id="profPan">${xt.map(v=>`<text x="${X(v)}" y="${H-5}" font-size="9.5" fill="var(--mut)" text-anchor="middle">${v}</text>`).join('')}
+    <path d="${area}" fill="rgba(95,174,78,.18)"/><path d="${path}" fill="none" stroke="#8fae7a" stroke-width="1.6"/>
     ${days.slice(0,-1).map((a,k)=>`<text x="${(X(P[a][3])+X(P[days[k+1]][3]))/2}" y="${pt+10}" font-size="11" fill="var(--coy2)" text-anchor="middle" font-weight="600">D${k+1}</text>`).join('')}
     ${cuts.map(x=>`<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="var(--coy)" stroke-width="1.4" stroke-dasharray="4 3"/>`).join('')}
     ${mir?`<rect x="${X(P[nTurn][3])}" y="${pt}" width="${X(D)-X(P[nTurn][3])}" height="${H-pb-pt}" fill="rgba(255,255,255,.03)"/><line x1="${X(P[nTurn][3])}" x2="${X(P[nTurn][3])}" y1="${pt+14}" y2="${H-pb}" stroke="var(--mut)" stroke-width="0.8"/><text x="${X(P[nTurn][3])+3}" y="${H-pb-4}" font-size="9.5" fill="var(--mut)">折返・回程 →</text>`:''}
     ${TRIM.on&&TRIM.a!=null?`<line x1="${X(P[TRIM.a][3])}" x2="${X(P[TRIM.a][3])}" y1="${pt}" y2="${H-pb}" stroke="#e0715f" stroke-width="2"/>`:''}
     ${TRIM.on&&TRIM.a!=null&&TRIM.b!=null?`<rect x="${X(P[TRIM.a][3])}" y="${pt}" width="${X(P[TRIM.b][3])-X(P[TRIM.a][3])}" height="${H-pb-pt}" fill="rgba(224,113,95,.28)"/><line x1="${X(P[TRIM.b][3])}" x2="${X(P[TRIM.b][3])}" y1="${pt}" y2="${H-pb}" stroke="#e0715f" stroke-width="2"/>`:''}
-    ${wl}<rect id="profAB" x="-10" y="${pt}" width="0" height="${H-pb-pt}" fill="rgba(255,60,220,.2)"/><line id="profA" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profB" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profRest" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ffe14d" stroke-width="1" stroke-dasharray="2 2"/><text id="profRestT" x="-30" y="${pt+22}" font-size="10" fill="#ffe14d">◆</text><line id="profCur" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#fff" stroke-width="0.8" opacity=".7"/></g></svg>${virt?'':`<button type="button" class="profsplit${PROF.split?' on':''}" data-psplit>${PROF.split?ic('trim')+'分天編輯中（點圖切開／取消）・完成':ic('trim')+'編輯分天'}</button>`}`;
+    ${wl}<rect id="profAB" x="-10" y="${pt}" width="0" height="${H-pb-pt}" fill="rgba(255,60,220,.2)"/><line id="profA" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profB" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profRest" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ffe14d" stroke-width="1" stroke-dasharray="2 2"/><text id="profRestT" x="-30" y="${pt+22}" font-size="10" fill="#ffe14d">◆</text><line id="profCur" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#fff" stroke-width="0.8" opacity=".7"/></g></g></svg>${virt?'':`<button type="button" class="profsplit${PROF.split?' on':''}" data-psplit>${PROF.split?ic('trim')+'分天編輯中（點圖切開／取消）・完成':ic('trim')+'編輯分天'}</button>`}`;
   renderMap(P,[0,...T.cuts,n],WP,mir?nTurn:-1,T);try{trimBar();}catch(e){}
   $('#profInfo').textContent=virt?`${D.toFixed(1)} km｜依你輸入的起終點沿步道算出｜分天請在下面每天的終點改`:`${D.toFixed(1)} km${mir?'（含鏡射回程）':''}｜${T.src==='route'?'依步道自動規劃':T.src==='draw'?'手繪路線':'GPX 軌跡'}｜點兩個位置看兩點間距離與爬升；要改分天按右上「編輯分天」`;
   if(NAV.on)npSize();
@@ -2631,7 +2636,7 @@ function renderProfile(){
   const at=ev=>{const r=svg.getBoundingClientRect(),x=(ev.clientX-r.left)*W/r.width,d=Math.max(0,Math.min(D,(PROF.vS||0)+(x-pl)/(W-pl-6)*D/(PROF.zoom||1)));let lo=0,hi=n;while(lo<hi){const m=(lo+hi)>>1;if(P[m][3]<d)lo=m+1;else hi=m;}return lo>0&&Math.abs(P[lo-1][3]-d)<Math.abs(P[lo][3]-d)?lo-1:lo;};
   const curEl=$('#profCur'),readEl=$('#profRead');let raf=0,lastEv=null;
   readEl.innerHTML=`<div data-prt></div><div class="pbar"><span data-pcur></span><span class="pbtns"><button type="button" data-pb="l" aria-label="往前">◀</button><button type="button" data-pb="r" aria-label="往後">▶</button><button type="button" data-pb="zoom" title="水平放大（×1→×2→×4）">${PROF.zoom>1?'×'+PROF.zoom:'×1'}</button><button type="button" data-pb="a">設起點</button><button type="button" data-pb="b">設終點</button><button type="button" data-pb="c">清除</button><button type="button" data-pb="rest">◆ 休息點</button></span></div>`;
-  const setCur=(i,pan)=>{i=Math.max(0,Math.min(n,i));PROF.cur=i;if(pan&&zoom>1&&(P[i][3]<vS||P[i][3]>vS+visD)){renderProfile();return;}const x=X(P[i][3]);curEl.setAttribute('x1',x);curEl.setAttribute('x2',x);
+  const setCur=(i,pan)=>{i=Math.max(0,Math.min(n,i));PROF.cur=i;if(pan&&zoom>1&&(P[i][3]<vS||P[i][3]>vS+visD)){PROF.vS=P[i][3]-visD/2;renderProfile();return;}const x=X(P[i][3]);curEl.setAttribute('x1',x);curEl.setAttribute('x2',x);
     if(MAP.m&&MAP.loaded)mapCursor(P[i][0],P[i][1]);
     let w=null;for(const q of WP){if(Math.abs(P[q.i][3]-P[i][3])<0.15){w=q;break;}}const el=readEl.querySelector('[data-pcur]');if(el)el.textContent=`${P[i][3].toFixed(2)} km　${P[i][2]!=null?P[i][2]+' m':''}${w?'　'+w.n:''}`;};
   const upd=()=>{raf=0;const i=at(lastEv);if(i!==PROF.cur)setCur(i);};
@@ -2647,8 +2652,17 @@ function renderProfile(){
       if(A!=null&&B!=null&&A!==B){const i=Math.min(A,B),j=Math.max(A,B);mapSrc('sel',lineFC(P.slice(i,j+1).map(q=>[q[1],q[0]]),{c:COL('#ff3cdc'),k:COL('#000000')}));}else mapSrc('sel',EMPTY);}}catch(e){}};
   PROF.fn={setCur,profRange,P,n,D,X};
   if(PROF.key!==P){PROF.key=P;PROF.a=PROF.b=null;PROF.rt='';PROF.cur=0;PROF.zoom=1;PROF.vS=0;}profRange();setCur(PROF.cur||0);
-  svg.addEventListener('pointermove',ev=>{lastEv={clientX:ev.clientX};if(!raf)raf=requestAnimationFrame(upd);},{passive:true});
-  svg.addEventListener('click',ev=>{const i=at(ev);if(TRIM.on){trimTap(i);return;}
+  // 放大時左右拖動＝平移（點一下仍是選位置）；沒放大時滑動＝移動游標
+  let drag=null;const kx=(W-pl-6)/visD,panG=$('#profPan');
+  svg.addEventListener('pointerdown',ev=>{if(zoom<=1)return;drag={x:ev.clientX,id:ev.pointerId,moved:false,dx:0};});
+  svg.addEventListener('pointermove',ev=>{
+    if(drag){const r=svg.getBoundingClientRect();if(!drag.moved&&Math.abs(ev.clientX-drag.x)>6){drag.moved=true;try{svg.setPointerCapture(drag.id);}catch(e){}}
+      if(drag.moved){drag.dx=Math.max(-(D-visD-vS)*kx,Math.min(vS*kx,(ev.clientX-drag.x)*W/r.width));panG.setAttribute('transform',`translate(${drag.dx.toFixed(1)},0)`);}return;}
+    if(zoom>1&&ev.pointerType!=='mouse')return;
+    lastEv={clientX:ev.clientX};if(!raf)raf=requestAnimationFrame(upd);},{passive:true});
+  const dragEnd=()=>{if(!drag)return;const d=drag;drag=null;if(!d.moved)return;PROF.vS=vS-d.dx/kx;PROF.dragged=true;setTimeout(()=>{PROF.dragged=false;renderProfile();},0);};
+  svg.addEventListener('pointerup',dragEnd);svg.addEventListener('pointercancel',dragEnd);
+  svg.addEventListener('click',ev=>{if(PROF.dragged)return;const i=at(ev);if(TRIM.on){trimTap(i);return;}
     if(virt||!PROF.split){setCur(i);return;}
     if(i<=0||i>=n)return;
     const near=T.cuts.find(c=>Math.abs(P[c][3]-P[i][3])<Math.max(0.3,D*0.015));

@@ -67,7 +67,7 @@ const visArea = p => p.evaluate(() => {
   const bs = [...document.querySelectorAll('#navMode .navbtns>button')].filter(e => !e.hidden && e.offsetParent).map(e => e.getBoundingClientRect());
   const ct = document.querySelector('.maplibregl-ctrl-top-right').getBoundingClientRect();
   const u = { l: Math.min(...bs.map(r => r.left)), t: Math.min(...bs.map(r => r.top)), r: Math.max(...bs.map(r => r.right)), b: Math.max(...bs.map(r => r.bottom)) };
-  return { W: cv.width, H: cv.height, profTop: np.top - cv.top, btn: u, ctrlL: ct.left - cv.left, horiz: (u.r - u.l) > (u.b - u.t) };
+  return { W: cv.width, H: cv.height, profTop: np.top - cv.top, btn: u, ctrlL: ct.left - cv.left, ctrlB: ct.bottom - cv.top, ctrlRow: ct.width > ct.height * 1.5, horiz: (u.r - u.l) > (u.b - u.t) };
 });
 const routeBox = p => p.evaluate(() => { const m = window.__gp.MAP.m, P = window.__gp.MAP.P; let a = 1e9, b = 1e9, c = -1e9, d = -1e9; for (const q of P) { const s = m.project([q[1], q[0]]); a = Math.min(a, s.x); b = Math.min(b, s.y); c = Math.max(c, s.x); d = Math.max(d, s.y); } return { l: a, t: b, r: c, b: d }; });
 
@@ -121,7 +121,7 @@ T('導航：按 ＋ 放大，畫面中央的點不跑掉', async p => {
 T('導航：整條路線放到最大，不被按鈕／高度圖擋住、也不偏一邊', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'route'); await p.waitForTimeout(400); await idle(p); await shot(p, 'fit');
   const v = await visArea(p), b = await routeBox(p);
-  const L = v.horiz ? 0 : v.btn.r, Tp = v.horiz ? v.btn.b : 0, Rt = v.ctrlL, Bt = v.profTop;
+  const L = v.horiz ? 0 : v.btn.r, Tp = Math.max(v.horiz ? v.btn.b : 0, v.ctrlRow ? v.ctrlB : 0), Rt = v.ctrlRow ? v.W : v.ctrlL, Bt = v.profTop;
   ok(b.l >= L - 2 && b.t >= Tp - 2 && b.r <= Rt + 2 && b.b <= Bt + 2, `路線跑出可見範圍：路線 ${JSON.stringify(Object.fromEntries(Object.entries(b).map(([k, x]) => [k, Math.round(x)])))}，可見 l${Math.round(L)} t${Math.round(Tp)} r${Math.round(Rt)} b${Math.round(Bt)}`);
   const fw = (b.r - b.l) / (Rt - L), fh = (b.b - b.t) / (Bt - Tp);
   ok(Math.max(fw, fh) > 0.75, `路線只用了可見範圍的 ${Math.round(Math.max(fw, fh) * 100)}%`);
@@ -343,6 +343,31 @@ T('下載全台山頭：之後別區路線不再上網、重開還在', async p 
   const r2 = await p.evaluate(() => { const K = window.__gp.fn('PK'); return { n: K.list.length, full: K.full, first: K.list[0] }; });
   ok(r2.n === 6 && r2.full && r2.first.n && r2.first.la, '重開 App 後全台山頭不見了');
 }, { vp: '直式' });
+T('導航：右邊地圖按鈕跟左邊一樣大、不跟 SOS／高度圖重疊', async p => {
+  await loadGpx(p); await openNav(p); await shot(p, 'btns');
+  const r = await p.evaluate(() => { const L = document.querySelector('#navMode .navbtns>button').getBoundingClientRect(), Rb = [...document.querySelectorAll('#navMode .maplibregl-ctrl-top-right button')].filter(b => b.offsetParent && !b.closest('.lyrmenu')).map(b => b.getBoundingClientRect());
+    const sos = document.querySelector('#navMode .sosb').getBoundingClientRect(), np = document.getElementById('navProf').getBoundingClientRect(), hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    return { lw: Math.round(L.width), sizes: [...new Set(Rb.map(b => Math.round(b.width) + 'x' + Math.round(b.height)))], n: Rb.length, sos: Rb.some(b => hit(b, sos)), prof: Rb.some(b => hit(b, np)) }; });
+  ok(r.n >= 5, '右邊按鈕少了：' + r.n); ok(r.sizes.length === 1 && r.sizes[0] === r.lw + 'x' + r.lw, `右邊按鈕 ${r.sizes.join('、')}，左邊 ${r.lw}x${r.lw}`);
+  ok(!r.sos, '右邊按鈕跟 SOS 重疊'); ok(!r.prof, '右邊按鈕跟高度圖重疊');
+});
+T('導航：圖層選單在畫面中間橫向展開、不被 SOS 擋', async p => {
+  await loadGpx(p); await openNav(p); await p.click('.lyrctl>button'); await p.waitForTimeout(200); await shot(p, 'layers');
+  const r = await p.evaluate(() => { const m = document.querySelector('.lyrmenu'), q = m.getBoundingClientRect(), bs = [...m.querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none'), tops = new Set(bs.map(b => Math.round(b.getBoundingClientRect().top))), np = document.getElementById('navProf').getBoundingClientRect();
+    const vis = bs.filter(b => { const r = b.getBoundingClientRect(); return r.right > q.left + 4 && r.left < q.right - 4; }), top = vis.every(b => { const r = b.getBoundingClientRect(), x0 = Math.max(r.left, q.left) + 4, x1 = Math.min(r.right, q.right) - 4; return [[x0, r.top + 4], [x1, r.top + 4], [x0, r.bottom - 4], [x1, r.bottom - 4], [(x0 + x1) / 2, (r.top + r.bottom) / 2]].every(([x, y]) => { const el = document.elementFromPoint(x, y); return el && b.contains(el); }); });
+    return { open: !m.hidden, row: tops.size === 1, n: bs.length, mid: Math.abs((q.top + q.bottom) / 2 - np.top / 2) < 30, wide: q.width > innerWidth * 0.8, top, scroll: m.scrollWidth > m.clientWidth || m.scrollWidth <= m.clientWidth }; });
+  ok(r.open && r.n >= 6, '圖層選單沒打開'); ok(r.row, '圖層選項沒有排成一橫列'); ok(r.mid && r.wide, '圖層選單不在畫面中間'); ok(r.top, '圖層選項被別的東西蓋住（SOS？）');
+  await p.mouse.click(200, 30); await p.waitForTimeout(150); ok(await p.evaluate(() => document.querySelector('.lyrmenu').hidden), '點外面沒有收起來');
+});
+T('導航：高度圖往下滑收起、往上滑拉開', async p => {
+  await loadGpx(p); await openNav(p); const cdp = await p.context().newCDPSession(p);
+  const swipe = async (y0, y1) => { const x = 120; await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] }); for (let k = 1; k <= 6; k++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + (y1 - y0) * k / 6 }] }); await p.waitForTimeout(16); } await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await p.waitForTimeout(300); };
+  const st = () => p.evaluate(() => { const e = document.getElementById('navProf'); return { min: e.classList.contains('min'), top: Math.round(e.getBoundingClientRect().top), pad: Math.round(window.__gp.MAP.m.getPadding().bottom), h: e.offsetHeight }; });
+  let r = await st(); ok(!r.min, '一開始應該是展開的');
+  await swipe(r.top + 15, r.top + 120); r = await st(); ok(r.min, '往下滑沒收起'); ok(Math.abs(r.pad - r.h) <= 2, '收起後地圖 padding 沒跟著變');
+  await swipe(r.top + 15, r.top - 150); r = await st(); ok(!r.min, '往上滑沒拉開');
+  await p.click('#navProf .nph'); r = await st(); ok(r.min, '點標題列應該還是可以收');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

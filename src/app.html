@@ -257,7 +257,7 @@ svg.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;str
 #navEdit .btnrow{margin-top:8px}#navEdit .seg2{display:inline-flex;border:1px solid #666;border-radius:6px;overflow:hidden;margin-left:6px}#navEdit .seg2 button{background:none;border:0;color:#ccc;padding:3px 9px;font:inherit;font-size:12.5px}#navEdit .seg2 button.on{background:var(--coy);color:#111}
 .navbtns button.on{background:var(--coy);color:#111}
 #navProf{position:absolute;left:0;right:0;bottom:0;z-index:1001;background:rgba(17,21,15,.96);border-top:1px solid var(--line);padding:0 calc(8px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(8px + env(safe-area-inset-left))}
-#navProf .nph{all:unset;display:flex;gap:10px;align-items:center;width:100%;padding:6px 4px;color:var(--coy2);font-size:13px;cursor:pointer;box-sizing:border-box}#navProf .nph i{font-style:normal;color:var(--mut);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#navProf .nph b{color:var(--mut)}
+#navProf::before{content:'';position:absolute;top:3px;left:50%;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:rgba(207,170,112,.4);pointer-events:none}#navProf .nph{padding-top:10px!important;all:unset;display:flex;gap:10px;align-items:center;width:100%;padding:6px 4px;color:var(--coy2);font-size:13px;cursor:pointer;box-sizing:border-box}#navProf .nph i{font-style:normal;color:var(--mut);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#navProf .nph b{color:var(--mut)}
 #navProfBody{height:30vh;max-height:220px;min-height:120px;display:flex;flex-direction:row;gap:8px}#navProfMain{flex:1;min-width:0;display:flex;flex-direction:column}#navProfMain #prof{flex:1;min-height:0;overflow:hidden}#prof{position:relative}.profsplit{position:absolute;top:2px;right:4px;background:rgba(17,21,15,.85);border:1px solid var(--line);color:var(--mut);border-radius:12px;padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer}.profsplit.on{color:#111;background:#ffe14d;border-color:#ffe14d}
 #navMode #profRead .phint{display:none}#navMode #profRead .pbtns button{height:26px;min-width:30px;padding:0 6px;font-size:11.5px}#navMode #profRead .pbar [data-pcur]{font-size:11px}
 @media (orientation:portrait){#navProfBody{min-height:170px;height:32vh}}
@@ -328,7 +328,18 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 .sosbtn{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.sosbtn .btn{text-decoration:none;flex:1 1 40%;text-align:center;font-size:15px;padding:10px}
 #navProg{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:1000;background:rgba(20,22,20,.9);color:#fff;border-radius:20px;padding:8px 14px;font-size:13px;max-width:92vw;text-align:center}
 #navProg:empty{display:none}
-#navMode .maplibregl-ctrl-top-right{top:env(safe-area-inset-top)}
+#navMode .maplibregl-ctrl-top-right{top:calc(10px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right))}#navMode .maplibregl-ctrl-top-right .maplibregl-ctrl{margin:0 0 10px 0;border-radius:10px}
+#navMode .maplibregl-ctrl-group button{width:52px;height:52px}#navMode .maplibregl-ctrl-group button .maplibregl-ctrl-icon{background-size:40px 40px}#navMode .lyrctl>button svg{width:26px!important;height:26px!important}#navMode .maplibregl-ctrl-group button[title^="整條路線"]{font-size:26px!important}
+#navMode .maplibregl-ctrl-group>button:first-child{border-radius:10px 10px 0 0}#navMode .maplibregl-ctrl-group>button:last-child{border-radius:0 0 10px 10px}#navMode .maplibregl-ctrl-group>button:only-child{border-radius:10px}
+@media (max-height:560px){#navMode .maplibregl-ctrl-group button{width:42px;height:42px}#navMode .maplibregl-ctrl-group button .maplibregl-ctrl-icon{background-size:32px 32px}
+  #navMode .maplibregl-ctrl-top-right{display:flex;flex-direction:row-reverse;align-items:flex-start;gap:10px}#navMode .maplibregl-ctrl-top-right .maplibregl-ctrl{margin:0}
+  #navMode .maplibregl-ctrl-top-right .maplibregl-ctrl-group:not(.lyrctl){display:flex}#navMode .maplibregl-ctrl-top-right .maplibregl-ctrl-group:not(.lyrctl) button+button{border-top:0;border-left:1px solid rgba(207,170,112,.2)}
+  #navMode .maplibregl-ctrl-group>button:first-child{border-radius:10px 0 0 10px}#navMode .maplibregl-ctrl-group>button:last-child{border-radius:0 10px 10px 0}#navMode .maplibregl-ctrl-group>button:only-child{border-radius:10px}}
+/* 導航中的圖層選單：在畫面中間展開成一橫列、可左右滑，蓋在 SOS 上面 */
+#navMode .maplibregl-ctrl-top-right:has(.lyrmenu:not([hidden])){z-index:1100}#navMode .lyrctl{transform:none!important;filter:none!important}#navMode #rmap{z-index:auto!important}/* #rmap 的 z-index:0 會把圖層選單鎖在左邊按鈕和 SOS 底下 *//* 有 transform 時 fixed 會被框在按鈕裡 */
+#navMode .lyrmenu{position:fixed;left:calc(12px + env(safe-area-inset-left));right:calc(12px + env(safe-area-inset-right));top:calc((100dvh - var(--npb,180px))/2);transform:translateY(-50%);display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overscroll-behavior:contain;min-width:0;padding:8px;border-radius:12px;scrollbar-width:none;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+#navMode .lyrmenu::-webkit-scrollbar{display:none}#navMode .lyrmenu[hidden]{display:none!important}
+#navMode .lyrmenu button{display:flex!important;align-items:center;flex:none;width:auto!important;white-space:nowrap;padding:12px 16px!important;font-size:15px!important;border:1px solid rgba(207,170,112,.35)!important;border-radius:8px!important;border-top:1px solid rgba(207,170,112,.35)!important}
 #mapBig{position:absolute;right:6px;bottom:6px;z-index:500;background:rgba(17,21,15,.85)}
 .maplibregl-map{font:12px/1.4 system-ui,sans-serif}
 .mk-dot{width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}.mk-start{width:14px;height:14px;background:#8fae7a}.mk-wp{width:8px;height:8px;background:#cfaa70;border-color:#11150f}
@@ -2084,7 +2095,7 @@ function altsMap(){const f=[];let nav=false;try{nav=NAV.on;}catch(e){}if(!nav)(S
 function mapSetBase(k){try{localStorage.setItem('gearPlanner.mapBase',k);}catch(e){}mapApplyStyle();}
 class LayerCtl{onAdd(){const d=document.createElement('div');d.className='maplibregl-ctrl maplibregl-ctrl-group lyrctl';
     d.innerHTML=`<button type="button" title="切換底圖" aria-label="切換底圖" style="display:flex;align-items:center;justify-content:center"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><div class="lyrmenu" hidden>${Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}">${b.name}</button>`).join('')}<button type="button" data-3d style="border-top:1px solid var(--line)">3D 地形</button><button type="button" data-pks>山頭名稱</button></div>`;
-    const menu=d.querySelector('.lyrmenu');d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);}catch(err){}};
+    const menu=d.querySelector('.lyrmenu');document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!d.contains(e.target))menu.hidden=true;},true);d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);}catch(err){}};
     menu.onclick=e=>{if(e.target.closest('[data-3d]')){menu.hidden=true;map3dToggle();return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);menu.hidden=true;return;}const b=e.target.closest('[data-base]');if(b){mapSetBase(b.dataset.base);menu.hidden=true;}};this._d=d;return d;}onRemove(){this._d.remove();}}
 // 3D 地形：規劃和導航各自一個開關（導航預設關、打開先提醒耗電）；黑屏時關地形；導航中跟隨／跟著方向轉時降低繪製解析度
 const M3D={want:false,navWant:false,on:false};try{M3D.want=localStorage.getItem('gearPlanner.map3d')==='1';M3D.navWant=localStorage.getItem('gearPlanner.map3dNav')==='1';}catch(e){}
@@ -2122,7 +2133,7 @@ function mapFit(P,pad){if(!MAP.m||!P||!P.length)return;let a=1e9,b=1e9,c=-1e9,d=
 function mapView(lat,lon,minZ){if(!MAP.m)return;MAP.m.easeTo({center:[lon,lat],zoom:Math.max(MAP.m.getZoom(),minZ||0),duration:400});}
 function mapCursor(lat,lon){if(!MAP.m)return;if(!MAP.cur)MAP.cur=new maplibregl.Marker({element:mkEl('mk-cur')}).setLngLat([lon,lat]).addTo(MAP.m);else MAP.cur.setLngLat([lon,lat]);}
 function mapInsets(pad){const cv=MAP.m.getCanvas().getBoundingClientRect(),I={l:pad,r:pad,t:pad,b:pad},vis=e=>e&&!e.hidden&&e.offsetParent!==null;
-  const ct=MAP.m.getContainer().querySelector('.maplibregl-ctrl-top-right');if(ct){const q=ct.getBoundingClientRect();I.r=Math.max(I.r,cv.right-q.left+6);}
+  const ct=MAP.m.getContainer().querySelector('.maplibregl-ctrl-top-right');if(ct){const q=ct.getBoundingClientRect();if(q.width>q.height*1.5){const T=Math.max(I.t,q.bottom-cv.top+8),Rr=Math.max(I.r,cv.right-q.left+6);if((cv.width-I.l-I.r)*(cv.height-T-I.b)>=(cv.width-I.l-Rr)*(cv.height-I.t-I.b))I.t=T;else I.r=Rr;}else I.r=Math.max(I.r,cv.right-q.left+6);}
   if(NAV.on){const nb=document.querySelector('#navMode .navbtns');if(vis(nb)){let q=null;for(const e of nb.children){if(e.hidden||e.offsetParent===null)continue;const r=e.getBoundingClientRect();if(!r.width)continue;q=q?{left:Math.min(q.left,r.left),right:Math.max(q.right,r.right),top:Math.min(q.top,r.top),bottom:Math.max(q.bottom,r.bottom)}:{left:r.left,right:r.right,top:r.top,bottom:r.bottom};}
       // 按鈕可能是左邊直排或上方橫排（橫式時會換行成一排）：看擋左邊還是擋上面，選剩下地圖面積大的那種
       if(q){const np=$('#navProf'),bb=vis(np)?Math.max(I.b,cv.bottom-np.getBoundingClientRect().top+10):I.b,L=Math.max(I.l,q.right-cv.left+8),T=Math.max(I.t,q.bottom-cv.top+8);
@@ -2229,6 +2240,13 @@ $('#mapGps').addEventListener('click',()=>{if(GPS.watch!=null&&GPS.byBtn){GPS.by
   if(gpsStart()){GPS.byBtn=true;GPS.first=true;$('#mapGps').innerHTML=ic('stop')+'停止定位';}});
 // --- 全螢幕導航地圖 ---
 const NAV={on:false,tick:null};
+function navProfMin(v){const el=$('#navProf');if(!el)return;el.classList.toggle('min',!!v);try{localStorage.setItem('gearPlanner.navProfMin',v?'1':'0');}catch(e){}npSize();if(!v)renderProfile();}
+// 高度圖面板：往下滑收起、收起時往上滑拉開（標題列照樣可以點）。導航板裡的清單在捲動時不算
+(()=>{const el=document.getElementById('navProf');if(!el)return;let y0=null,x0=0,t0=0;
+  el.addEventListener('touchstart',e=>{y0=null;if(e.touches.length!==1)return;const c=e.target.closest&&e.target.closest('#navCard');if(c&&c.scrollHeight>c.clientHeight+2)return;const t=e.touches[0];y0=t.clientY;x0=t.clientX;t0=Date.now();},{passive:true});
+  el.addEventListener('touchend',e=>{if(y0==null)return;const t=e.changedTouches[0],dy=t.clientY-y0,dx=t.clientX-x0;y0=null;
+    if(Math.abs(dy)<35||Math.abs(dy)<Math.abs(dx)*1.5||Date.now()-t0>900)return;const min=el.classList.contains('min');if(dy>0&&!min)navProfMin(true);else if(dy<0&&min)navProfMin(false);},{passive:true});
+  el.addEventListener('touchcancel',()=>{y0=null;},{passive:true});})();
 function npSize(){const el=$('#navProf');if(!el)return;document.getElementById('navMode').style.setProperty('--npb',el.offsetHeight+'px');try{navPad();}catch(e){}const inf=$('#profInfo'),ni=$('#navProfInfo');if(!ni.textContent||!(MAP.P&&MAP.P.length>1))ni.textContent=inf?inf.textContent.split('｜')[0]:'';}
 // 導航時高度圖蓋在地圖下方：設 padding 讓「＋／－、定位、整條路線」都以看得到的地圖範圍為準（換 padding 時畫面不動）
 function navPad(){const m=MAP.m;if(!m||!NAV.on||FOL.on)return;const ct=m.getContainer(),H=ct.clientHeight,W=ct.clientWidth;if(!H||!W)return;
@@ -2267,7 +2285,7 @@ $('#bDraw').addEventListener('click',async()=>{if(S.room&&RM.isOwner===false){to
   if(!MAP.m)return;await navOpen();if(!S.route.trk){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:null;MAP.m.jumpTo(L0?{center:[L0.lon,L0.lat],zoom:13}:{center:[121.0,23.75],zoom:8});}
   if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}DRAW.on=true;DRAW.taps=[];DRAW.legs=[];drawBar();editUI();});$('#editOpen').addEventListener('click',navOpen);
 $('#navMode').addEventListener('click',e=>{const b=e.target.closest('[data-nav]');const mn=document.querySelector('#navMode .navmenu');if(mn&&!mn.hidden&&(!b||b.dataset.nav!=='menu'))mn.hidden=true;if(!b)return;const a=b.dataset.nav;
-  if(a==='prof'){const el=$('#navProf');el.classList.toggle('min');try{localStorage.setItem('gearPlanner.navProfMin',el.classList.contains('min')?'1':'0');}catch(e){}npSize();if(!el.classList.contains('min'))renderProfile();return;}
+  if(a==='prof'){navProfMin(!$('#navProf').classList.contains('min'));return;}
   if(a==='dark'){setMapDark(!document.getElementById('rmap').classList.contains('mapdark'));return;}
   if(a==='close')navClose();
   else if(a==='center'){if(GPS.watch==null){gpsStart();GPS.first=true;}else if(GPS.last&&MAP.m)mapView(GPS.last.la,GPS.last.lo,15);else{GPS.first=true;toast('還在等 GPS 定位');}}

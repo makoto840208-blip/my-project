@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v80**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v81**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -39,6 +39,7 @@
 - A 路線（兩點之間）：`routeAlts()` 抓 BRouter alternativeidx 0～3、`altSame()` 剔重複、`gradeStats()`（最陡＝連續 100 m）、`altPick()` 上限內 100 m 坡度均方根最小；`gradeCfg()` 一般 ≤45%／探勘預設 70%、0＝無上限；段落存 `g.alts`/`g.altSel`/`g.altManual`；`disclaim('plan'|'explore')` 第一次跳說明。
 - 3D：圖層選單開關，規劃 `M3D.want`、導航 `M3D.navWant`（預設關，`map3dToggle()` 第一次跳耗電提醒、可勾不再顯示 `gearPlanner.nav3dWarn`）；獨立 `dem3d` 來源；黑屏關地形；`map3dPR()` 導航 3D＋跟隨／轉向時 pixelRatio 1；`navClose` 要在清 padding 之後才 `map3dApply()`。離線下載時 3D 有開會加 `demWide()`（外推 20 km、z10–12）。
 - 山頭／對山定位（獨立模組 `PK`、`pk*`）：Overpass 抓 OSM `natural=peak`（路線外推 0.18°），存 `gearPlanner.peaks`（精簡格式 [名,高,緯,經]，`PK.full`＝全台，`pkDownloadAll()` 按鈕 #pkAll）；`pkResect()` 最小平方交會、`pkOnRoute()` 一座山＋路線交點、`pkSolve()` → `NB.fix`；黑屏雷達 `.pkrot` 反向旋轉讓山名正向。分家時整塊搬到導航。
+- 導航版面（v81）：右上地圖按鈕跟左邊一樣大（直式 52、橫式 42，橫式排成右上一橫列）；圖層選單在導航中是畫面中間的 fixed 橫列（`#navMode #rmap{z-index:auto}`、`.lyrctl{transform:none}`，不然會被鎖在 SOS／左邊按鈕底下）；高度圖面板 `navProfMin()`，往下滑收起、往上滑拉開（導航板清單可捲時不算）。`mapInsets` 對左邊按鈕和右邊按鈕都會判斷直欄或橫列。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意
@@ -48,8 +49,6 @@
 
 ## 之前提過、還沒做
 - **導航分家**（下一輪，使用者同意）：導航獨立成第二個頁面／圖示，同網址共用 localStorage／IndexedDB（資料即時同步、離線可用），地圖／高度圖／畫線拆成共用程式由 build 組進兩頁；導航只有地圖但可編輯。山頭定位模組整塊搬過去。現在導航是「借」首頁的 #rmap、#prof、#profRead 搬來搬去，容易漏搬（v75 的控制列消失就是這樣）。
-- **導航高度圖改成滑動收合**（使用者 2026-10-27 提，先記錄還不用做）：高度剖面面板往下滑收起、從螢幕底部往上滑拉開（取代現在點標題列 ▾ 收合）。
-- **導航圖層選單被 SOS 擋到**（同上，先記錄）：圖層選單展開時會被右下 SOS 按鈕蓋住；改成在畫面中間展開成一橫列、可以左右滑動。
 - 騎車模式（路線規劃／偏航／時間改騎車設定）
 - 走路時用 GPS 行進方向自動校正羅盤偏差
 - 每天用當天背負重量算時間（使用者說先不用）

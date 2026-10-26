@@ -2725,6 +2725,10 @@ $('#mapGpx').addEventListener('click',async()=>{const P=MAP.P;if(!P){toast('還�
   try{const f=new File([g],fn,{type:'application/gpx+xml'}),fs=[f,...ph];if(navigator.canShare&&navigator.canShare({files:fs})){await navigator.share({files:fs,title:fn});return;}}catch(e){if(e&&e.name==='AbortError')return;}
   download(g,fn,'application/gpx+xml');ph.forEach((f,i)=>setTimeout(()=>download(f,f.name,'image/jpeg'),400*(i+1)));toast('已下載 '+fn+(ph.length?`＋${ph.length} 張標記照片`:'')+'，可以匯入其他地圖 App');});
 // --- 離線地圖 ---
+// 3D 遠景地形：路線外推約 20 km、縮放 10～12 級（3D 傾斜看遠方用）
+function demWide(P){let s=90,w=180,n=-90,e=-180;for(const q of P){if(q[0]<s)s=q[0];if(q[0]>n)n=q[0];if(q[1]<w)w=q[1];if(q[1]>e)e=q[1];}const pd=0.18;s-=pd;n+=pd;w-=pd;e+=pd;
+  const t2=(lat,lon,z)=>{const N=2**z,x=Math.floor((lon+180)/360*N),r=lat*Math.PI/180,y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*N);return [x,y];},out=[];
+  for(let z=10;z<=12;z++){const [x0,y0]=t2(n,w,z),[x1,y1]=t2(s,e,z);for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)out.push(TPL.dem.replace('{z}',z).replace('{x}',x).replace('{y}',y));}return out;}
 function tileList(P,tpl){const T=new Set(),t2=(lat,lon,z)=>{const n=2**z,x=Math.floor((lon+180)/360*n),r=lat*Math.PI/180,y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n);return [x,y];};
   let last=null;const pts=P.filter(q=>{if(!last||hav({lat:q[0],lon:q[1]},{lat:last[0],lon:last[1]})>0.15){last=q;return true;}return false;});
   for(let z=11;z<=16;z++){const tm=40075016*Math.cos(pts[0][0]*Math.PI/180)/2**z,r=Math.max(1,Math.ceil((z>=14?900:1500)/tm));
@@ -2732,8 +2736,10 @@ function tileList(P,tpl){const T=new Set(),t2=(lat,lon,z)=>{const n=2**z,x=Math.
   return [...T].map(k=>{const [z,x,y]=k.split('/');return tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y).replace('{s}','a');});}
 $('#mapOff').addEventListener('click',async()=>{const P=MAP.P;if(!P||!MAP.m){toast('先等地圖載入');return;}if(!('caches' in window)){toast('這個瀏覽器不支援離線地圖');return;}
   if(MAP.dl){MAP.dl.stop=true;return;}
-  const tpls=BASES[mapBaseKey()].tiles,urls=[...new Set(tpls.flatMap(([t,mx])=>tileList(P,t).filter(u=>{const z=+(u.match(/\/(\d+)\/\d+\/\d+(?:\.png)?$/)||[])[1];return !z||z<=mx||!/terrarium/.test(t);})))],mb=(urls.length*0.022).toFixed(0);
-  if(!confirm(`下載目前底圖、路線兩側約 1 公里的地圖（縮放 11–16 級）\n約 ${urls.length} 張圖、${mb} MB。\n建議用 Wi-Fi。下載完後沒網路也能看地圖。`))return;
+  const tpls=BASES[mapBaseKey()].tiles,base=[...new Set(tpls.flatMap(([t,mx])=>tileList(P,t).filter(u=>{const z=+(u.match(/\/(\d+)\/\d+\/\d+(?:\.png)?$/)||[])[1];return !z||z<=mx||!/terrarium/.test(t);})))];
+  const want3d=M3D.want||M3D.navWant,zOf=u=>+(u.match(/\/(\d+)\/\d+\/\d+\.png/)||[])[1],dem3d=want3d?[...new Set([...demWide(P),...tileList(P,TPL.dem).filter(u=>zOf(u)<=14)])].filter(u=>!base.includes(u)):[];
+  const urls=[...base,...dem3d],mb=(base.length*0.022+dem3d.length*0.08).toFixed(0);
+  if(!confirm(`下載目前底圖、路線兩側約 1 公里的地圖（縮放 11–16 級）${dem3d.length?`\n＋3D 地形：路線附近和外圍約 20 km 的遠景（${dem3d.length} 張）`:''}\n共約 ${urls.length} 張圖、${mb} MB。\n建議用 Wi-Fi。下載完後沒網路也能看地圖${dem3d.length?'和 3D':''}。`))return;
   const c=await caches.open('gp-tiles');let done=0,fail=0;MAP.dl={stop:false};const st=MAP.dl;$('#mapOff').innerHTML=ic('stop')+'停止下載';
   const work=async()=>{while(urls.length&&!st.stop){const u=urls.shift();try{if(await c.match(u)){done++;continue;}let r;try{r=await fetch(u,{mode:'cors'});}catch(e){if(!done){st.stop=true;st.cors=true;}throw e;}if(!r.ok)throw new Error('HTTP '+r.status);await c.put(u,r);done++;}catch(e){fail++;MAP.lastErr=String(e);}
     $('#mapMsg').textContent=`下載離線地圖中… ${done+fail} 張${fail?`（失敗 ${fail}）`:''}`;}};

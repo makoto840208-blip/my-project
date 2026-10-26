@@ -316,6 +316,19 @@ T('導航 3D：耗電提醒＋不再顯示、跟隨時降解析度、黑屏關�
   await tog(); await p.waitForTimeout(300); ok(!(await p.$('.modal [data-w3]')), '勾了不再顯示，還是跳提醒'); r = await st(); ok(r.t, '第二次打開失敗');
   await navBtn(p, 'close'); await p.waitForTimeout(500); r = await st(); ok(!r.t, '規劃畫面的 3D 是另一個開關（沒開），離開導航應該回 2D');
 }, { vp: '橫式' });
+T('離線下載：3D 開著才一起抓遠景地形', async p => {
+  await loadGpx(p); p._dlg = [];
+  await p.evaluate(() => document.getElementById('mapOff').click()); await p.waitForTimeout(300);
+  ok(p._dlg.length === 1 && !/3D/.test(p._dlg[0]), '3D 沒開時不該抓遠景地形：' + (p._dlg[0] || '沒有確認框'));
+  const n0 = +(p._dlg[0].match(/共約 (\d+) 張/) || [])[1];
+  await p.evaluate(() => window.__gp.fn('map3dSet')(true)); await p.waitForTimeout(300); p._dlg = [];
+  await p.evaluate(() => document.getElementById('mapOff').click()); await p.waitForTimeout(300);
+  const m = p._dlg[0] || '', k = +(m.match(/遠景（(\d+) 張）/) || [])[1], n1 = +(m.match(/共約 (\d+) 張/) || [])[1];
+  if (process.env.DBG) console.log(m);
+  ok(/3D 地形/.test(m) && k > 10, '3D 開著時確認框沒列出遠景地形：' + m.slice(0, 120)); ok(n1 === n0 + k, `總張數不對（${n0}＋${k}≠${n1}）`);
+  const w = await p.evaluate(() => { const P = window.__gp.MAP.P, L = window.__gp.fn('demWide')(P); return { n: L.length, z: [...new Set(L.map(u => +u.match(/\/(\d+)\/\d+\/\d+\.png/)[1]))].sort() }; });
+  ok(w.z.join(',') === '10,11,12', '遠景地形縮放級數應該是 10～12：' + w.z);
+}, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

@@ -93,6 +93,23 @@ async function planTwoPoints(p) {
 const FAKE_PEAKS = [['北測峰', 24.1155, 121.2950, 3200], ['東測山', 24.0705, 121.3540, 3100], ['西南測山', 24.0450, 121.2680, 2900], ['小測山', 24.0800, 121.3100, 2400], ['無高度山', 24.0600, 121.3000, null], ['遠方山', 24.5000, 121.6000, 3500]];
 const ME = { la: 24.0705, lo: 121.2950 };
 
+
+// 通用假 BRouter：A→B 走一條微彎的線；有 nogos（避開點）就往外繞大一點
+const brouterGeneric = r => { const u = new URL(r.request().url()), ll = u.searchParams.get('lonlats').split('|').map(s => s.split(',').map(Number)), ng = u.searchParams.get('nogos');
+  const [A, B] = ll, n = 40, c = [], off = ng ? 0.004 : 0.0006;
+  for (let i = 0; i <= n; i++) { const t = i / n, bend = Math.sin(Math.PI * t) * off; c.push([A[0] + (B[0] - A[0]) * t + bend, A[1] + (B[1] - A[1]) * t + bend, 2000 + 100 * Math.sin(Math.PI * t)]); }
+  r.fulfill({ body: JSON.stringify({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: c } }] }), contentType: 'application/json' }); };
+async function edEnter(p) { await loadGpx(p); await openNav(p); await navBtn(p, 'edit'); await p.waitForTimeout(300); await idle(p); }
+const edState = p => p.evaluate(() => { const G = window.__gp, E = G.fn('ED'), T = G.S.route.trk; return { on: E.on, n: E.ctl.length, ctl: E.ctl.slice(), sel: E.sel, seg: E.selSeg, busy: E.busy, msg: E.msg, len: T ? T.p.length : 0, p0: T ? T.p[0].slice(0, 2) : null, km: T ? T.p[T.p.length - 1][3] : 0, undo: G.fn('UNDO').length, bar: document.getElementById('navEdit').textContent, trk: !!T }; });
+const ctlXY = (p, k) => p.evaluate(k => { const G = window.__gp, E = G.fn('ED'), P = G.S.route.trk.p, i = E.ctl[k], s = G.MAP.m.project([P[i][1], P[i][0]]), r = G.MAP.m.getCanvas().getBoundingClientRect(); return [r.left + s.x, r.top + s.y]; }, k);
+// 畫面上看得到的控制點，挑中間那個
+const visCtl = p => p.evaluate(() => (window.__gp.MAP.m.getSource('ed')._data.features || []).map(f => f.properties.k));
+// 路線上離所有控制點都夠遠、而且在畫面可點範圍內的位置
+const lineSpot = p => p.evaluate(() => { const G = window.__gp, E = G.fn('ED'), P = G.S.route.trk.p, m = G.MAP.m, rr = m.getCanvas().getBoundingClientRect(), F = (m.getSource('ed')._data.features || []).map(f => m.project(f.geometry.coordinates));
+  const ne = document.getElementById('navEdit').getBoundingClientRect(), bad = (x, y) => { const el = document.elementFromPoint(x, y); return !el || !el.closest('.maplibregl-canvas-container,canvas'); };
+  let best = null; for (let i = 1; i < P.length - 1; i++) { const s = m.project([P[i][1], P[i][0]]), x = rr.left + s.x, y = rr.top + s.y; if (x < 20 || y < 20 || x > innerWidth - 20 || y > ne.top - 10) continue; if (bad(x, y)) continue; const d = Math.min(...F.map(q => Math.hypot(q.x - s.x, q.y - s.y))); if (!best || d > best.d) best = { i, x, y, d }; } return best; });
+const edWait = p => p.waitForFunction(() => !window.__gp.fn('ED').busy, null, { timeout: 10000 });
+
 const VPS = [{ n: '直式', w: 412, h: 915 }, { n: '橫式', w: 915, h: 412 }];
 const TESTS = [];
 const T = (name, fn, o = {}) => TESTS.push({ name, fn, o });
@@ -416,6 +433,52 @@ T('等高線：背景執行緒計算、預先算好的直接用、下載時一�
   ok(/純黑等高線先算好存起來（\d+ 張/.test(p._dlg[0] || ''), '純黑等高線底圖下載離線地圖時，沒有一起算等高線：' + (p._dlg[0] || '').slice(0, 80));
   p._dlg = []; await p.evaluate(() => { document.getElementById('ctrAll').click(); }); await p.waitForTimeout(300);
   const n = +((p._dlg[0] || '').match(/共 (\d+) 張/) || [])[1]; ok(n > 300 && n < 3000, '全台等高線概覽張數不合理：' + (p._dlg[0] || '').slice(0, 80));
+}, { vp: '直式' });
+T('路線編輯：轉折處控制點、拖點移動（直線、坡度）、復原', async p => {
+  await edEnter(p); let r = await edState(p);
+  ok(r.on && r.n >= 3 && r.n <= 60 && r.ctl[0] === 0 && r.ctl[r.n - 1] === r.len - 1, `控制點不對：${r.n} 個`); ok(/編輯路線/.test(r.bar), '編輯列沒出現');
+  await p.click('#navEdit [data-esnap="0"]'); const len0 = r.len, km0 = r.km;
+  const vk = await visCtl(p), k = vk[Math.floor(vk.length / 2)], [x, y] = await ctlXY(p, k);
+  await p.mouse.move(x, y); await p.mouse.down(); for (let i = 1; i <= 8; i++) { await p.mouse.move(x + i * 8, y - i * 4); await p.waitForTimeout(30); } await p.mouse.up(); await edWait(p); await p.waitForTimeout(200);
+  r = await edState(p); ok(r.undo === 1, '拖完沒有存復原'); ok(/最陡/.test(r.msg) && /%/.test(r.msg), '拖完沒顯示新路段的坡度：' + r.msg); ok(Math.abs(r.km - km0) > 0.01, '拖了路線距離卻沒變');
+  ok(r.sel === k, `拖完應該選在剛拖的點（${r.sel}）`);
+  await p.click('#navEdit [data-ed="undo"]'); await p.waitForTimeout(300); r = await edState(p); ok(r.len === len0 && Math.abs(r.km - km0) < 0.001, '復原沒回到原本的路線');
+}, { vp: '直式' });
+T('路線編輯：點線加點、刪點、剪掉開頭、營地不能刪', async p => {
+  await edEnter(p); await p.click('#navEdit [data-esnap="0"]'); let r = await edState(p);
+  const sp = await lineSpot(p), seg = Object.assign(sp, { k: await p.evaluate(i => { const E = window.__gp.fn('ED'); let k = 0; while (k < E.ctl.length - 2 && E.ctl[k + 1] <= i) k++; return k; }, sp.i) }); ok(sp.d > 30, `找不到離控制點夠遠的路線位置（${Math.round(sp.d)}px）`);
+  await p.mouse.click(seg.x, seg.y); await p.waitForTimeout(400); r = await edState(p); ok(r.seg === seg.k, `點線沒選到那段（${r.seg}）`); ok(/在這裡加點/.test(r.bar), '點線後沒有「在這裡加點」');
+  const n0 = r.n; await p.click('#navEdit [data-ed="add"]'); r = await edState(p); ok(r.n === n0 + 1 && r.sel != null, '加點失敗');
+  await p.click('#navEdit [data-ed="del"]'); await edWait(p); r = await edState(p); ok(r.n === n0, `刪點後控制點數應該回到 ${n0}，現在 ${r.n}`);
+  const c1 = await p.evaluate(() => { const G = window.__gp, E = G.fn('ED'); return G.S.route.trk.p[E.ctl[1]].slice(0, 2); });
+  await navBtn(p, 'route'); await p.waitForTimeout(400); await idle(p); await p.evaluate(() => window.__gp.fn('edRender')());
+  const [x0, y0] = await ctlXY(p, 0); await p.mouse.click(x0, y0); await p.waitForTimeout(400); r = await edState(p); ok(r.sel === 0 && /剪掉開頭/.test(r.bar), '選起點後沒有「剪掉開頭」');
+  await p.click('#navEdit [data-ed="del"]'); await edWait(p); r = await edState(p); ok(r.p0[0] === c1[0] && r.p0[1] === c1[1], '剪掉開頭後，新起點不是原本第 2 個點');
+  // 加一個分天點，它要變成控制點而且不能刪
+  await p.evaluate(() => { const G = window.__gp, T = G.S.route.trk; T.cuts = [Math.floor(T.p.length / 2)]; G.fn('rebuildFromTrk')({}); G.fn('edOn')(false); G.fn('edOn')(true); });
+  const kc = await p.evaluate(() => { const G = window.__gp, E = G.fn('ED'), T = G.S.route.trk; return E.ctl.indexOf(T.cuts[0]); }); ok(kc > 0, '分天點沒有變成控制點');
+  const [xc, yc] = await ctlXY(p, kc); await p.mouse.click(xc, yc); await p.waitForTimeout(400); r = await edState(p); ok(r.sel === kc && /不能刪/.test(r.bar) && !(await p.$('#navEdit [data-ed="del"]')), '營地／分天點應該不能刪');
+}, { vp: '直式' });
+T('路線編輯：清除整條、復原；不通繞路（沒網路→手動點；有網路→避開重算）', async p => {
+  await edEnter(p); const len0 = (await edState(p)).len;
+  await p.click('#navEdit [data-ed="clear"]'); await p.waitForTimeout(300); let r = await edState(p); ok(!r.trk, '清除整條後路線還在');
+  await p.click('#toast button'); await p.waitForTimeout(400); r = await edState(p); ok(r.trk && r.len === len0, '清除後按復原沒救回來');
+  await openNav(p).catch(() => {}); await navBtn(p, 'edit'); if (!(await edState(p)).on) await navBtn(p, 'edit');
+  await p.waitForTimeout(300); const mid = await lineSpot(p);
+  await p.context().setOffline(true); await navBtn(p, 'block'); await p.waitForTimeout(200); ok(/點不通的地方/.test((await edState(p)).bar), '按「前方不通」後沒有提示點位置');
+  await p.mouse.click(mid.x, mid.y); await edWait(p); r = await edState(p); ok(r.sel != null && /沒有網路/.test(r.msg), '沒網路時應該加點讓人手動拖：' + r.msg);
+  ok(await p.evaluate(() => (window.__gp.S.marks || []).some(m => m.type === 'danger')), '不通的地方沒有留危險標記');
+  await p.context().setOffline(false); p._brouter = brouterGeneric; await p.click('#navEdit [data-ed="unsel"]');
+  await navBtn(p, 'block'); await p.mouse.click(mid.x, mid.y); await edWait(p); r = await edState(p);
+  ok(/找到繞路/.test(r.msg) && /\[套用繞路\]|套用繞路/.test(r.bar), '有網路時應該先預覽繞路：' + r.msg.slice(0, 60));
+  const km0 = r.km; await p.click('#navEdit [data-ed="bapply"]'); await p.waitForTimeout(300); r = await edState(p); ok(r.km > km0 + 0.05 && r.undo >= 1, '套用繞路後路線沒變長');
+}, { vp: '直式' });
+T('路線編輯：沿步道模式拖點會重新規劃', async p => {
+  p._brouter = brouterGeneric; await edEnter(p); let r = await edState(p); ok(/沿步道/.test(r.bar), '預設應該是沿步道');
+  const vk = await visCtl(p), k = vk[Math.floor(vk.length / 3)], [x, y] = await ctlXY(p, k);
+  await p.mouse.move(x, y); await p.mouse.down(); for (let i = 1; i <= 6; i++) { await p.mouse.move(x + i * 10, y); await p.waitForTimeout(30); } await p.mouse.up(); await edWait(p);
+  r = await edState(p); ok(r.undo === 1 && /新路段/.test(r.msg) && !/找不到步道/.test(r.msg), '沿步道拖點失敗：' + r.msg);
+  const n = await p.evaluate(() => { const E = window.__gp.fn('ED'), P = window.__gp.S.route.trk.p; return E.ctl[E.sel + 1] - E.ctl[E.sel - 1]; }); ok(n >= 60, `重新規劃的兩段點數太少（${n}），不像沿步道`);
 }, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);

@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v83**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v84**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -48,10 +48,12 @@
 - 偏離後取代（v83）：`EXC`／`excTrack()` 記偏離時實際走的路，回到路線後導航板問要不要取代（黑屏也提醒），可復原。
 - 隊伍同步（v83）：`applyRoomPlan(pl,force)` 導航中路線形狀（`routeSig`）變了不自動套，存 `RM.pend`，導航板「套用／先不要」＋震動＋黑屏「有新路線，回地圖套用」；先不要記 `RM.skipTs`，離開導航時照常套。左「更多」：`sync` 檢查路線更新（`roomCheck`）、`qrshare` 路線 QR、`qrscan` 掃 QR。
 - 路線 QR（v83）：`qrPack()` 軌跡精簡（水平 3 m／高度 5 m）＋整數差分、`deflate-raw` 壓縮、base64url，切成 `GPQ1|id|i/n|資料` 多張自動輪播（qrcode-generator，cdnjs）；掃描用 BarcodeDetector，沒有就用 `jsqr.js`；`qrFeed()` 收齊→`qrConfirm()` 確認才套用。導航開啟 3 秒後 `qrPreload()`。
+- 規劃畫面 QR（v84）：路線卡有「路線 QR（給隊友掃）」`#bQrShare`；「掃隊友的路線 QR」`#bQrScan` 只在 `pointer:coarse`＋有 getUserMedia 時顯示。QR 是多張輪播，只能當場用鏡頭掃，**不做截圖／上傳圖片掃描**；不在現場的隊友用房間同步或檔案。
+- 隊友裝備全螢幕（v84）：寬螢幕 `#params`/`#gear`/`#dash` 是 sticky（自成圖層），`.tcmp.fs` 會被標題列和儀表板蓋住；開全螢幕時 `body.tfs-on` 把它們改 static。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意
-- **自動測試**：`node tools/test.js --build [--only 名稱片段] [--shots 資料夾] [--tiles]`。模擬直式 412×915、橫式 915×412 手機；DEM 合成、圖磚空白、BRouter／Overpass 用假資料（`fakeAlt`、`FAKE_PEAKS`）；`DBG=1` 會印頁面錯誤的堆疊。新功能一定要加測試。
+- **自動測試**：`node tools/test.js --build [--only 名稱片段] [--shots 資料夾] [--tiles]`。模擬直式 412×915、橫式 915×412 手機，另有「網頁」1600×900 無觸控（只跑標 `vp:'網頁'` 的測試）；DEM 合成、圖磚空白、BRouter／Overpass 用假資料（`fakeAlt`、`FAKE_PEAKS`）；`DBG=1` 會印頁面錯誤的堆疊。新功能一定要加測試。
 - 這個雲端環境連不到 AWS（DEM）、jsdelivr、unpkg、Cloudflare API、OSM／Overpass、Wikipedia；brouter.de 用 curl 連得到（可驗真資料）；cdnjs、NLSC、OpenTopoMap、Esri、Firebase 可透過 Playwright proxy（`proxy={'server':$HTTPS_PROXY,'bypass':'<-loopback>'}`、`--use-gl=swiftshader`）。
 - 網址加 `?gptest` 會暴露 `window.__gp`（MAP、S、PROF、NAV、GPS、FOL、MEAS、RED、NB，`fn('名稱')` 可取內部函式）。
 

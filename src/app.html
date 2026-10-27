@@ -166,6 +166,7 @@ details.fmt td{border-bottom:1px solid var(--line);padding:3px 6px;vertical-alig
 .pk .empty{color:var(--mut);font-size:13px}
 .tcmp{margin-top:8px;border:1px solid var(--line);border-radius:4px}.tcs{overflow:auto;max-height:70vh}
 .tcmp.fs{position:fixed;inset:0;z-index:70;margin:0;border:0;border-radius:0;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* 寬螢幕欄位是 sticky（自成圖層），全螢幕時先解除，不然會被上方標題列蓋住 */body.tfs-on #params,body.tfs-on #gear,body.tfs-on #dash{position:static!important}
 .tcmp.fs .tcs{flex:1;max-height:none}.tcmp.fs table{font-size:13px}
 .tfsbar{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:2px solid var(--olive);background:var(--hdr);color:var(--coy2)}.tfsbar span{color:var(--mut);font-size:12.5px;margin-right:auto}
 .tcmp table{border-collapse:collapse;font-size:12.5px;min-width:100%}
@@ -609,7 +610,7 @@ html.oled .card{border-color:#1c2118}
         <div class="gradebar" id="gradeBar"></div><div class="wxbar" style="margin:0 0 6px"><label class="f" style="flex-direction:row;align-items:center;gap:6px;color:var(--txt)">我的上河倍數 ×<input type="number" id="myMul" min="0.3" max="3" step="0.05" inputmode="decimal" placeholder="自動" style="width:90px"></label><span style="font-size:12px;color:var(--mut)">熟悉上河圖的人才填：1.0＝照上河時間走、0.8＝快 20%；空白＝不用上河（沒紀錄用通用時間，有紀錄照你的速度）</span></div>
         <div id="paceHint" style="font-size:12px;color:var(--mut);margin:-2px 0 8px"></div>
         <div id="segList"></div>
-        <div class="btnrow"><button class="btn" id="addSeg">＋新增路段</button><button class="btn pri" id="bTxt">貼上計畫書文字</button><button class="btn" id="bExpTxt">匯出計畫文字</button><button class="btn pri" id="bGpx">匯入 GPX／KML</button><button class="btn" id="bDraw"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>在地圖上畫路線</button><input type="file" id="gpxFile" accept=".gpx,application/gpx+xml" hidden><button class="btn" id="bRPrompt">複製路線查詢提示詞</button><button class="btn" id="bRImpShow">匯入路線</button></div>
+        <div class="btnrow"><button class="btn" id="addSeg">＋新增路段</button><button class="btn pri" id="bTxt">貼上計畫書文字</button><button class="btn" id="bExpTxt">匯出計畫文字</button><button class="btn pri" id="bGpx">匯入 GPX／KML</button><button class="btn" id="bDraw"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>在地圖上畫路線</button><button class="btn" id="bQrShare" type="button"><svg class="ic2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.5M14 20h.5M17.5 17.5h3v3"/></svg>路線 QR（給隊友掃）</button><button class="btn" id="bQrScan" type="button" hidden><svg class="ic2" viewBox="0 0 24 24"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4"/><path d="M7 12h10"/></svg>掃隊友的路線 QR</button><input type="file" id="gpxFile" accept=".gpx,application/gpx+xml" hidden><button class="btn" id="bRPrompt">複製路線查詢提示詞</button><button class="btn" id="bRImpShow">匯入路線</button></div>
         <div id="rImp" hidden style="margin-top:8px"><textarea id="rImpTxt" placeholder="貼上 Gemini 回傳的路線 JSON"></textarea><div class="btnrow"><button class="btn pri" id="bRImp">匯入（會取代目前路段）</button></div><div id="rImpMsg" style="font-size:13px;margin-top:6px"></div></div>
         <div id="txtPanel" hidden>
           <div style="font-size:13px;color:#bdb8a7;margin-bottom:6px">把登山計畫書的行程直接貼進來（從 Word、LINE、網頁複製都可以）。會自動抓：每天的起訖點、海拔、公里、時間、爬升下降、營地水源、訊號、路況、撤退點、日期、人數、留守人。</div>
@@ -1383,10 +1384,10 @@ function teamCompare(all){
     ts.forEach(t=>rows.push(`<tr><th>${TYPES[t][1]}</th>${all.map(m=>cell(m,t)).join('')}</tr>`));});
   return `<div class="tcmp${TEAMFS?' fs':''}">${TEAMFS?`<div class="tfsbar"><b>隊友裝備並排</b><span>${all.length} 人</span><button class="btn sm" data-tfs="0">✕ 關閉全螢幕</button></div>`:''}<div class="tcs"><table><tr><th></th>${all.map(m=>`<th class="tname">${esc(m.name)}<small>${(m.pack/1000).toFixed(1)} kg</small></th>`).join('')}</tr>${rows.join('')}
     <tr class="tcat"><td colspan="${all.length+1}">合計</td></tr><tr><th>裝備重</th>${all.map(m=>`<td><b>${(sum(m.items,x=>x.g*x.qty)/1000).toFixed(2)} kg</b></td>`).join('')}</tr></table></div></div>`;}
-function box_reset(){$('#teamBox')._h='';document.body.style.overflow=TEAMFS?'hidden':'';}
+function box_reset(){$('#teamBox')._h='';document.body.style.overflow=TEAMFS?'hidden':'';document.body.classList.toggle('tfs-on',!!TEAMFS);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&TEAMFS){TEAMFS=false;box_reset();renderTeam();}});
 function renderTeam(){const L=S.team||[],box=$('#teamBox');$('#teamSum').textContent=L.length?`${L.length+1} 人`:'';
-  if(!L.length){box._h='';box.innerHTML=S.room?'<div class="rec" style="font-size:13px">房間裡目前只有你。隊友打開連結加入後，會出現在這裡，可以按「查看隊友裝備」並排看每個人帶了什麼。</div>':'';return;}
+  if(!L.length){if(TEAMFS){TEAMFS=false;box_reset();}box._h='';box.innerHTML=S.room?'<div class="rec" style="font-size:13px">房間裡目前只有你。隊友打開連結加入後，會出現在這裡，可以按「查看隊友裝備」並排看每個人帶了什麼。</div>':'';return;}
   const me={name:'我',body:S.body,pack:C?C.pack:0,items:live().map(x=>({type:x.type,name:dispName(x),g:x.g,qty:x.qty}))};
   const all=[me,...L],rat=m=>m.body?(m.pack/1000/m.body*100):0;
   const sh=m=>SHARED.filter(t=>t!=='meds'&&m.items.some(x=>x.type===t)).map(t=>TYPES[t][1]).join('、')||'–';
@@ -1506,7 +1507,7 @@ function qrModal(html){document.querySelectorAll('body>.qrm').forEach(m=>{if(m._
 async function qrShare(){if(!S.route.trk&&!(S.route.segs||[]).length){toast('還沒有路線可以傳');return;}
   if(!(await qrLib(QRGEN,()=>!!window.qrcode))){toast('QR 產生器還沒下載過（要先在有網路時打開一次）');return;}
   let fr;try{fr=await qrEncode();}catch(e){toast('產生失敗：'+e.message);return;}
-  const m=qrModal(`<div class="sh2"><b>路線 QR</b><button type="button" class="btn x" data-qx>✕</button></div><div class="qinfo">請隊友在導航「更多」按「掃隊友的路線 QR」對準這裡${fr.length>1?`，共 ${fr.length} 張會自動輪播，掃到全部就好`:''}。螢幕調亮一點比較好掃。</div><div class="qrbox"></div><div class="qinfo qidx"></div><div class="btnrow" style="justify-content:center"><button type="button" class="btn" data-qslow>${fr.length>1?'放慢輪播':'關閉'}</button></div>`);
+  const m=qrModal(`<div class="sh2"><b>路線 QR</b><button type="button" class="btn x" data-qx>✕</button></div><div class="qinfo">請隊友用手機按「掃隊友的路線 QR」（在路線計畫，或導航「更多」裡）對準這裡${fr.length>1?`，共 ${fr.length} 張會自動輪播，掃到全部就好`:''}。螢幕調亮一點比較好掃。</div><div class="qrbox"></div><div class="qinfo qidx"></div><div class="btnrow" style="justify-content:center"><button type="button" class="btn" data-qslow>${fr.length>1?'放慢輪播':'關閉'}</button></div>`);
   const box=m.querySelector('.qrbox'),idx=m.querySelector('.qidx');let i=0,ms=650;const svgs=fr.map(t=>{const q=qrcode(0,'L');q.addData(t,'Byte');q.make();return q.createSvgTag({cellSize:4,margin:4,scalable:true});});
   const show=()=>{box.innerHTML=svgs[i];idx.textContent=fr.length>1?`第 ${i+1}／${fr.length} 張`:'';};show();
   let tm=null;const loop=()=>{tm=setTimeout(()=>{i=(i+1)%fr.length;show();loop();},ms);};if(fr.length>1)loop();
@@ -1526,7 +1527,7 @@ async function qrScan(){const has=('BarcodeDetector' in window);let det=null;
   if(has){try{const f=await BarcodeDetector.getSupportedFormats();if(f.includes('qr_code'))det=new BarcodeDetector({formats:['qr_code']});}catch(e){}}
   if(!det&&!(await qrLib(QRJS,()=>!!window.jsQR))){toast('QR 掃描器還沒下載過（要先在有網路時打開一次）');return;}
   QR.id='';QR.parts={};QR.n=0;
-  const m=qrModal(`<div class="sh2"><b>掃隊友的路線 QR</b><button type="button" class="btn x" data-qx>✕</button></div><video playsinline muted></video><div class="qinfo qprog">對準主辦手機上的 QR</div><div class="btnrow" style="justify-content:center"><button type="button" class="btn" data-qx>取消</button></div>`);
+  const m=qrModal(`<div class="sh2"><b>掃隊友的路線 QR</b><button type="button" class="btn x" data-qx>✕</button></div><video playsinline muted></video><div class="qinfo qprog">對準隊友螢幕上的 QR</div><div class="btnrow" style="justify-content:center"><button type="button" class="btn" data-qx>取消</button></div>`);
   const v=m.querySelector('video');let stream=null,alive=true,cv=null;m._stop=()=>{alive=false;try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(e){}};
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false});}catch(e){m.querySelector('.qprog').textContent='打不開相機：'+(e.name==='NotAllowedError'?'請允許相機權限':e.message);return;}
   if(!alive){m._stop();return;}v.srcObject=stream;try{await v.play();}catch(e){}
@@ -3281,6 +3282,10 @@ function gpxSummary(how){
     <div class="btnrow" style="margin-top:8px"><button class="btn sm" id="gpxGo">重新分天</button><button class="btn sm" id="gpxCancel">收起</button></div>`;
 }
 $('#bGpx').addEventListener('click',()=>$('#gpxFile').click());
+/* 規劃畫面的路線 QR：顯示網頁手機都有；掃描要鏡頭，只在觸控裝置（手機／平板）顯示 */
+$('#bQrShare').addEventListener('click',()=>qrShare());$('#bQrScan').addEventListener('click',()=>qrScan());
+$('#bQrScan').hidden=!(matchMedia('(pointer:coarse)').matches&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+setTimeout(()=>{try{qrPreload();}catch(e){}},4000);
 $('#gpxFile').setAttribute('accept','.gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml,application/xml,text/xml');
 $('#gpxFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=async()=>{e.target.value='';

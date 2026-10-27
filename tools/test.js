@@ -36,7 +36,7 @@ function ok(c, msg) { if (!c) throw new Error(msg); }
 async function shot(p, name) { if (!SHOTS) return; fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, `${cur}_${name}.png`) }); }
 
 async function newPage(b, vp) {
-  const ctx = await b.newContext({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: 2.5, hasTouch: true, isMobile: true, geolocation: { latitude: 24.0705, longitude: 121.2950, accuracy: 10 }, permissions: ['geolocation'] });
+  const ctx = await b.newContext({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: vp.desk ? 1 : 2.5, hasTouch: !vp.desk, isMobile: !vp.desk, geolocation: { latitude: 24.0705, longitude: 121.2950, accuracy: 10 }, permissions: ['geolocation'] });
   const p = await ctx.newPage(); p._err = [];
   p.on('pageerror', e => p._err.push(e.message + (process.env.DBG ? ' @ ' + (e.stack || '').split('\n').slice(1, 3).join(' ').replace(/https:\/\/app.test\/\?gptest/g, '') : '')));
   p.on('dialog', d => { p._dlg = (p._dlg || []).concat(d.message()); (p._acceptDlg ? d.accept() : d.dismiss()).catch(() => {}); });
@@ -110,7 +110,7 @@ const lineSpot = p => p.evaluate(() => { const G = window.__gp, E = G.fn('ED'), 
   let best = null; for (let i = 1; i < P.length - 1; i++) { const s = m.project([P[i][1], P[i][0]]), x = rr.left + s.x, y = rr.top + s.y; if (x < 20 || y < 20 || x > innerWidth - 20 || y > ne.top - 10) continue; if (bad(x, y)) continue; const d = Math.min(...F.map(q => Math.hypot(q.x - s.x, q.y - s.y))); if (!best || d > best.d) best = { i, x, y, d }; } return best; });
 const edWait = p => p.waitForFunction(() => !window.__gp.fn('ED').busy, null, { timeout: 10000 });
 
-const VPS = [{ n: '直式', w: 412, h: 915 }, { n: '橫式', w: 915, h: 412 }];
+const VPS = [{ n: '直式', w: 412, h: 915 }, { n: '橫式', w: 915, h: 412 }, { n: '網頁', w: 1600, h: 900, desk: true }]; // 網頁：電腦瀏覽器（無觸控），只跑標明 vp:'網頁' 的測試
 const TESTS = [];
 const T = (name, fn, o = {}) => TESTS.push({ name, fn, o });
 
@@ -527,6 +527,28 @@ T('路線 QR：產生 → 掃描（jsQR）→ 確認套用', async p => {
   const a = await p.evaluate(() => { const T = window.__gp.S.route.trk; return { km: T.p[T.p.length - 1][3], pts: T.p.length }; });
   ok(Math.abs(a.km - info.km) / info.km < 0.01, `套用後距離不對 ${a.km} vs ${info.km}`); ok(a.pts > 20 && a.pts <= info.pts, '點數不對 ' + a.pts);
 }, { vp: '直式' });
+// 網頁版：按鈕中心點上「最上面」的元素是不是它自己（沒被標題列等蓋住）
+const onTop = (p, sel) => p.evaluate(sel => { const e = document.querySelector(sel); if (!e) return 'no ' + sel; const r = e.getBoundingClientRect(); if (!r.width) return 'hidden ' + sel; const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return h && (h === e || e.contains(h)) ? true : 'covered by ' + (h ? h.tagName + '#' + h.id + '.' + h.className : 'null'); }, sel);
+T('網頁：隊友裝備全螢幕不被標題列蓋住、可關閉', async p => {
+  await p.evaluate(() => { const G = window.__gp; G.S.team = [{ name: '阿明', body: 70, pack: 11500, items: [{ type: 'pack', name: '背包', g: 1800, qty: 1 }, { type: 'tent', name: '帳篷', g: 1500, qty: 1 }] }]; G.fn('renderTeam')(); document.querySelector('#teamBox').scrollIntoView(); });
+  await p.click('#teamBox [data-tfs="1"]'); await p.waitForTimeout(300); await shot(p, 'tfs');
+  const t = await onTop(p, '#teamBox .tfsbar [data-tfs="0"]'); ok(t === true, '關閉全螢幕按鈕：' + t);
+  await p.click('#teamBox .tfsbar [data-tfs="0"]'); await p.waitForTimeout(200);
+  const st = await p.evaluate(() => ({ fs: !!document.querySelector('.tcmp.fs'), cls: document.body.classList.contains('tfs-on'), ov: document.body.style.overflow }));
+  ok(!st.fs && !st.cls && !st.ov, '關不乾淨 ' + JSON.stringify(st));
+  await p.click('#teamBox [data-tfs="1"]'); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+  ok(!(await p.$('.tcmp.fs')), 'Esc 關不掉');
+}, { vp: '網頁' });
+T('網頁：規劃畫面有路線 QR、沒有掃描', async p => {
+  ok(await p.evaluate(() => document.querySelector('#bQrScan').hidden), '電腦不該顯示掃描');
+  await p.click('#bQrShare'); await p.waitForTimeout(300); ok(!(await p.$('.qrm .qrbox svg')), '沒路線不該開 QR');
+  await loadGpx(p); await p.click('#bQrShare'); await p.waitForSelector('.qrm .qrbox svg', { timeout: 15000 }); await shot(p, 'qr');
+  const t = await onTop(p, '.qrm [data-qx]'); ok(t === true, 'QR 關閉鈕：' + t);
+  await p.click('.qrm [data-qx]'); await p.waitForTimeout(200); ok(!(await p.$('.qrm')), 'QR 視窗關不掉');
+}, { vp: '網頁' });
+T('手機：規劃畫面有路線 QR 和掃描', async p => {
+  const v = await p.evaluate(() => ({ s: !document.querySelector('#bQrShare').hidden, c: !document.querySelector('#bQrScan').hidden })); ok(v.s && v.c, '按鈕沒顯示 ' + JSON.stringify(v));
+}, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));
@@ -538,7 +560,7 @@ T('全程沒有頁面錯誤', async p => {
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: '<-loopback>' } : undefined });
   const t0 = Date.now();
   for (const vp of VPS) for (const t of TESTS) {
-    if (ONLY && !t.name.includes(ONLY)) continue; if (t.o.vp && t.o.vp !== vp.n) continue;
+    if (ONLY && !t.name.includes(ONLY)) continue; if (t.o.vp ? t.o.vp !== vp.n : vp.desk) continue;
     cur = `${vp.n}_${t.name.replace(/[^\w一-鿿]+/g, '_').slice(0, 30)}`;
     const { ctx, p } = await newPage(b, vp); let err = null;
     try { await boot(p); await t.fn(p, vp); if (p._err.length) throw new Error('頁面錯誤：' + p._err.join(' | ')); } catch (e) { err = e.message.split('\n')[0]; try { await shot(p, 'FAIL'); } catch (x) {} }

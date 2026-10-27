@@ -480,6 +480,21 @@ T('路線編輯：沿步道模式拖點會重新規劃', async p => {
   r = await edState(p); ok(r.undo === 1 && /新路段/.test(r.msg) && !/找不到步道/.test(r.msg), '沿步道拖點失敗：' + r.msg);
   const n = await p.evaluate(() => { const E = window.__gp.fn('ED'), P = window.__gp.S.route.trk.p; return E.ctl[E.sel + 1] - E.ctl[E.sel - 1]; }); ok(n >= 60, `重新規劃的兩段點數太少（${n}），不像沿步道`);
 }, { vp: '直式' });
+T('偏離後回到路線：提示用實際走的路取代、黑屏提醒、可復原', async p => {
+  await loadGpx(p); await openNav(p);
+  const r0 = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, ex = G.fn('excTrack'), a = 200, b = 260, path = [];
+    for (let i = a - 5; i <= a; i++) path.push([P[i][0], P[i][1]]);
+    for (let k = 1; k <= 3; k++) path.push([P[a][0] + 0.0005 * k, P[a][1]]);
+    for (let i = a; i <= b; i += 6) path.push([P[i][0] + 0.0015, P[i][1]]);
+    for (let k = 2; k >= 0; k--) path.push([P[b][0] + 0.0005 * k, P[b][1]]); path.push([P[b + 1][0], P[b + 1][1]]);
+    path.forEach(q => ex(q[0], q[1], 2500, 8)); G.fn('navBoard')(); const E = G.fn('EXC'); return { offer: !!E.offer, len: E.offer && E.offer.len, card: document.getElementById('navCard').textContent, km: G.S.route.trk.p[G.S.route.trk.p.length - 1][3], n: G.S.route.trk.p.length }; });
+  ok(r0.offer && r0.len > 0.1, '回到路線後沒有提示取代'); ok(/用你實際走的路取代這段/.test(r0.card), '導航板沒有顯示取代提示');
+  await navBtn(p, 'black'); await p.waitForTimeout(300); ok(/剛才偏離過路線/.test(await p.evaluate(() => document.getElementById('nbkTxt').textContent)), '黑屏沒有提醒'); await p.dispatchEvent('#navBlack', 'dblclick'); await p.waitForTimeout(200);
+  await p.click('#navCard [data-exc="ok"]'); await p.waitForFunction(() => !window.__gp.fn('EXC').offer, null, { timeout: 5000 }); await p.waitForTimeout(500);
+  const r1 = await p.evaluate(() => { const T = window.__gp.S.route.trk; return { km: T.p[T.p.length - 1][3], n: T.p.length, und: window.__gp.fn('UNDO').length, mid: T.p[Math.floor(T.p.length * 0.3)] }; });
+  ok(r1.und === 1, '取代後沒有存復原'); ok(r1.n !== r0.n || Math.abs(r1.km - r0.km) > 0.01, '路線沒有被取代');
+  await navBtn(p, 'undo'); await p.waitForTimeout(300); const r2 = await p.evaluate(() => { const T = window.__gp.S.route.trk; return { km: T.p[T.p.length - 1][3], n: T.p.length }; }); ok(r2.n === r0.n && Math.abs(r2.km - r0.km) < 0.001, '復原沒有回到原本路線');
+}, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

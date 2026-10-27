@@ -400,6 +400,23 @@ T('3D 效能：純黑等高線自動換掉、少一層陰影、山名減量、�
   await p.evaluate(() => window.__gp.fn('map3dSet')(false)); await p.waitForTimeout(800);
   r = await L(); ok(r.ctr && !r.dem, '關掉 3D 沒換回純黑等高線'); ok(r.pr === 2, `關掉 3D 解析度應該回到 2，現在 ${r.pr}`);
 }, { vp: '直式' });
+T('等高線：背景執行緒計算、預先算好的直接用、下載時一起算', async p => {
+  await loadGpx(p); await p.evaluate(() => window.__gp.fn('mapSetBase')('ctr')); await p.waitForTimeout(500); await idle(p); await p.waitForTimeout(1500);
+  let r = await p.evaluate(() => { const W = window.__gp.fn('CTRW'), C = window.__gp.fn('CTR'); return { ok: W.ok, n: W.id, mem: C.tiles ? C.tiles.size : 0 }; });
+  ok(r.ok === true && r.n > 0 && r.mem > 0, `等高線沒在背景執行緒算（worker ${r.ok}、算了 ${r.n} 張、記憶體 ${r.mem}）`);
+  // 把現在畫面要的圖塊先存好，清掉記憶體後重畫，不應該再叫背景計算
+  const n0 = await p.evaluate(async () => { const G = window.__gp, m = G.MAP.m, z = Math.floor(m.getZoom()), b = m.getBounds(), L = G.fn('tilesBB')([b.getSouth() - 0.02, b.getWest() - 0.02, b.getNorth() + 0.02, b.getEast() + 0.02], Math.max(9, z - 1), z + 1);
+    const [d, f] = await G.fn('ctrPrecompute')(L); G.fn('CTR').tiles.clear(); return { id: G.fn('CTRW').id, d, f, n: L.length }; });
+  ok(n0.d === n0.n && n0.f === 0, `預先計算失敗：${n0.d}/${n0.n}，失敗 ${n0.f}`);
+  await p.evaluate(() => { const m = window.__gp.MAP.m; window.__gp.fn('mapSetBase')('topo'); m.style.sourceCaches['ctr'] && m.style.sourceCaches['ctr'].clearTiles && m.style.sourceCaches['ctr'].clearTiles(); });
+  await p.waitForTimeout(300); await p.evaluate(() => window.__gp.fn('mapSetBase')('ctr')); await p.waitForTimeout(500); await idle(p); await p.waitForTimeout(800);
+  r = await p.evaluate(() => ({ id: window.__gp.fn('CTRW').id, mem: window.__gp.fn('CTR').tiles.size }));
+  ok(r.mem > 0, '重畫後沒有載入等高線'); ok(r.id === n0.id, `預先算好的沒被用到，又在背景重算了 ${r.id - n0.id} 張`);
+  p._dlg = []; await p.evaluate(() => document.getElementById('mapOff').click()); await p.waitForTimeout(300);
+  ok(/純黑等高線先算好存起來（\d+ 張/.test(p._dlg[0] || ''), '純黑等高線底圖下載離線地圖時，沒有一起算等高線：' + (p._dlg[0] || '').slice(0, 80));
+  p._dlg = []; await p.evaluate(() => { document.getElementById('ctrAll').click(); }); await p.waitForTimeout(300);
+  const n = +((p._dlg[0] || '').match(/共 (\d+) 張/) || [])[1]; ok(n > 300 && n < 3000, '全台等高線概覽張數不合理：' + (p._dlg[0] || '').slice(0, 80));
+}, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

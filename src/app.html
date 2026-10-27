@@ -598,7 +598,7 @@ html.oled .card{border-color:#1c2118}
           <div class="proflbl"><b>路線地圖・高度剖面</b><button class="btn sm" id="reditBtn" type="button" style="margin-left:8px"><svg class="ic2" viewBox="0 0 24 24"><rect x="3" y="4" width="10" height="16" rx="1"/><path d="M16 7h5M16 12h5M16 17h5"/></svg>路線編輯模式</button><span id="profInfo"></span></div>
           <div class="profgrid">
             <div><div class="mapbox"><div id="rmap"></div><button class="btn sm" id="mapBig" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>全螢幕地圖</button></div>
-            <div class="maptools"><button class="btn" id="mapGps" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5"/></svg>我的位置</button><button class="btn" id="mapOff" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>下載離線地圖</button><button class="btn" id="pkAll" type="button">下載全台山頭</button><button class="btn" id="mapGpx" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></svg>匯出 GPX</button><button class="btn" id="trimBtn" type="button" hidden><svg class="ic2" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg></button><button class="btn" id="trimUndo" type="button" hidden>↶</button><button class="btn" id="mapDarkBtn" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg>暗色地圖</button><button class="btn" id="editOpen" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>編輯路線（全螢幕）</button></div>
+            <div class="maptools"><button class="btn" id="mapGps" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5"/></svg>我的位置</button><button class="btn" id="mapOff" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>下載離線地圖</button><button class="btn" id="pkAll" type="button">下載全台山頭</button><button class="btn" id="ctrAll" type="button">下載全台等高線</button><button class="btn" id="mapGpx" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></svg>匯出 GPX</button><button class="btn" id="trimBtn" type="button" hidden><svg class="ic2" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg></button><button class="btn" id="trimUndo" type="button" hidden>↶</button><button class="btn" id="mapDarkBtn" type="button"><svg class="ic2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg>暗色地圖</button><button class="btn" id="editOpen" type="button"><svg class="ic2" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>編輯路線（全螢幕）</button></div>
             <div id="trimBar" class="rec" style="margin-top:6px;font-size:13px;border-color:#e0715f" hidden></div>
             <div id="mapMsg" style="font-size:12px;color:var(--mut);margin-top:4px"></div></div>
             <div><div id="prof"></div><div id="profRead" class="proflbl" style="min-height:18px"></div></div>
@@ -2047,10 +2047,44 @@ async function ctrTile(z,x,y,signal,st){const S=512,cv=typeof OffscreenCanvas!==
       if(LB.length){g.font='600 21px ui-monospace,Menlo,Consolas,monospace';g.textAlign='center';g.textBaseline='middle';
         LB.forEach(q=>{const t=String(Math.round(q.L)),w=g.measureText(t).width;g.save();g.translate(q.x,q.y);g.rotate(q.a);g.fillStyle='#000';g.fillRect(-w/2-5,-12,w+10,24);g.fillStyle='rgba(170,172,130,.95)';g.fillText(t,0,1);g.restore();});}}}
   const bl=cv.convertToBlob?await cv.convertToBlob({type:'image/png'}):await new Promise(r=>cv.toBlob(r,'image/png'));return await bl.arrayBuffer();}
+// 純黑等高線：①先看記憶體 ②再看手機裡預先算好的（gp-ctr）③都沒有才算——在背景執行緒（Web Worker）算，轉動地圖不會卡
+const CTRW={w:null,ok:null,id:0,cb:new Map()};
+function ctrWorker(){if(CTRW.ok===false)return null;if(CTRW.w)return CTRW.w;
+  try{if(typeof OffscreenCanvas==='undefined'||typeof Worker==='undefined')throw 0;
+    const src=`const CTR={cache:new Map(),pend:new Map()};const TPL={dem:${JSON.stringify(TPL.dem)}};\n${ctrIv.toString()}\n${ctrDem.toString()}\n${ctrTile.toString()}\n`+
+      `const Q=[],X=new Set();let busy=0;async function run(){if(busy>=2)return;const t=Q.shift();if(!t)return;if(X.has(t.id)){X.delete(t.id);return run();}busy++;try{const st={};const b=await ctrTile(t.z,t.x,t.y,null,st);postMessage({id:t.id,b,ok:!!st.ok},[b]);}catch(e){postMessage({id:t.id,err:String(e&&e.message||e)});}busy--;run();}
+onmessage=e=>{const d=e.data;if(d.cancel){X.add(d.cancel);return;}Q.push(d);run();run();};`;
+    const w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+    w.onmessage=e=>{const d=e.data,f=CTRW.cb.get(d.id);if(f){CTRW.cb.delete(d.id);f(d);}};w.onerror=()=>{CTRW.ok=false;CTRW.w=null;CTRW.cb.forEach(f=>f({err:'worker'}));CTRW.cb.clear();};
+    CTRW.w=w;CTRW.ok=true;return w;}catch(e){CTRW.ok=false;return null;}}
+function ctrCalc(z,x,y,signal){const w=ctrWorker();
+  if(!w){const st={};return ctrTile(z,x,y,signal,st).then(b=>({b,ok:!!st.ok}));}
+  return new Promise(res=>{const id=++CTRW.id;CTRW.cb.set(id,d=>{if(d.err&&!d.b){const st={};ctrTile(z,x,y,signal,st).then(b=>res({b,ok:!!st.ok}),()=>res({b:null}));return;}res(d);});
+    w.postMessage({id,z,x,y});if(signal)signal.addEventListener('abort',()=>{if(CTRW.cb.has(id)){CTRW.cb.delete(id);w.postMessage({cancel:id});res({b:null,aborted:true});}},{once:true});});}
+const ctrKey=(z,x,y)=>`${location.origin}/__ctr/${z}/${x}/${y}.png`;
+async function ctrStored(z,x,y){try{if(!('caches' in window))return null;const c=await caches.open('gp-ctr'),r=await c.match(ctrKey(z,x,y));return r?await r.arrayBuffer():null;}catch(e){return null;}}
 function ctrRegister(){if(CTR.reg||!window.maplibregl||!maplibregl.addProtocol)return;CTR.reg=true;
-  maplibregl.addProtocol('ctr',async(params,ac)=>{const m=params.url.match(/ctr:\/\/(\d+)\/(\d+)\/(\d+)/);if(!m)throw new Error('bad ctr url');const k=m[1]+'/'+m[2]+'/'+m[3],TC=CTR.tiles||(CTR.tiles=new Map());let b=TC.get(k);
-    if(!b){const st={};b=await ctrTile(+m[1],+m[2],+m[3],ac&&ac.signal,st);if(b&&b.byteLength&&(st.ok||+m[1]<9)&&!(ac&&ac.signal&&ac.signal.aborted)){TC.set(k,b);if(TC.size>160)TC.delete(TC.keys().next().value);}}else{TC.delete(k);TC.set(k,b);}
-    return {data:b.slice(0)};});}/* 算好的等高線圖塊留 160 張，同一塊不重算（交出去的是複本，原本那份才不會被搬走） */
+  maplibregl.addProtocol('ctr',async(params,ac)=>{const m=params.url.match(/ctr:\/\/(\d+)\/(\d+)\/(\d+)/);if(!m)throw new Error('bad ctr url');const z=+m[1],x=+m[2],y=+m[3],k=z+'/'+x+'/'+y,TC=CTR.tiles||(CTR.tiles=new Map());let b=TC.get(k);
+    if(b){TC.delete(k);TC.set(k,b);return {data:b.slice(0)};}
+    b=await ctrStored(z,x,y);
+    if(!b){const r=await ctrCalc(z,x,y,ac&&ac.signal);if(ac&&ac.signal&&ac.signal.aborted)throw new DOMException('aborted','AbortError');b=r.b;if(!b)return {data:new ArrayBuffer(0)};if(!(r.ok||z<9))return {data:b};}
+    TC.set(k,b);if(TC.size>160)TC.delete(TC.keys().next().value);return {data:b.slice(0)};});}/* 算好的留 160 張在記憶體；交出去的是複本，原本那份才不會被搬走 */
+// 預先算好存在手機（下載離線地圖時、或「全台等高線概覽」）。已經存過的跳過；回傳 [完成,失敗]
+async function ctrPrecompute(list,prog,st){if(!('caches' in window))return [0,list.length];const c=await caches.open('gp-ctr');let done=0,fail=0,i=0;
+  const work=async()=>{while(i<list.length&&!(st&&st.stop)){const [z,x,y]=list[i++],key=ctrKey(z,x,y);try{if(await c.match(key)){done++;continue;}const r=await ctrCalc(z,x,y,null);if(!r.b||!r.ok)throw 0;await c.put(key,new Response(new Blob([r.b],{type:'image/png'})));done++;}catch(e){fail++;}if(prog)prog(done,fail,list.length);}};
+  await Promise.all([work(),work()]);return [done,fail];}
+const lat2ty=(lat,z)=>{const r=lat*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z);},lon2tx=(lon,z)=>Math.floor((lon+180)/360*2**z);
+function tilesBB(bb,z0,z1){const out=[];for(let z=z0;z<=z1;z++){const x0=lon2tx(bb[1],z),x1=lon2tx(bb[3],z),y0=lat2ty(bb[2],z),y1=lat2ty(bb[0],z);for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)out.push([z,x,y]);}return out;}
+// 這條路線要準備的等高線：路線兩側 z11–16（跟離線地圖同範圍）＋外圍約 20 km 的 z13（遠景）
+function ctrRouteTiles(P){const near=new Set(tileList(P,'{z}/{x}/{y}').map(u=>u)),out=[...near].map(k=>k.split('/').map(Number)),bb=pkBB(P);tilesBB(bb,13,13).forEach(t=>{const k=t.join('/');if(!near.has(k)){near.add(k);out.push(t);}});return out;}
+// 全台等高線概覽：z11–12，一次算好
+async function ctrDownloadAll(){if(CTR.dl){CTR.dl.stop=true;return;}if(!navigator.onLine){toast('要有網路才能下載');return;}
+  const L=tilesBB(PK_TW,11,12);if(!confirm(`準備全台灣的純黑等高線概覽（縮小看整個區域時用，縮放 11–12 級，共 ${L.length} 張）\n會下載高度資料（約 ${Math.round(L.length*0.06)} MB）並在手機上算好存起來，約幾分鐘。之後全台都不用再算。\n建議用 Wi-Fi。`))return;
+  const b=$('#ctrAll'),msg=$('#mapMsg'),st=CTR.dl={stop:false};if(b)b.innerHTML=ic('stop')+'停止';
+  const [d,f]=await ctrPrecompute(L,(d,f,n)=>{if(msg)msg.textContent=`準備全台等高線… ${d+f}/${n}${f?`（失敗 ${f}）`:''}`;},st);CTR.dl=null;
+  try{localStorage.setItem('gearPlanner.ctrAll',st.stop?'':String(Date.now()));}catch(e){}ctrAllBtn();
+  if(msg)msg.textContent=st.stop?`已停止，存了 ${d} 張`:`✓ 全台等高線概覽存好了：${d} 張${f?`，${f} 張失敗（再按一次會補）`:''}`;}
+function ctrAllBtn(){const b=$('#ctrAll');if(!b)return;let t='';try{t=localStorage.getItem('gearPlanner.ctrAll')||'';}catch(e){}b.innerHTML=ic('download')+(t?'全台等高線 ✓（點一下更新）':'下載全台等高線');}
 
 function mapStyle(){const R=(url,max,attr)=>({type:'raster',tiles:[url],tileSize:256,maxzoom:max,attribution:attr});
   const ln={'line-join':'round','line-cap':'round'};
@@ -2789,18 +2823,21 @@ function tileList(P,tpl){const T=new Set(),t2=(lat,lon,z)=>{const n=2**z,x=Math.
     pts.forEach(q=>{const [x,y]=t2(q[0],q[1],z);for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++)T.add(`${z}/${x+dx}/${y+dy}`);});}
   return [...T].map(k=>{const [z,x,y]=k.split('/');return tpl.replace('{z}',z).replace('{x}',x).replace('{y}',y).replace('{s}','a');});}
 $('#pkAll').addEventListener('click',()=>pkDownloadAll());try{pkAllBtn();}catch(e){}
+$('#ctrAll').addEventListener('click',()=>ctrDownloadAll());try{ctrAllBtn();}catch(e){}
 $('#mapOff').addEventListener('click',async()=>{const P=MAP.P;if(!P||!MAP.m){toast('先等地圖載入');return;}if(!('caches' in window)){toast('這個瀏覽器不支援離線地圖');return;}
   if(MAP.dl){MAP.dl.stop=true;return;}
   const tpls=BASES[mapBaseKey()].tiles,base=[...new Set(tpls.flatMap(([t,mx])=>tileList(P,t).filter(u=>{const z=+(u.match(/\/(\d+)\/\d+\/\d+(?:\.png)?$/)||[])[1];return !z||z<=mx||!/terrarium/.test(t);})))];
   const want3d=M3D.want||M3D.navWant,zOf=u=>+(u.match(/\/(\d+)\/\d+\/\d+\.png/)||[])[1],dem3d=want3d?[...new Set([...demWide(P),...tileList(P,TPL.dem).filter(u=>zOf(u)<=14)])].filter(u=>!base.includes(u)):[];
-  const urls=[...base,...dem3d],mb=(base.length*0.022+dem3d.length*0.08).toFixed(0);
-  if(!confirm(`下載目前底圖、路線兩側約 1 公里的地圖（縮放 11–16 級）${dem3d.length?`\n＋3D 地形：路線附近和外圍約 20 km 的遠景（${dem3d.length} 張）`:''}\n共約 ${urls.length} 張圖、${mb} MB。\n建議用 Wi-Fi。下載完後沒網路也能看地圖${dem3d.length?'和 3D':''}。`))return;
+  const urls=[...base,...dem3d],mb=(base.length*0.022+dem3d.length*0.08).toFixed(0),ctrL=mapBaseKey()==='ctr'?ctrRouteTiles(P):[];
+  if(!confirm(`下載目前底圖、路線兩側約 1 公里的地圖（縮放 11–16 級）${dem3d.length?`\n＋3D 地形：路線附近和外圍約 20 km 的遠景（${dem3d.length} 張）`:''}${ctrL.length?`\n＋純黑等高線先算好存起來（${ctrL.length} 張，路線附近詳細、外圍 20 km 遠景；要多花一兩分鐘）`:''}\n共約 ${urls.length} 張圖、${mb} MB。\n建議用 Wi-Fi。下載完後沒網路也能看地圖${dem3d.length?'和 3D':''}。`))return;
   const c=await caches.open('gp-tiles');let done=0,fail=0;MAP.dl={stop:false};const st=MAP.dl;$('#mapOff').innerHTML=ic('stop')+'停止下載';
   const work=async()=>{while(urls.length&&!st.stop){const u=urls.shift();try{if(await c.match(u)){done++;continue;}let r;try{r=await fetch(u,{mode:'cors'});}catch(e){if(!done){st.stop=true;st.cors=true;}throw e;}if(!r.ok)throw new Error('HTTP '+r.status);await c.put(u,r);done++;}catch(e){fail++;MAP.lastErr=String(e);}
     $('#mapMsg').textContent=`下載離線地圖中… ${done+fail} 張${fail?`（失敗 ${fail}）`:''}`;}};
-  await Promise.all([1,2,3,4,5,6].map(work));MAP.dl=null;$('#mapOff').innerHTML=ic('download')+'下載離線地圖';
+  await Promise.all([1,2,3,4,5,6].map(work));
+  let cd=0,cf=0;if(ctrL.length&&!st.stop&&!st.cors){[cd,cf]=await ctrPrecompute(ctrL,(d,f,n)=>{$('#mapMsg').textContent=`算等高線中… ${d+f}/${n}${f?`（失敗 ${f}）`:''}`;},st);}
+  MAP.dl=null;$('#mapOff').innerHTML=ic('download')+'下載離線地圖';
   if(st.cors){$('#mapMsg').textContent='這個底圖的伺服器不允許下載到手機。按地圖右上角的圖層，切到「OpenTopoMap 等高線」再按一次下載。';return;}
-  $('#mapMsg').textContent=st.stop?`已停止，存了 ${done} 張`:`✓ 離線地圖存好了：${done} 張${fail?`，${fail} 張失敗（再按一次會補抓${MAP.lastErr?'；'+esc(MAP.lastErr.slice(0,80)):''}）`:''}。沒網路時這一帶的地圖照樣能看。`;});
+  $('#mapMsg').textContent=st.stop?`已停止，存了 ${done} 張`:`✓ 離線地圖存好了：${done} 張${fail?`，${fail} 張失敗（再按一次會補抓${MAP.lastErr?'；'+esc(MAP.lastErr.slice(0,80)):''}）`:''}${ctrL.length?`；等高線算好 ${cd} 張${cf?`（${cf} 張失敗）`:''}`:''}。沒網路時這一帶的地圖照樣能看。`;});
 // --- 畫路線 ---
 const DRAW={on:false,taps:[],legs:[],snap:true,busy:false,anchor:null};
 function drawPts(){return DRAW.legs.flat();}

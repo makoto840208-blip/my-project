@@ -64,8 +64,8 @@ const navBtn = (p, a) => p.evaluate(a => { const b = document.querySelector(`#na
 // 地圖上「沒被擋住」的範圍
 const visArea = p => p.evaluate(() => {
   const m = window.__gp.MAP.m, cv = m.getCanvas().getBoundingClientRect(), np = document.querySelector('#navProf').getBoundingClientRect();
-  const bs = [...document.querySelectorAll('#navMode .navbtns>button')].filter(e => !e.hidden && e.offsetParent).map(e => e.getBoundingClientRect());
-  const ct = document.querySelector('.maplibregl-ctrl-top-right').getBoundingClientRect();
+  const bs = [...document.querySelectorAll('#navMode .navbtns:not(.navbtnsR)>button')].filter(e => !e.hidden && e.offsetParent).map(e => e.getBoundingClientRect());
+  const ct = document.querySelector('#navMode .navbtnsR').getBoundingClientRect();
   const u = { l: Math.min(...bs.map(r => r.left)), t: Math.min(...bs.map(r => r.top)), r: Math.max(...bs.map(r => r.right)), b: Math.max(...bs.map(r => r.bottom)) };
   return { W: cv.width, H: cv.height, profTop: np.top - cv.top, btn: u, ctrlL: ct.left - cv.left, ctrlB: ct.bottom - cv.top, ctrlRow: ct.width > ct.height * 1.5, horiz: (u.r - u.l) > (u.b - u.t) };
 });
@@ -113,7 +113,7 @@ T('導航：控制列跟著搬進來，padding 等於高度圖高度', async p =
 T('導航：按 ＋ 放大，畫面中央的點不跑掉', async p => {
   await loadGpx(p); await openNav(p);
   const pt = await p.evaluate(() => { const m = window.__gp.MAP.m, np = document.querySelector('#navProf').getBoundingClientRect().top; return m.unproject([innerWidth / 2, np / 2]).toArray(); });
-  for (let k = 0; k < 2; k++) { await p.click('.maplibregl-ctrl-zoom-in'); await p.waitForTimeout(700); }
+  for (let k = 0; k < 2; k++) { await p.click('#navMode [data-nr=zin]'); await p.waitForTimeout(700); }
   await idle(p);
   const r = await p.evaluate(ll => { const m = window.__gp.MAP.m, q = m.project(ll), np = document.querySelector('#navProf').getBoundingClientRect().top; return { dx: q.x - innerWidth / 2, dy: q.y - np / 2 }; }, pt);
   ok(Math.abs(r.dx) < 4 && Math.abs(r.dy) < 4, `放大後中央點偏了 (${r.dx.toFixed(0)}, ${r.dy.toFixed(0)}) px`);
@@ -345,27 +345,50 @@ T('下載全台山頭：之後別區路線不再上網、重開還在', async p 
 }, { vp: '直式' });
 T('導航：右邊地圖按鈕跟左邊一樣大、不跟 SOS／高度圖重疊', async p => {
   await loadGpx(p); await openNav(p); await shot(p, 'btns');
-  const r = await p.evaluate(() => { const L = document.querySelector('#navMode .navbtns>button').getBoundingClientRect(), Rb = [...document.querySelectorAll('#navMode .maplibregl-ctrl-top-right button')].filter(b => b.offsetParent && !b.closest('.lyrmenu')).map(b => b.getBoundingClientRect());
+  const r = await p.evaluate(() => { const L = document.querySelector('#navMode .navbtns:not(.navbtnsR)>button').getBoundingClientRect(), Rb = [...document.querySelectorAll('#navMode .navbtnsR>button')].filter(b => b.offsetParent).map(b => b.getBoundingClientRect());
     const sos = document.querySelector('#navMode .sosb').getBoundingClientRect(), np = document.getElementById('navProf').getBoundingClientRect(), hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
     return { lw: Math.round(L.width), sizes: [...new Set(Rb.map(b => Math.round(b.width) + 'x' + Math.round(b.height)))], n: Rb.length, sos: Rb.some(b => hit(b, sos)), prof: Rb.some(b => hit(b, np)) }; });
-  ok(r.n >= 5, '右邊按鈕少了：' + r.n); ok(r.sizes.length === 1 && r.sizes[0] === r.lw + 'x' + r.lw, `右邊按鈕 ${r.sizes.join('、')}，左邊 ${r.lw}x${r.lw}`);
+  ok(r.n === 3, '右邊預設應該是 放大、縮小、更多 三顆：' + r.n); ok(r.sizes.length === 1 && r.sizes[0] === r.lw + 'x' + r.lw, `右邊按鈕 ${r.sizes.join('、')}，左邊 ${r.lw}x${r.lw}`);
   ok(!r.sos, '右邊按鈕跟 SOS 重疊'); ok(!r.prof, '右邊按鈕跟高度圖重疊');
 });
-T('導航：圖層選單在畫面中間橫向展開、不被 SOS 擋', async p => {
-  await loadGpx(p); await openNav(p); await p.click('.lyrctl>button'); await p.waitForTimeout(200); await shot(p, 'layers');
-  const r = await p.evaluate(() => { const m = document.querySelector('.lyrmenu'), q = m.getBoundingClientRect(), bs = [...m.querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none'), tops = new Set(bs.map(b => Math.round(b.getBoundingClientRect().top))), np = document.getElementById('navProf').getBoundingClientRect();
-    const vis = bs.filter(b => { const r = b.getBoundingClientRect(); return r.right > q.left + 4 && r.left < q.right - 4; }), top = vis.every(b => { const r = b.getBoundingClientRect(), x0 = Math.max(r.left, q.left) + 4, x1 = Math.min(r.right, q.right) - 4; return [[x0, r.top + 4], [x1, r.top + 4], [x0, r.bottom - 4], [x1, r.bottom - 4], [(x0 + x1) / 2, (r.top + r.bottom) / 2]].every(([x, y]) => { const el = document.elementFromPoint(x, y); return el && b.contains(el); }); });
-    return { open: !m.hidden, row: tops.size === 1, n: bs.length, mid: Math.abs((q.top + q.bottom) / 2 - np.top / 2) < 30, wide: q.width > innerWidth * 0.8, top, scroll: m.scrollWidth > m.clientWidth || m.scrollWidth <= m.clientWidth }; });
-  ok(r.open && r.n >= 6, '圖層選單沒打開'); ok(r.row, '圖層選項沒有排成一橫列'); ok(r.mid && r.wide, '圖層選單不在畫面中間'); ok(r.top, '圖層選項被別的東西蓋住（SOS？）');
-  await p.mouse.click(200, 30); await p.waitForTimeout(150); ok(await p.evaluate(() => document.querySelector('.lyrmenu').hidden), '點外面沒有收起來');
+T('導航：圖層在畫面中間的大按鈕橫條、不被擋、點外面收起', async p => {
+  await loadGpx(p); await openNav(p); await p.click('#navMode [data-nr=more]'); await p.waitForTimeout(150); await p.click('#navStrip .nsi[data-nr=layers]'); await p.waitForTimeout(200); await shot(p, 'layers');
+  const r = await p.evaluate(() => { const m = document.getElementById('navStrip'), L = document.getElementById('nsL'), q = L.getBoundingClientRect(), bs = [...L.querySelectorAll('.nsi')], tops = new Set(bs.map(b => Math.round(b.getBoundingClientRect().top))), np = document.getElementById('navProf').getBoundingClientRect(), mq = m.getBoundingClientRect();
+    const vis = bs.filter(b => { const r = b.getBoundingClientRect(); return r.right > q.left + 4 && r.left < q.right - 4; }), top = vis.every(b => { const r = b.getBoundingClientRect(), x0 = Math.max(r.left, q.left) + 4, x1 = Math.min(r.right, q.right) - 4; return [[x0, r.top + 4], [x1, r.top + 4], [x0, r.bottom - 4], [x1, r.bottom - 4]].every(([x, y]) => { const el = document.elementFromPoint(x, y); return el && b.contains(el); }); });
+    return { open: !m.hidden, t: document.getElementById('nsT').textContent, row: tops.size === 1, n: bs.length, h: Math.min(...bs.map(b => b.getBoundingClientRect().height)), mid: Math.abs((mq.top + mq.bottom) / 2 - np.top / 2) < 30, wide: mq.width > innerWidth * 0.85, top }; });
+  ok(r.open && r.t === '地圖圖層' && r.n >= 8, '圖層橫條沒打開'); ok(r.row, '圖層選項沒排成一橫列'); ok(r.h >= 70, `圖層按鈕太扁（${r.h}px）`); ok(r.mid && r.wide, '圖層橫條不在畫面中間'); ok(r.top, '圖層選項被別的東西蓋住');
+  await p.click('#navStrip .nsi[data-lb=topo]'); await p.waitForTimeout(150); ok(await p.evaluate(() => window.__gp.fn('mapBaseKey')() === 'topo' && document.getElementById('navStrip').hidden), '點底圖沒切換或沒收起');
+  await p.click('#navMode [data-nr=more]'); await p.mouse.click(Math.round(p.viewportSize().width / 2), 40); await p.waitForTimeout(150); ok(await p.evaluate(() => document.getElementById('navStrip').hidden), '點外面沒有收起來');
 });
-T('導航：高度圖往下滑收起、往上滑拉開', async p => {
-  await loadGpx(p); await openNav(p); const cdp = await p.context().newCDPSession(p);
-  const swipe = async (y0, y1) => { const x = 120; await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] }); for (let k = 1; k <= 6; k++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + (y1 - y0) * k / 6 }] }); await p.waitForTimeout(16); } await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await p.waitForTimeout(300); };
-  const st = () => p.evaluate(() => { const e = document.getElementById('navProf'); return { min: e.classList.contains('min'), top: Math.round(e.getBoundingClientRect().top), pad: Math.round(window.__gp.MAP.m.getPadding().bottom), h: e.offsetHeight }; });
+T('導航：左右「更多」橫條、長按固定（最多 3 個）、重開還在', async p => {
+  await loadGpx(p); await openNav(p);
+  const bar = sd => p.evaluate(sd => [...document.querySelectorAll(sd === 'L' ? '#navMode .navbtns:not(.navbtnsR)>button' : '#navMode .navbtnsR>button')].filter(b => b.offsetParent).map(b => b.dataset.nav || b.dataset.nr), sd);
+  ok((await bar('L')).join() === 'close,center,menu', '左邊預設應該是 關閉、定位、更多：' + (await bar('L')));
+  await p.click('#navMode [data-nav=menu]'); await p.waitForTimeout(150);
+  const it = await p.evaluate(() => [...document.querySelectorAll('#navStrip .nsi')].map(b => [b.dataset.nav, b.textContent.trim(), Math.round(b.getBoundingClientRect().height)]));
+  ok(it.length >= 14 && it.every(x => x[1] && x[2] >= 70), '左邊橫條的按鈕不齊或太小：' + JSON.stringify(it.slice(0, 3)));
+  const hold = async sel => { const b = await p.$(sel); await b.evaluate(e => e.scrollIntoView({ inline: 'center', block: 'nearest' })); await p.waitForTimeout(250); const q = await b.boundingBox(); await p.mouse.move(q.x + q.width / 2, q.y + q.height / 2); await p.mouse.down(); await p.waitForTimeout(700); await p.mouse.up(); await p.waitForTimeout(150); };
+  await hold('#navStrip .nsi[data-nav=follow]'); ok((await bar('L')).join() === 'close,center,follow,menu', '長按「跟隨」沒固定到左邊：' + (await bar('L')));
+  ok(await p.evaluate(() => !document.getElementById('navStrip').hidden && window.__gp.FOL.on === false), '長按不該觸發功能、橫條也不該收起');
+  await hold('#navStrip .nsi[data-nav=lock]'); const h = await p.evaluate(() => document.getElementById('nsHint').textContent); ok(/最多固定 3 個/.test(h) && (await bar('L')).length === 4, '第 4 個應該擋下來並提示：' + h);
+  await hold('#navStrip .nsi[data-nav=close]'); ok((await bar('L')).join() === 'center,follow,menu', '長按已固定的沒取消：' + (await bar('L')));
+  await p.click('#navStrip .nsi[data-nav=dark]'); await p.waitForTimeout(200); ok(await p.evaluate(() => document.getElementById('navStrip').hidden), '點功能後橫條應該收起');
+  await p.click('#navMode [data-nr=more]'); await p.waitForTimeout(150); await hold('#navStrip .nsi[data-nr=north]'); ok((await bar('R')).join() === 'zin,zout,north,more', '右邊長按沒固定：' + (await bar('R')));
+  await p.click('#navStrip .nsi[data-nr=zin]'); await p.waitForTimeout(150); ok(await p.evaluate(() => !document.getElementById('navStrip').hidden), '在橫條裡按放大，橫條應該留著可以連按');
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state').textContent === '已載入'); await loadGpx(p); await openNav(p);
+  ok((await bar('L')).join() === 'center,follow,menu' && (await bar('R')).join() === 'zin,zout,north,more', '重開後固定的按鈕不見了');
+});
+T('導航：高度圖跟著手指拖、拖不夠會彈回、收起時留 50px 把手列', async p => {
+  await loadGpx(p); await openNav(p); const cdp = await p.context().newCDPSession(p), x = 120;
+  const tp = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  const drag = async (y0, y1, steps, wait) => { await tp('touchStart', y0); for (let k = 1; k <= steps; k++) { await tp('touchMove', y0 + (y1 - y0) * k / steps); await p.waitForTimeout(wait); } };
+  const st = () => p.evaluate(() => { const e = document.getElementById('navProf'), m = (getComputedStyle(e).transform.match(/matrix\(.*,\s*([-\d.]+)\)$/) || [])[1]; return { min: e.classList.contains('min'), top: Math.round(e.getBoundingClientRect().top), ty: m ? Math.round(+m) : 0, pad: Math.round(window.__gp.MAP.m.getPadding().bottom), h: e.offsetHeight, nph: Math.round(e.querySelector('.nph').getBoundingClientRect().height) }; });
   let r = await st(); ok(!r.min, '一開始應該是展開的');
-  await swipe(r.top + 15, r.top + 120); r = await st(); ok(r.min, '往下滑沒收起'); ok(Math.abs(r.pad - r.h) <= 2, '收起後地圖 padding 沒跟著變');
-  await swipe(r.top + 15, r.top - 150); r = await st(); ok(!r.min, '往上滑沒拉開');
+  await drag(r.top + 20, r.top + 50, 6, 40); let m = await st(); ok(m.ty >= 25 && m.ty <= 35, `拖的時候面板沒跟著手指（位移 ${m.ty}px）`);
+  await tp('touchEnd'); await p.waitForTimeout(350); m = await st(); ok(!m.min && m.ty === 0, '只拖一點點、慢慢放開，應該彈回去');
+  await drag(r.top + 20, r.top + 200, 6, 16); await tp('touchEnd'); await p.waitForTimeout(400); r = await st(); ok(r.min, '拖夠多沒收起'); ok(Math.abs(r.pad - r.h) <= 2, '收起後地圖 padding 沒跟著變'); ok(r.nph >= 50, `收起時的把手列只有 ${r.nph}px，太矮容易被系統回桌面手勢搶走`);
+  await drag(r.top + 25, r.top + 5, 6, 40); m = await st(); ok(!m.min || m.ty > 0, '往上拉時面板沒跟著出來'); await tp('touchEnd'); await p.waitForTimeout(400); m = await st(); ok(m.min, '往上拉一點點應該彈回收起');
+  await drag(r.top + 25, r.top - 250, 6, 16); await tp('touchEnd'); await p.waitForTimeout(400); r = await st(); ok(!r.min, '往上拉夠多沒拉開');
   await p.click('#navProf .nph'); r = await st(); ok(r.min, '點標題列應該還是可以收');
 });
 T('3D 效能：純黑等高線自動換掉、少一層陰影、山名減量、關掉恢復', async p => {

@@ -257,7 +257,7 @@ svg.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;str
 #navEdit .btnrow{margin-top:8px}#navEdit .seg2{display:inline-flex;border:1px solid #666;border-radius:6px;overflow:hidden;margin-left:6px}#navEdit .seg2 button{background:none;border:0;color:#ccc;padding:3px 9px;font:inherit;font-size:12.5px}#navEdit .seg2 button.on{background:var(--coy);color:#111}
 .navbtns button.on{background:var(--coy);color:#111}
 #navProf{position:absolute;left:0;right:0;bottom:0;z-index:1001;background:rgba(17,21,15,.96);border-top:1px solid var(--line);padding:0 calc(8px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(8px + env(safe-area-inset-left))}
-#navProf::before{content:'';position:absolute;top:3px;left:50%;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:rgba(207,170,112,.4);pointer-events:none}#navProf .nph{padding-top:10px!important;all:unset;display:flex;gap:10px;align-items:center;width:100%;padding:6px 4px;color:var(--coy2);font-size:13px;cursor:pointer;box-sizing:border-box}#navProf .nph i{font-style:normal;color:var(--mut);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#navProf .nph b{color:var(--mut)}
+#navProf{touch-action:none}#navCard{touch-action:pan-y}#navProf.min .nph{min-height:50px;padding-top:14px!important;padding-bottom:6px!important}#navProf::before{content:'';position:absolute;top:3px;left:50%;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:rgba(207,170,112,.4);pointer-events:none}#navProf .nph{padding-top:10px!important;all:unset;display:flex;gap:10px;align-items:center;width:100%;padding:6px 4px;color:var(--coy2);font-size:13px;cursor:pointer;box-sizing:border-box}#navProf .nph i{font-style:normal;color:var(--mut);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#navProf .nph b{color:var(--mut)}
 #navProfBody{height:30vh;max-height:220px;min-height:120px;display:flex;flex-direction:row;gap:8px}#navProfMain{flex:1;min-width:0;display:flex;flex-direction:column}#navProfMain #prof{flex:1;min-height:0;overflow:hidden}#prof{position:relative}.profsplit{position:absolute;top:2px;right:4px;background:rgba(17,21,15,.85);border:1px solid var(--line);color:var(--mut);border-radius:12px;padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer}.profsplit.on{color:#111;background:#ffe14d;border-color:#ffe14d}
 #navMode #profRead .phint{display:none}#navMode #profRead .pbtns button{height:26px;min-width:30px;padding:0 6px;font-size:11.5px}#navMode #profRead .pbar [data-pcur]{font-size:11px}
 @media (orientation:portrait){#navProfBody{min-height:170px;height:32vh}}
@@ -309,7 +309,15 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 #navMode .navbtns>button.on{background:#3d3420;color:#ffd27a;border-color:#cfaa70}
 #navBlack{position:fixed;inset:0;z-index:9550;background:#000;color:#777;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px;user-select:none}#navBlack .n{font-size:20px;color:#8a7a5a}#navBlack .v{font-size:26px;font-family:var(--mono);color:#9a9a9a}#navBlack .t{font-size:18px;color:#6f8f66;font-family:var(--mono)}#navBlack .s{font-size:13px;color:#555;margin-top:8px}#navBlack .w{font-size:22px;color:#c0392b;font-weight:700;margin-bottom:8px}#navBlack .nbkHint{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));font-size:12px;color:#333}
 #navCard{flex:0 0 clamp(150px,38%,320px);overflow:auto;color:#fff;border-left:1px solid rgba(207,170,112,.35);padding:2px 0 2px 8px;font-size:13px;cursor:pointer}#navCard .btnrow{margin-top:6px}#navCard .btn{color:var(--txt)}
-#navMode .navbtns{z-index:1003}.navmenu svg.ic{width:20px;height:20px;color:#cfaa70;flex:none}.navmenu{position:absolute;left:calc(100% + 8px);top:0;border-radius:8px!important;max-height:calc(100vh - 24px - env(safe-area-inset-top));max-height:calc(100dvh - 24px - env(safe-area-inset-top));overflow:auto;display:flex;flex-direction:column;background:rgba(17,21,15,.96);border:1px solid rgba(207,170,112,.5);border-radius:12px;padding:6px;min-width:210px;box-shadow:0 4px 16px rgba(0,0,0,.6)}#navMode .navbtns .navmenu button{all:unset;width:auto;height:auto;color:#d9ccb0;display:flex;align-items:center;gap:10px;font-size:15px;padding:10px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}#navMode .navbtns .navmenu button:hover,#navMode .navbtns .navmenu button.on{background:rgba(207,170,112,.25)}
+#navMode .navbtns{z-index:1003}
+#navMode .navbtns.navbtnsR{left:auto;right:calc(12px + env(safe-area-inset-right));direction:rtl}#navMode .navbtns>button>span{display:none}#navMode .maplibregl-ctrl-top-right{display:none!important}
+#navStrip{position:absolute;left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));top:calc((100% - var(--npb,180px))/2);transform:translateY(-50%);z-index:1150;background:rgba(16,19,14,.97);border:1px solid rgba(207,170,112,.45);border-radius:14px;padding:6px 8px 8px;box-shadow:0 8px 28px rgba(0,0,0,.7)}
+#navStrip[hidden]{display:none}#navStrip .nsh{display:flex;align-items:center;gap:8px;padding:0 2px 6px;color:#cfaa70;font-size:13.5px}#navStrip .nsh small{flex:1;color:#8f9481;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#navStrip .nsh small.w{color:#e6a090}
+#navStrip .nsx{all:unset;width:40px;height:34px;text-align:center;color:#cfaa70;font-size:18px;cursor:pointer;border:1px solid rgba(207,170,112,.35);border-radius:8px}
+#navStrip .nsl{display:flex;gap:8px;overflow-x:auto;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}#navStrip .nsl::-webkit-scrollbar{display:none}
+#navStrip .nsi{all:unset;box-sizing:border-box;flex:none;min-width:80px;height:78px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(207,170,112,.35);border-radius:10px;background:#1b2316;color:#d9ccb0;font-size:13px;line-height:1.2;text-align:center;cursor:pointer;position:relative;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#navStrip .nsi svg.ic{width:28px;height:28px;color:#cfaa70}#navStrip .nsi.on{background:#3d3420;color:#ffd27a;border-color:#cfaa70}#navStrip .nsi.pin::after{content:'';position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#cfaa70}
+#navStrip .nsi.lb{min-width:118px;font-size:13.5px}#navStrip .nsi.hold{outline:2px solid #ffb347}.navmenu svg.ic{width:20px;height:20px;color:#cfaa70;flex:none}.navmenu{position:absolute;left:calc(100% + 8px);top:0;border-radius:8px!important;max-height:calc(100vh - 24px - env(safe-area-inset-top));max-height:calc(100dvh - 24px - env(safe-area-inset-top));overflow:auto;display:flex;flex-direction:column;background:rgba(17,21,15,.96);border:1px solid rgba(207,170,112,.5);border-radius:12px;padding:6px;min-width:210px;box-shadow:0 4px 16px rgba(0,0,0,.6)}#navMode .navbtns .navmenu button{all:unset;width:auto;height:auto;color:#d9ccb0;display:flex;align-items:center;gap:10px;font-size:15px;padding:10px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}#navMode .navbtns .navmenu button:hover,#navMode .navbtns .navmenu button.on{background:rgba(207,170,112,.25)}
 .navblk{position:absolute;left:calc(12px + env(safe-area-inset-left));bottom:calc(var(--npb,180px) + 14px);z-index:1000}
 .navsos{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(var(--npb,180px) + 14px);z-index:1000}
 .navbig .bigb{width:76px;height:76px;border-radius:12px;font-family:var(--mono);letter-spacing:1px;border:2px solid rgba(207,170,112,.55);background:rgba(16,19,14,.9);color:#cfaa70;font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:0 3px 12px rgba(0,0,0,.6);cursor:pointer}.navbig .bigb span{font-size:26px;line-height:1}
@@ -755,7 +763,7 @@ html.oled .card{border-color:#1c2118}
   <div class="navmap"></div>
   <div class="navbtns"><button data-nav="close" title="離開全螢幕"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button data-nav="center" title="定位到我的位置（只移動一次）"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="7.5"/></svg></button><button data-nav="follow" title="跟隨：以我為中心、前進方向朝上"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l6 16-6-4-6 4z"/></svg></button><button data-nav="route" title="整條路線放到最大"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></button><button data-nav="lock" title="鎖定觸控（防誤觸）"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button><button data-nav="menu" title="更多功能"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <div class="navmenu" hidden><button data-nav="mark"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>標記這裡（水源、岔路…）</span></button><button data-nav="meas"><svg class="ic" viewBox="0 0 24 24"><path d="M3 16L16 3l5 5L8 21z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg><span>量距離／高差</span></button><button data-nav="head"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6l3 7-3-1.6L9 13z"/></svg><span>地圖跟著手機方向轉</span></button><button data-nav="dark"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16A8 8 0 0 0 12 4z" fill="currentColor"/></svg><span>暗色／亮色地圖</span></button><button data-nav="draw"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg><span>畫路線</span></button><button data-nav="trim"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/></svg><span>刪減路線</span></button><button data-nav="undo" hidden><svg class="ic" viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/></svg><span>復原上一次修改</span></button><button data-nav="bigtxt"><svg class="ic" viewBox="0 0 24 24"><path d="M3 19L8 5l5 14M5 14h6"/><path d="M15 19l3-8 3 8M16 16.5h4"/></svg><span>大字模式</span></button><button data-nav="offset"><svg class="ic" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span>偏航提醒設定</span></button><button data-nav="offtest"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><span>測試偏航提醒</span></button><button data-nav="peakfix"><svg class="ic" viewBox="0 0 24 24"><path d="M2 20l7-12 4 6 3-4 6 10z"/><circle cx="18" cy="5" r="2"/></svg><span>對山定位（GPS 沒訊號時）</span></button><button data-nav="goto"><svg class="ic" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg><span>輸入座標目標</span></button></div></div>
-  <div class="navbig navblk"><button data-nav="black" class="bigb"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>黑屏</button></div><div class="navbig navsos"><button data-nav="sos" class="bigb sosb"><span>SOS</span>求救</button></div>
+  <div class="navbtns navbtnsR"><button data-nr="zin" title="放大"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button data-nr="zout" title="縮小"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><button data-nr="more" title="更多地圖功能"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="npoolR" hidden><button data-nr="north" title="轉回正北"><svg class="ic nrN" viewBox="0 0 24 24"><path d="M12 3l4.5 9h-9z" fill="currentColor"/><path d="M12 21l-4.5-9h9z"/></svg></button><button data-nr="layers" title="地圖圖層"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><button data-nr="fit" title="整條路線放到最大"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div></div><div id="navStrip" hidden><div class="nsh"><b id="nsT"></b><small id="nsHint"></small><button type="button" class="nsx" data-ns="x" aria-label="收起">✕</button></div><div class="nsl" id="nsL"></div></div><div class="navbig navblk"><button data-nav="black" class="bigb"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>黑屏</button></div><div class="navbig navsos"><button data-nav="sos" class="bigb sosb"><span>SOS</span>求救</button></div>
   <div id="navLock" hidden><div class="lockb"><span class="lockfill"></span><b>已鎖定</b><small>長按 1.5 秒解鎖</small></div><button class="lockSos" type="button">SOS</button></div>
   <div id="navBlack" hidden><div id="nbkTxt"></div><div class="nbkHint">連點兩下回到地圖</div><button type="button" class="bkSos" data-bksos>SOS</button></div>
   <div id="navEdit" hidden></div>
@@ -2136,8 +2144,8 @@ function mapFit(P,pad){if(!MAP.m||!P||!P.length)return;let a=1e9,b=1e9,c=-1e9,d=
 function mapView(lat,lon,minZ){if(!MAP.m)return;MAP.m.easeTo({center:[lon,lat],zoom:Math.max(MAP.m.getZoom(),minZ||0),duration:400});}
 function mapCursor(lat,lon){if(!MAP.m)return;if(!MAP.cur)MAP.cur=new maplibregl.Marker({element:mkEl('mk-cur')}).setLngLat([lon,lat]).addTo(MAP.m);else MAP.cur.setLngLat([lon,lat]);}
 function mapInsets(pad){const cv=MAP.m.getCanvas().getBoundingClientRect(),I={l:pad,r:pad,t:pad,b:pad},vis=e=>e&&!e.hidden&&e.offsetParent!==null;
-  const ct=MAP.m.getContainer().querySelector('.maplibregl-ctrl-top-right');if(ct){const q=ct.getBoundingClientRect();if(q.width>q.height*1.5){const T=Math.max(I.t,q.bottom-cv.top+8),Rr=Math.max(I.r,cv.right-q.left+6);if((cv.width-I.l-I.r)*(cv.height-T-I.b)>=(cv.width-I.l-Rr)*(cv.height-I.t-I.b))I.t=T;else I.r=Rr;}else I.r=Math.max(I.r,cv.right-q.left+6);}
-  if(NAV.on){const nb=document.querySelector('#navMode .navbtns');if(vis(nb)){let q=null;for(const e of nb.children){if(e.hidden||e.offsetParent===null)continue;const r=e.getBoundingClientRect();if(!r.width)continue;q=q?{left:Math.min(q.left,r.left),right:Math.max(q.right,r.right),top:Math.min(q.top,r.top),bottom:Math.max(q.bottom,r.bottom)}:{left:r.left,right:r.right,top:r.top,bottom:r.bottom};}
+  const ct=NAV.on?document.querySelector('#navMode .navbtnsR'):MAP.m.getContainer().querySelector('.maplibregl-ctrl-top-right');if(ct&&ct.getBoundingClientRect().width>0){const q=ct.getBoundingClientRect();if(q.width>q.height*1.5){const T=Math.max(I.t,q.bottom-cv.top+8),Rr=Math.max(I.r,cv.right-q.left+6);if((cv.width-I.l-I.r)*(cv.height-T-I.b)>=(cv.width-I.l-Rr)*(cv.height-I.t-I.b))I.t=T;else I.r=Rr;}else I.r=Math.max(I.r,cv.right-q.left+6);}
+  if(NAV.on){const nb=document.querySelector('#navMode .navbtns:not(.navbtnsR)');if(vis(nb)){let q=null;for(const e of nb.children){if(e.hidden||e.offsetParent===null)continue;const r=e.getBoundingClientRect();if(!r.width)continue;q=q?{left:Math.min(q.left,r.left),right:Math.max(q.right,r.right),top:Math.min(q.top,r.top),bottom:Math.max(q.bottom,r.bottom)}:{left:r.left,right:r.right,top:r.top,bottom:r.bottom};}
       // 按鈕可能是左邊直排或上方橫排（橫式時會換行成一排）：看擋左邊還是擋上面，選剩下地圖面積大的那種
       if(q){const np=$('#navProf'),bb=vis(np)?Math.max(I.b,cv.bottom-np.getBoundingClientRect().top+10):I.b,L=Math.max(I.l,q.right-cv.left+8),T=Math.max(I.t,q.bottom-cv.top+8);
         if((cv.width-L-I.r)*(cv.height-I.t-bb)>=(cv.width-I.l-I.r)*(cv.height-T-bb))I.l=L;else I.t=T;}}
@@ -2189,6 +2197,7 @@ async function renderMap(P,idx,WP,nTurn,T){const box=$('#rmap');if(!box)return;M
     MAP.m.addControl(new maplibregl.NavigationControl({showCompass:true,visualizePitch:false}),'top-right');MAP.m.addControl(new LayerCtl(),'top-right');MAP.m.addControl(new FitCtl(),'top-right');
     MAP.m.on('click',e=>{if(DRAW.on)drawTap({lat:e.lngLat.lat,lng:e.lngLat.lng});else if(TRIM.on)trimTap(null,{lat:e.lngLat.lat,lng:e.lngLat.lng});else if(MEAS.on)measTap({lat:e.lngLat.lat,lng:e.lngLat.lng});});
     MAP.m.on('rotatestart',e=>{if(e.originalEvent&&HEAD.on)headStop();});
+    MAP.m.on('rotate',()=>{document.querySelectorAll('#navMode .nrN').forEach(sv=>{sv.style.transform=`rotate(${-MAP.m.getBearing()}deg)`;});});
     MAP.m.on('error',e=>{/* 單一圖磚失敗不處理 */});
     MAP.ready=new Promise(r=>MAP.m.on('load',()=>{MAP.loaded=true;mapApplyStyle();try{map3dApply();}catch(e){}r();}));}
   await MAP.ready;
@@ -2244,12 +2253,22 @@ $('#mapGps').addEventListener('click',()=>{if(GPS.watch!=null&&GPS.byBtn){GPS.by
 // --- 全螢幕導航地圖 ---
 const NAV={on:false,tick:null};
 function navProfMin(v){const el=$('#navProf');if(!el)return;el.classList.toggle('min',!!v);try{localStorage.setItem('gearPlanner.navProfMin',v?'1':'0');}catch(e){}npSize();if(!v)renderProfile();}
-// 高度圖面板：往下滑收起、收起時往上滑拉開（標題列照樣可以點）。導航板裡的清單在捲動時不算
-(()=>{const el=document.getElementById('navProf');if(!el)return;let y0=null,x0=0,t0=0;
-  el.addEventListener('touchstart',e=>{y0=null;if(e.touches.length!==1)return;const c=e.target.closest&&e.target.closest('#navCard');if(c&&c.scrollHeight>c.clientHeight+2)return;const t=e.touches[0];y0=t.clientY;x0=t.clientX;t0=Date.now();},{passive:true});
-  el.addEventListener('touchend',e=>{if(y0==null)return;const t=e.changedTouches[0],dy=t.clientY-y0,dx=t.clientX-x0;y0=null;
-    if(Math.abs(dy)<35||Math.abs(dy)<Math.abs(dx)*1.5||Date.now()-t0>900)return;const min=el.classList.contains('min');if(dy>0&&!min)navProfMin(true);else if(dy<0&&min)navProfMin(false);},{passive:true});
-  el.addEventListener('touchcancel',()=>{y0=null;},{passive:true});})();
+// 高度圖面板：手指拖著走（像通知欄），放開時拖超過 1/3、或甩得夠快才收／開，不然彈回去；標題列照樣可以點。
+// 收起時留一條約 50px 的把手列：從這裡往上拉，起點離螢幕底邊夠遠，不會被系統當成回桌面。導航板清單捲得動時不搶。
+(()=>{const el=document.getElementById('navProf');if(!el)return;let d=null;
+  const body=()=>document.getElementById('navProfBody');
+  el.addEventListener('touchstart',e=>{d=null;if(e.touches.length!==1)return;const c=e.target.closest&&e.target.closest('#navCard');if(c&&c.scrollHeight>c.clientHeight+2)return;
+    if(e.target.closest&&e.target.closest('#profSvg')&&(PROF.zoom||1)>1)return;/* 放大的高度圖要左右拖，不搶 */
+    const t=e.touches[0];d={y0:t.clientY,x0:t.clientX,min:el.classList.contains('min'),on:false,last:t.clientY,lt:performance.now(),v:0,off:0,H:0};},{passive:true});
+  el.addEventListener('touchmove',e=>{if(!d)return;const t=e.touches[0],dy=t.clientY-d.y0,dx=t.clientX-d.x0;
+    if(!d.on){if(Math.abs(dy)<8)return;if(Math.abs(dy)<Math.abs(dx)*1.3){d=null;return;}d.on=true;if(d.min)el.classList.remove('min');d.H=body().offsetHeight||1;el.style.transition='none';}
+    const now=performance.now();d.v=(t.clientY-d.last)/Math.max(1,now-d.lt);d.last=t.clientY;d.lt=now;
+    d.off=Math.max(0,Math.min(d.H,d.min?d.H+dy:dy));el.style.transform=`translateY(${d.off}px)`;},{passive:true});
+  const end=()=>{if(!d)return;const D=d;d=null;if(!D.on)return;
+    const shut=D.v>0.5?true:D.v<-0.5?false:D.min?(D.H-D.off)<D.H/3:D.off>D.H/3;
+    el.style.transition='transform .18s ease-out';el.style.transform=`translateY(${shut?D.H:0}px)`;
+    setTimeout(()=>{el.style.transition='';el.style.transform='';if(shut!==D.min||D.min)navProfMin(shut);},190);};
+  el.addEventListener('touchend',end,{passive:true});el.addEventListener('touchcancel',end,{passive:true});})();
 function npSize(){const el=$('#navProf');if(!el)return;document.getElementById('navMode').style.setProperty('--npb',el.offsetHeight+'px');try{navPad();}catch(e){}const inf=$('#profInfo'),ni=$('#navProfInfo');if(!ni.textContent||!(MAP.P&&MAP.P.length>1))ni.textContent=inf?inf.textContent.split('｜')[0]:'';}
 // 導航時高度圖蓋在地圖下方：設 padding 讓「＋／－、定位、整條路線」都以看得到的地圖範圍為準（換 padding 時畫面不動）
 function navPad(){const m=MAP.m;if(!m||!NAV.on||FOL.on)return;const ct=m.getContainer(),H=ct.clientHeight,W=ct.clientWidth;if(!H||!W)return;
@@ -2269,14 +2288,14 @@ function navHud(){if(!NAV.on)return;const g=GPS.last,R=GPS.rec,set=(k,v)=>{const
   const rb=$('#navRec');if(rb){rb.classList.toggle('on',!!(R&&R.on));}}
 async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網路一次，或先下載離線地圖）');return;}
   NAV.on=true;try{mapNavMode(true);}catch(e){}try{altsMap();map3dApply();}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
-  NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'),$('#profRead'));try{document.querySelectorAll('#rmap .maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(e=>e.classList.remove('maplibregl-compact-show'));}catch(e){}try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
+  try{navPinsApply();}catch(e){}NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'),$('#profRead'));try{document.querySelectorAll('#rmap .maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(e=>e.classList.remove('maplibregl-compact-show'));}catch(e){}try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
   NAV.fsByMe=false; // 不再呼叫瀏覽器全螢幕：會跳出系統的「從頂端向下拖曳」通知，地圖本身已經鋪滿整個畫面
   try{if(navigator.wakeLock)GPS.wake=await navigator.wakeLock.request('screen');}catch(e){}
   if(GPS.rec&&GPS.rec.pts.length)mapSrc('rec',lineFC(GPS.rec.pts.map(p=>[p[1],p[0]])));
   try{OFF.ac=OFF.ac||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
   if(GPS.watch==null&&S.route.trk)gpsStart(); // 只開定位、不自動移動地圖
   setTimeout(()=>{MAP.m.invalidateSize();npSize();renderProfile();},150);NAV.tick=setInterval(()=>{navHud();navBoard();},2000);navHud();navBoard();editUI();try{marksRender();teamLocRender();}catch(e){}}
-function navClose(){NAV.on=false;try{mapNavMode(false);}catch(e){}try{altsMap();}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
+function navClose(){NAV.on=false;try{$('#navStrip').hidden=true;}catch(e){}try{mapNavMode(false);}catch(e){}try{altsMap();}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
   if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();}try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}try{map3dApply();}catch(e){}/* 3D 要在清 padding 之後，不然傾斜動畫會被打斷 */
   if(NAV.profHome){NAV.profHome.append($('#prof'),$('#profRead'));}
   try{if(NAV.fsByMe&&document.fullscreenElement)document.exitFullscreen();}catch(e){}NAV.fsByMe=false;try{if(GPS.wake){GPS.wake.release();GPS.wake=null;}}catch(e){}
@@ -2287,7 +2306,7 @@ $('#bDraw').addEventListener('click',async()=>{if(S.room&&RM.isOwner===false){to
   if(!MAP.m){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:{lat:23.75,lon:121.0};await renderMap([[L0.lat,L0.lon,null,0]],[0,0],[],-1,{src:'none'});if(!S.route.trk&&!virtualTrk()){MAP.P=null;MAP.idx=null;mapClearRoute();}}
   if(!MAP.m)return;await navOpen();if(!S.route.trk){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:null;MAP.m.jumpTo(L0?{center:[L0.lon,L0.lat],zoom:13}:{center:[121.0,23.75],zoom:8});}
   if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}DRAW.on=true;DRAW.taps=[];DRAW.legs=[];drawBar();editUI();});$('#editOpen').addEventListener('click',navOpen);
-$('#navMode').addEventListener('click',e=>{const b=e.target.closest('[data-nav]');const mn=document.querySelector('#navMode .navmenu');if(mn&&!mn.hidden&&(!b||b.dataset.nav!=='menu'))mn.hidden=true;if(!b)return;const a=b.dataset.nav;
+$('#navMode').addEventListener('click',e=>{const b0=e.target.closest('[data-nav]');if(b0&&b0.dataset.nav!=='menu'){const st=$('#navStrip');if(st&&!st.hidden)st.hidden=true;}const b=e.target.closest('[data-nav]');const mn=document.querySelector('#navMode .navmenu');if(mn&&!mn.hidden&&(!b||b.dataset.nav!=='menu'))mn.hidden=true;if(!b)return;const a=b.dataset.nav;
   if(a==='prof'){navProfMin(!$('#navProf').classList.contains('min'));return;}
   if(a==='dark'){setMapDark(!document.getElementById('rmap').classList.contains('mapdark'));return;}
   if(a==='close')navClose();
@@ -2304,7 +2323,7 @@ $('#navMode').addEventListener('click',e=>{const b=e.target.closest('[data-nav]'
   else if(a==='follow'){folToggle();return;}
   else if(a==='lock'){lockOn();return;}
   else if(a==='bigtxt'){bigTxt(!document.getElementById('navMode').classList.contains('bigtxt'));return;}
-  else if(a==='menu'){const mn=document.querySelector('#navMode .navmenu');mn.hidden=!mn.hidden;return;}
+  else if(a==='menu'){navStrip('L');return;}
   else if(a==='offset'){offSetting();}
   else if(a==='offtest'){OFF.test=Date.now();try{navigator.vibrate&&navigator.vibrate([400,150,400,150,400]);}catch(e){}beep([[880,.18],[660,.18],[880,.3]]);toast('這就是偏航提醒的聲音'+(navigator.vibrate?'和震動':'（iPhone 網頁不能震動，只有聲音）'));navBoard();}
   else if(a==='goto'){goToCoord();}
@@ -2831,6 +2850,47 @@ async function drawFinish(){let pts=drawPts().map(q=>q.slice());if(pts.length<2)
 if(/gptest/.test(location.search)){const g=f=>{try{return f();}catch(e){return undefined;}};window.__gp={drawTap,trimTap,MAP,
   get S(){return g(()=>S);},get PROF(){return g(()=>PROF);},get NAV(){return g(()=>NAV);},get GPS(){return g(()=>GPS);},get FOL(){return g(()=>FOL);},get MEAS(){return g(()=>MEAS);},get RED(){return g(()=>RED);},get NB(){return g(()=>NB);},
   fn:n=>g(()=>eval(n))};}
+// ===== 導航按鈕：左右各一欄「固定按鈕＋更多」，更多＝畫面中間的大按鈕橫條；長按橫條裡的按鈕可固定／取消（每邊最多 3 個）=====
+// 按鈕本身只有一份，只是在「按鈕欄」和「收納區」之間搬，開關狀態才不會跑掉。黑屏、SOS 固定不動。
+const NLBL={close:'離開導航',center:'定位',follow:'跟隨',route:'整條路線',lock:'鎖定觸控',mark:'標記',meas:'量距',head:'跟著方向轉',dark:'暗色',draw:'畫路線',trim:'刪減路線',undo:'復原',bigtxt:'大字',offset:'偏航設定',offtest:'測試偏航',peakfix:'對山定位',goto:'輸入座標',zin:'放大',zout:'縮小',north:'轉回正北',layers:'圖層',fit:'整條路線'};
+const NORD={L:['close','center','follow','route','lock','mark','meas','head','dark','draw','trim','undo','bigtxt','peakfix','goto','offset','offtest'],R:['zin','zout','north','layers','fit']};
+const NPIN={L:['close','center'],R:['zin','zout']};try{const o=JSON.parse(localStorage.getItem('gearPlanner.navPins')||'null');if(o&&Array.isArray(o.L)&&Array.isArray(o.R)){NPIN.L=o.L.filter(k=>NORD.L.includes(k)).slice(0,3);NPIN.R=o.R.filter(k=>NORD.R.includes(k)).slice(0,3);}}catch(e){}
+const npBox=sd=>sd==='L'?{bar:document.querySelector('#navMode .navbtns:not(.navbtnsR)'),pool:document.querySelector('#navMode .navmenu'),attr:'data-nav',more:'[data-nav=menu]'}:{bar:document.querySelector('#navMode .navbtnsR'),pool:document.querySelector('#navMode .npoolR'),attr:'data-nr',more:'[data-nr=more]'};
+function navPinsApply(){['L','R'].forEach(sd=>{const B=npBox(sd);if(!B.bar||!B.pool)return;const more=B.bar.querySelector(B.more),get=k=>B.bar.querySelector(`[${B.attr}="${k}"]`);
+    NORD[sd].forEach(k=>{const b=get(k);if(b&&!NPIN[sd].includes(k))B.pool.appendChild(b);});NPIN[sd].forEach(k=>{const b=get(k);if(b)B.bar.insertBefore(b,more);});});
+  try{if(NAV.on)npSize();}catch(e){}}
+function navPinsSave(){try{localStorage.setItem('gearPlanner.navPins',JSON.stringify(NPIN));}catch(e){}}
+function navStrip(kind,keep){const st=$('#navStrip');if(!st)return;if(!keep&&!st.hidden&&st._k===kind){st.hidden=true;return;}st._k=kind;
+  const L=$('#nsL'),T=$('#nsT'),H=$('#nsHint');H.classList.remove('w');
+  if(kind==='layers'){let on3=false,pks=true;try{on3=M3D.navWant;pks=PK.show;}catch(e){}const bk=mapBaseKey();T.textContent='地圖圖層';H.textContent='左右滑看更多';
+    L.innerHTML=Object.entries(BASES).map(([k,b])=>`<button type="button" class="nsi lb${k===bk?' on':''}" data-lb="${k}">${esc(b.name.replace(/（/,'\n（'))}</button>`).join('')
+      +`<button type="button" class="nsi lb${on3?' on':''}" data-l3d>3D 地形${on3?'：開':'（較耗電）'}</button><button type="button" class="nsi lb${pks?' on':''}" data-lpk>山頭名稱${pks?'：開':'：關'}</button>`;
+    L.querySelectorAll('.lb').forEach(b=>{b.style.whiteSpace='pre-line';});}
+  else{const B=npBox(kind);T.textContent=kind==='L'?'更多功能':'地圖';H.textContent=`長按可${kind==='L'?'固定到左邊':'固定到右邊'}（最多 3 個）`;
+    L.innerHTML=NORD[kind].map(k=>{const o=B.bar.querySelector(`[${B.attr}="${k}"]`);if(!o||o.hidden)return '';const sv=o.querySelector('svg');
+      return `<button type="button" class="nsi${o.classList.contains('on')?' on':''}${NPIN[kind].includes(k)?' pin':''}" ${B.attr}="${k}" data-sd="${kind}">${sv?sv.outerHTML:''}<span>${NLBL[k]||k}</span></button>`;}).join('');}
+  st.hidden=false;L.scrollLeft=0;}
+(()=>{const st=document.getElementById('navStrip');if(!st)return;let t=null,held=false,tgt=null;
+  const clear=()=>{clearTimeout(t);t=null;if(tgt)tgt.classList.remove('hold');tgt=null;};
+  st.addEventListener('pointerdown',e=>{held=false;const b=e.target.closest('.nsi[data-sd]');if(!b)return;tgt=b;b.classList.add('hold');t=setTimeout(()=>{held=true;const sd=b.dataset.sd,k=b.getAttribute(sd==='L'?'data-nav':'data-nr'),P=NPIN[sd],H=$('#nsHint');
+      if(P.includes(k)){P.splice(P.indexOf(k),1);}else if(P.length>=3){H.textContent=`${sd==='L'?'左':'右'}邊最多固定 3 個，先長按取消一個`;H.classList.add('w');clear();return;}else P.push(k);
+      navPinsSave();navPinsApply();navStrip(sd,true);if(navigator.vibrate)try{navigator.vibrate(30);}catch(err){}clear();},550);});
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>st.addEventListener(ev,clear));
+  st.addEventListener('scroll',clear,true);st.addEventListener('contextmenu',e=>e.preventDefault());
+  st.addEventListener('click',e=>{if(held){held=false;e.stopPropagation();e.preventDefault();return;}
+    if(e.target.closest('[data-ns=x]')){st.hidden=true;return;}
+    const lb=e.target.closest('[data-lb]');if(lb){mapSetBase(lb.dataset.lb);st.hidden=true;return;}
+    if(e.target.closest('[data-l3d]')){st.hidden=true;map3dToggle();return;}
+    if(e.target.closest('[data-lpk]')){pkShowSet(!PK.show);navStrip('layers',true);return;}},true);
+  // 點橫條外面就收起來（按「更多」本身由它自己切換）
+  document.addEventListener('pointerdown',e=>{if(st.hidden||st.contains(e.target)||e.target.closest('[data-nav=menu],[data-nr=more],[data-nr=layers]'))return;st.hidden=true;},true);})();
+// 右邊按鈕的動作
+$('#navMode').addEventListener('click',e=>{const b=e.target.closest('[data-nr]');if(!b||!MAP.m)return;const a=b.dataset.nr,st=$('#navStrip'),inStrip=st.contains(b);
+  if(a==='more'){navStrip('R');return;}if(a==='layers'){navStrip('layers');return;}
+  if(a==='zin'||a==='zout'){MAP.m[a==='zin'?'zoomIn':'zoomOut']();return;}/* 放大縮小時橫條不收，可以連按 */
+  if(inStrip)st.hidden=true;
+  if(a==='north'){try{headStop();}catch(err){}MAP.m.easeTo({bearing:0,duration:300});}
+  else if(a==='fit'){if(MAP.P&&MAP.P.length>1)mapFitBest(MAP.P,40);}});
 function editUI(){const nb=document.querySelector('#navMode .navbtns');if(!nb)return;const T=S.route.trk;
   nb.querySelector('[data-nav=draw]').classList.toggle('on',DRAW.on);nb.querySelector('[data-nav=trim]').classList.toggle('on',TRIM.on);nb.querySelector('[data-nav=undo]').hidden=!(T&&T.undo);const mb=nb.querySelector('[data-nav=meas]');if(mb)mb.classList.toggle('on',MEAS.on);const hb=nb.querySelector('[data-nav=head]');if(hb)hb.classList.toggle('on',HEAD.on);nb.querySelector('[data-nav=menu]').classList.toggle('on',DRAW.on||TRIM.on||MEAS.on);}
 // --- 刪減路線 ---
@@ -4147,6 +4207,7 @@ addEventListener('resize',()=>{if(RED.on){clearTimeout(RED.t);RED.t=setTimeout((
     const md=[...document.querySelectorAll('body>.modal')].filter(m=>m.id!=='settings'&&!m.hidden).pop();if(md){md.remove();return true;}
     if(vis($('#navLock')))return true; // 鎖定中：返回不做事，要長按解鎖
     if(vis($('#navBlack')))return true; // 黑屏只能連點兩下離開，返回手勢不作用
+    const ns=$('#navStrip');if(vis(ns)){ns.hidden=true;return true;}
     const nm=document.querySelector('#navMode .navmenu');if(vis(nm)){nm.hidden=true;return true;}
     if(typeof MEAS!=='undefined'&&MEAS.on&&NAV.on){measToggle(false);return true;}
     if(NAV.on){navClose();return true;}

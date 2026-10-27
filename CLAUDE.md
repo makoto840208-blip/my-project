@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v81**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v82**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -39,7 +39,9 @@
 - A 路線（兩點之間）：`routeAlts()` 抓 BRouter alternativeidx 0～3、`altSame()` 剔重複、`gradeStats()`（最陡＝連續 100 m）、`altPick()` 上限內 100 m 坡度均方根最小；`gradeCfg()` 一般 ≤45%／探勘預設 70%、0＝無上限；段落存 `g.alts`/`g.altSel`/`g.altManual`；`disclaim('plan'|'explore')` 第一次跳說明。
 - 3D：圖層選單開關，規劃 `M3D.want`、導航 `M3D.navWant`（預設關，`map3dToggle()` 第一次跳耗電提醒、可勾不再顯示 `gearPlanner.nav3dWarn`）；獨立 `dem3d` 來源；黑屏關地形；`map3dPR()` 導航 3D＋跟隨／轉向時 pixelRatio 1；`navClose` 要在清 padding 之後才 `map3dApply()`。離線下載時 3D 有開會加 `demWide()`（外推 20 km、z10–12）。
 - 山頭／對山定位（獨立模組 `PK`、`pk*`）：Overpass 抓 OSM `natural=peak`（路線外推 0.18°），存 `gearPlanner.peaks`（精簡格式 [名,高,緯,經]，`PK.full`＝全台，`pkDownloadAll()` 按鈕 #pkAll）；`pkResect()` 最小平方交會、`pkOnRoute()` 一座山＋路線交點、`pkSolve()` → `NB.fix`；黑屏雷達 `.pkrot` 反向旋轉讓山名正向。分家時整塊搬到導航。
-- 導航版面（v81）：右上地圖按鈕跟左邊一樣大（直式 52、橫式 42，橫式排成右上一橫列）；圖層選單在導航中是畫面中間的 fixed 橫列（`#navMode #rmap{z-index:auto}`、`.lyrctl{transform:none}`，不然會被鎖在 SOS／左邊按鈕底下）；高度圖面板 `navProfMin()`，往下滑收起、往上滑拉開（導航板清單可捲時不算）。`mapInsets` 對左邊按鈕和右邊按鈕都會判斷直欄或橫列。
+- 導航版面（v82）：左 `.navbtns`、右 `.navbtns.navbtnsR`（App 自己的按鈕，導航時藏 MapLibre 右上控制）各放「固定按鈕＋更多」；`#navStrip` 是畫面中間的大按鈕橫條（左更多／右更多／圖層三種內容），長按 550ms 固定或取消（`NPIN`，每邊最多 3，存 `gearPlanner.navPins`，預設左 close/center、右 zin/zout）。按鈕只有一份，在按鈕欄和收納區（左 `.navmenu`、右 `.npoolR`）之間搬，開關狀態才不會跑掉；黑屏、SOS 固定。`#navMode #rmap{z-index:auto}`（不然地圖裡的東西會被鎖在按鈕底下）。
+- 高度圖面板：`navProfMin()`；手指拖著走、放開時超過 1/3 或甩得快才收／開，否則彈回；收起時把手列 ≥50px（從這裡往上拉才不會被 Android 回桌面手勢搶走）；`#navProf{touch-action:none}`、`#navCard{touch-action:pan-y}`。
+- 3D 效能（v82）：3D 時 pixelRatio 1.5（跟隨／轉向 1）、不疊 Esri 陰影、純黑等高線暫換地形陰影、山名最多 15 且移動時藏；等高線圖塊快取 `CTR.tiles`（跟高度資料的 `CTR.cache` 分開）。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意
@@ -48,6 +50,8 @@
 - 網址加 `?gptest` 會暴露 `window.__gp`（MAP、S、PROF、NAV、GPS、FOL、MEAS、RED、NB，`fn('名稱')` 可取內部函式）。
 
 ## 之前提過、還沒做
+- **黑屏語音播報**（使用者喜歡，還沒排）：按一下（之後用音量鍵）念「到○○還有幾 km、約幾小時、天黑前到不到得了」，按兩下念方位與推算位置。
+- **包成 App／上架**（使用者在考慮上架，先暫緩）：音量鍵控制導航（Android 外殼攔截音量鍵；iPhone 不行）。操作構想：短按移動、長按確定、兩鍵同按返回、連按三下喚醒防誤觸、SOS 長按 3 秒。
 - **導航分家**（下一輪，使用者同意）：導航獨立成第二個頁面／圖示，同網址共用 localStorage／IndexedDB（資料即時同步、離線可用），地圖／高度圖／畫線拆成共用程式由 build 組進兩頁；導航只有地圖但可編輯。山頭定位模組整塊搬過去。現在導航是「借」首頁的 #rmap、#prof、#profRead 搬來搬去，容易漏搬（v75 的控制列消失就是這樣）。
 - 騎車模式（路線規劃／偏航／時間改騎車設定）
 - 走路時用 GPS 行進方向自動校正羅盤偏差

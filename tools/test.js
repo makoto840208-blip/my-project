@@ -307,9 +307,9 @@ T('導航 3D：耗電提醒＋不再顯示、跟隨時降解析度、黑屏關�
   await tog(); await p.waitForSelector('.modal [data-w3="ok"]', { timeout: 3000 });
   await p.check('#w3dSkip'); await p.click('.modal [data-w3="ok"]'); await p.waitForFunction(() => !!window.__gp.MAP.m.getTerrain(), null, { timeout: 5000 }).catch(() => {});
   const st = () => p.evaluate(() => { const m = window.__gp.MAP.m; return { t: !!m.getTerrain(), pr: m.getPixelRatio() }; });
-  let r = await st(); ok(r.t, '導航 3D 沒打開'); ok(r.pr === 2, `平常解析度應該是 2，現在 ${r.pr}`);
+  let r = await st(); ok(r.t, '導航 3D 沒打開'); ok(r.pr === 1.5, `3D 平常解析度應該是 1.5，現在 ${r.pr}`);
   await navBtn(p, 'follow'); await p.waitForTimeout(300); r = await st(); ok(r.pr === 1, `跟隨模式時應該降到 1，現在 ${r.pr}`);
-  await navBtn(p, 'follow'); await p.waitForTimeout(300); r = await st(); ok(r.pr === 2, `關跟隨後應該回到 2，現在 ${r.pr}`);
+  await navBtn(p, 'follow'); await p.waitForTimeout(300); r = await st(); ok(r.pr === 1.5, `關跟隨後應該回到 1.5，現在 ${r.pr}`);
   await navBtn(p, 'black'); await p.waitForTimeout(300); r = await st(); ok(!r.t, '黑屏時應該關掉 3D 地形');
   await p.dispatchEvent('#navBlack', 'dblclick'); await p.waitForTimeout(400); r = await st(); ok(r.t, '離開黑屏應該恢復 3D');
   await tog(); await p.waitForTimeout(300); r = await st(); ok(!r.t, '再按一次沒關掉');
@@ -368,6 +368,15 @@ T('導航：高度圖往下滑收起、往上滑拉開', async p => {
   await swipe(r.top + 15, r.top - 150); r = await st(); ok(!r.min, '往上滑沒拉開');
   await p.click('#navProf .nph'); r = await st(); ok(r.min, '點標題列應該還是可以收');
 });
+T('3D 效能：純黑等高線自動換掉、少一層陰影、山名減量、關掉恢復', async p => {
+  await loadGpx(p); await p.evaluate(() => window.__gp.fn('mapSetBase')('ctr')); await p.waitForTimeout(300);
+  const L = () => p.evaluate(() => { const m = window.__gp.MAP.m, v = id => m.getLayoutProperty(id, 'visibility') !== 'none'; return { ctr: v('b-ctr'), hs: v('s-hs'), dem: v('s-dem') || v('b-nlsc'), on: (document.querySelector('.lyrmenu [data-base].on') || {}).dataset?.base, pk: document.querySelectorAll('.mk-pk').length, pr: m.getPixelRatio() }; });
+  let r = await L(); ok(r.ctr && !r.dem, '2D 純黑等高線應該只有等高線');
+  await p.evaluate(() => window.__gp.fn('map3dSet')(true)); await p.waitForTimeout(800);
+  r = await L(); ok(!r.ctr && r.dem && !r.hs, `3D 時應該換成地形陰影（暗色時是台灣地形圖）、不疊 Esri 陰影（ctr ${r.ctr} 底圖 ${r.dem} hs ${r.hs}）`); ok(r.on === 'ctr', '圖層選單應該還是標「純黑等高線」（只是暫時換）'); ok(r.pk <= 15, `3D 山名應該最多 15 個，現在 ${r.pk}`); ok(r.pr === 1.5, `3D 解析度應該 1.5，現在 ${r.pr}`);
+  await p.evaluate(() => window.__gp.fn('map3dSet')(false)); await p.waitForTimeout(800);
+  r = await L(); ok(r.ctr && !r.dem, '關掉 3D 沒換回純黑等高線'); ok(r.pr === 2, `關掉 3D 解析度應該回到 2，現在 ${r.pr}`);
+}, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

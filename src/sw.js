@@ -1,8 +1,8 @@
 const C='planner-v1';
 const KEEP=[C,'gp-tiles','gp-lib'];
-const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
+const SHELL=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./jsqr.js'];
 const TILE=/(wmts\.nlsc\.gov\.tw|tile\.opentopomap\.org|tile\.openstreetmap\.org|arcgisonline\.com|elevation-tiles-prod)/;
-const LIB=/cdnjs\.cloudflare\.com\/ajax\/libs\/(leaflet|qrcode|maplibre-gl|jsQR)/;
+const LIB=/cdnjs\.cloudflare\.com\/ajax\/libs\/(leaflet|qrcode|maplibre-gl)/;
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>!KEEP.includes(x)).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{

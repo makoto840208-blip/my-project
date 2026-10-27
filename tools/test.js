@@ -451,8 +451,8 @@ T('路線編輯：點線加點、刪點、剪掉開頭、營地不能刪', async
   const n0 = r.n; await p.click('#navEdit [data-ed="add"]'); r = await edState(p); ok(r.n === n0 + 1 && r.sel != null, '加點失敗');
   await p.click('#navEdit [data-ed="del"]'); await edWait(p); r = await edState(p); ok(r.n === n0, `刪點後控制點數應該回到 ${n0}，現在 ${r.n}`);
   const c1 = await p.evaluate(() => { const G = window.__gp, E = G.fn('ED'); return G.S.route.trk.p[E.ctl[1]].slice(0, 2); });
-  await navBtn(p, 'route'); await p.waitForTimeout(400); await idle(p); await p.evaluate(() => window.__gp.fn('edRender')());
-  const [x0, y0] = await ctlXY(p, 0); await p.mouse.click(x0, y0); await p.waitForTimeout(400); r = await edState(p); ok(r.sel === 0 && /剪掉開頭/.test(r.bar), '選起點後沒有「剪掉開頭」');
+  await p.waitForTimeout(300); await navBtn(p, 'route'); await p.waitForTimeout(400); await idle(p); await navBtn(p, 'route'); await p.waitForTimeout(400); await idle(p); await p.evaluate(() => window.__gp.fn('edRender')());
+  const [x0, y0] = await ctlXY(p, 0); await p.mouse.click(x0, y0); await p.waitForTimeout(400); r = await edState(p); ok(r.sel === 0 && /剪掉開頭/.test(r.bar), '選起點後沒有「剪掉開頭」' + JSON.stringify([r.sel, r.bar, x0, y0, await p.evaluate(([x,y]) => { const e = document.elementFromPoint(x, y); return e && (e.id || e.className); }, [x0, y0])]));
   await p.click('#navEdit [data-ed="del"]'); await edWait(p); r = await edState(p); ok(r.p0[0] === c1[0] && r.p0[1] === c1[1], '剪掉開頭後，新起點不是原本第 2 個點');
   // 加一個分天點，它要變成控制點而且不能刪
   await p.evaluate(() => { const G = window.__gp, T = G.S.route.trk; T.cuts = [Math.floor(T.p.length / 2)]; G.fn('rebuildFromTrk')({}); G.fn('edOn')(false); G.fn('edOn')(true); });
@@ -494,6 +494,38 @@ T('偏離後回到路線：提示用實際走的路取代、黑屏提醒、可�
   const r1 = await p.evaluate(() => { const T = window.__gp.S.route.trk; return { km: T.p[T.p.length - 1][3], n: T.p.length, und: window.__gp.fn('UNDO').length, mid: T.p[Math.floor(T.p.length * 0.3)] }; });
   ok(r1.und === 1, '取代後沒有存復原'); ok(r1.n !== r0.n || Math.abs(r1.km - r0.km) > 0.01, '路線沒有被取代');
   await navBtn(p, 'undo'); await p.waitForTimeout(300); const r2 = await p.evaluate(() => { const T = window.__gp.S.route.trk; return { km: T.p[T.p.length - 1][3], n: T.p.length }; }); ok(r2.n === r0.n && Math.abs(r2.km - r0.km) < 0.001, '復原沒有回到原本路線');
+}, { vp: '直式' });
+T('隊伍：導航中主辦改路線先提示，按套用才換；黑屏提醒', async p => {
+  await loadGpx(p); await openNav(p);
+  const r0 = await p.evaluate(() => { const G = window.__gp, pl = G.fn('planPayload')(); const T = pl.route.trk; T.p = T.p.slice(0, Math.floor(T.p.length * 0.7)); T.cuts = []; T.wps = T.wps.filter(w => w.i < T.p.length); pl.ts = Date.now() + 1000; pl.by = '阿主'; pl.byId = 'other';
+    window.__pl = pl; const n0 = G.S.route.trk.p.length; G.fn('applyRoomPlan')(pl); G.fn('navBoard')(); return { n0, n1: G.S.route.trk.p.length, pend: !!G.fn('RM').pend, card: document.getElementById('navCard').textContent }; });
+  await shot(p, 'pend');  ok(r0.pend && r0.n0 === r0.n1, '導航中直接套用了'); ok(/阿主 更新了路線/.test(r0.card), '導航板沒有提示');
+  await navBtn(p, 'black'); await p.waitForTimeout(300); ok(/有新路線，回地圖套用/.test(await p.evaluate(() => document.getElementById('nbkTxt').textContent)), '黑屏沒有提醒'); await p.dispatchEvent('#navBlack', 'dblclick'); await p.waitForTimeout(200);
+  await p.click('#navCard [data-pend="no"]'); await p.waitForTimeout(200);
+  const r1 = await p.evaluate(() => { const G = window.__gp; G.fn('applyRoomPlan')(window.__pl); return { pend: !!G.fn('RM').pend, n: G.S.route.trk.p.length }; });
+  ok(!r1.pend && r1.n === r0.n0, '按了先不要，同一版又跳出來');
+  await p.evaluate(() => { const G = window.__gp, pl = JSON.parse(JSON.stringify(window.__pl)); pl.ts += 5000; G.fn('applyRoomPlan')(pl); G.fn('navBoard')(); });
+  await p.click('#navCard [data-pend="ok"]'); await p.waitForTimeout(400);
+  const r2 = await p.evaluate(() => ({ n: window.__gp.S.route.trk.p.length, pend: !!window.__gp.fn('RM').pend }));
+  ok(!r2.pend && r2.n < r0.n0, '按套用沒有換路線');
+  await navBtn(p, 'sync'); await p.waitForTimeout(300); ok(/沒有加入隊伍房間/.test(await p.evaluate(() => document.getElementById('toast').textContent)), '沒房間時檢查更新沒有提示');
+}, { vp: '直式' });
+T('路線 QR：產生 → 掃描（jsQR）→ 確認套用', async p => {
+  await loadGpx(p); await openNav(p);
+  await navBtn(p, 'qrshare'); await p.waitForSelector('.qrm .qrbox svg', { timeout: 15000 });
+  const info = await p.evaluate(async () => { const G = window.__gp, fr = G.fn('QR').frames, T = G.S.route.trk; return { n: fr.length, len: fr.reduce((a, f) => a + f.length, 0), km: T.p[T.p.length - 1][3], pts: T.p.length }; });
+  await shot(p, 'qr');  ok(info.n >= 1 && info.n <= 12, 'QR 張數不合理：' + info.n);
+  await p.click('.qrm [data-qx]'); await p.waitForTimeout(200); ok(!(await p.$('.qrm')), 'QR 視窗關不掉');
+  const r = await p.evaluate(async () => { const G = window.__gp, fr = G.fn('QR').frames; await G.fn('qrLib')(G.fn('QRJS'), () => !!window.jsQR); if (!window.jsQR) return { err: 'jsQR 載不到' };
+    G.S.route.trk.p = G.S.route.trk.p.slice(0, 20); let done = false;
+    for (const f of fr.slice().reverse()) { const q = qrcode(0, 'L'); q.addData(f, 'Byte'); q.make(); const k = 4, m = 4, N = q.getModuleCount(), W = (N + 2 * m) * k, cv = document.createElement('canvas'); cv.width = cv.height = W; const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, W, W); c.fillStyle = '#000';
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (q.isDark(y, x)) c.fillRect((x + m) * k, (y + m) * k, k, k);
+      const d = c.getImageData(0, 0, W, W), o = jsQR(d.data, W, W); if (!o) return { err: '解不出 QR' }; done = await G.fn('qrFeed')(o.data); }
+    return { done, modal: (document.querySelector('.qrm') || {}).textContent || '' }; });
+  ok(!r.err, r.err); ok(r.done && /收到路線/.test(r.modal), '收齊後沒有確認視窗'); await shot(p, 'qrok');
+  await p.click('.qrm [data-qok]'); await p.waitForTimeout(500);
+  const a = await p.evaluate(() => { const T = window.__gp.S.route.trk; return { km: T.p[T.p.length - 1][3], pts: T.p.length }; });
+  ok(Math.abs(a.km - info.km) / info.km < 0.01, `套用後距離不對 ${a.km} vs ${info.km}`); ok(a.pts > 20 && a.pts <= info.pts, '點數不對 ' + a.pts);
 }, { vp: '直式' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);

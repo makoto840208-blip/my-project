@@ -4,7 +4,7 @@
 
 ## 檔案
 - `src/app.html`：**唯一的原始碼**（HTML+CSS+JS 全在一個檔，含內建裝備資料庫 JSON）。改這個。
-- `src/sw.js`、`src/manifest.json`、圖示：線上版附檔。
+- `src/sw.js`、`src/manifest.json`、圖示、`src/jsqr.js`（jsQR 1.4.0 壓縮版，cdnjs 沒有，所以跟網站放一起、sw 預先快取）：線上版附檔。
 - `tools/build.py <版本>`：產生 `public/`（Cloudflare 網站）和 `dist/cloudflare_上傳用_v<版本>.zip`。
 - `public/`：建置結果，**不要手改**。`wrangler.jsonc` 指向它（Worker 名稱 `square-mode-1f4a`）。
 - 線上網址：https://square-mode-1f4a.makoto840208.workers.dev
@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v82**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v83**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -42,6 +42,12 @@
 - 導航版面（v82）：左 `.navbtns`、右 `.navbtns.navbtnsR`（App 自己的按鈕，導航時藏 MapLibre 右上控制）各放「固定按鈕＋更多」；`#navStrip` 是畫面中間的大按鈕橫條（左更多／右更多／圖層三種內容），長按 550ms 固定或取消（`NPIN`，每邊最多 3，存 `gearPlanner.navPins`，預設左 close/center、右 zin/zout）。按鈕只有一份，在按鈕欄和收納區（左 `.navmenu`、右 `.npoolR`）之間搬，開關狀態才不會跑掉；黑屏、SOS 固定。`#navMode #rmap{z-index:auto}`（不然地圖裡的東西會被鎖在按鈕底下）。
 - 高度圖面板：`navProfMin()`；手指拖著走、放開時超過 1/3 或甩得快才收／開，否則彈回；收起時把手列 ≥50px（從這裡往上拉才不會被 Android 回桌面手勢搶走）；`#navProf{touch-action:none}`、`#navCard{touch-action:pan-y}`。
 - 3D 效能（v82）：3D 時 pixelRatio 1.5（跟隨／轉向 1）、不疊 Esri 陰影、純黑等高線暫換地形陰影、山名最多 15 且移動時藏；等高線圖塊快取 `CTR.tiles`（跟高度資料的 `CTR.cache` 分開）。
+- 等高線（v83）：`CTRW` Web Worker（OffscreenCanvas）算，不卡主執行緒；`ctr://` 先查 `CTR.tiles`→Cache Storage `gp-ctr`（`${origin}/__ctr/z/x/y.png`）→worker。離線下載時若底圖是純黑等高線，`ctrRouteTiles()` 會一起預先算（路線走廊 z11–16＋周邊 z13）；`#ctrAll` 下載全台 z11–12（LOD：遠看粗、近看細）。空白圖塊不快取。
+- 路線編輯器（v83，只在編輯模式）：`ED` 狀態、`edCtl()` 道格拉斯-普克抓轉折處控制點（≤50，營地／分天點／起終點必留且營地不能刪）；拖點＝移動、點線＝加點／重算、點點＝刪除；沿步道（BRouter）／直線切換＋即時坡度 `#edSlope`；`UNDO` 多步復原（最多 20）。`edReplace()` 換掉一段後重編航點／分天索引再 `rebuildFromTrk`。
+- 前方不通（v83）：`blockAt()` 在路上加危險標記；有網路 `rerouteAvoid()` 用 BRouter `nogos`（80→160 m）預覽、按確定才換；沒網路改成直線手動點＋即時坡度。
+- 偏離後取代（v83）：`EXC`／`excTrack()` 記偏離時實際走的路，回到路線後導航板問要不要取代（黑屏也提醒），可復原。
+- 隊伍同步（v83）：`applyRoomPlan(pl,force)` 導航中路線形狀（`routeSig`）變了不自動套，存 `RM.pend`，導航板「套用／先不要」＋震動＋黑屏「有新路線，回地圖套用」；先不要記 `RM.skipTs`，離開導航時照常套。左「更多」：`sync` 檢查路線更新（`roomCheck`）、`qrshare` 路線 QR、`qrscan` 掃 QR。
+- 路線 QR（v83）：`qrPack()` 軌跡精簡（水平 3 m／高度 5 m）＋整數差分、`deflate-raw` 壓縮、base64url，切成 `GPQ1|id|i/n|資料` 多張自動輪播（qrcode-generator，cdnjs）；掃描用 BarcodeDetector，沒有就用 `jsqr.js`；`qrFeed()` 收齊→`qrConfirm()` 確認才套用。導航開啟 3 秒後 `qrPreload()`。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意

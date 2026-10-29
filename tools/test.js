@@ -198,8 +198,40 @@ T('觸控鎖：鎖定與長按解鎖', async p => {
 T('GPS：導航板與高度圖位置線', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'center'); await p.waitForFunction(() => window.__gp.GPS.last, null, { timeout: 8000 }); await p.waitForTimeout(800);
   await p.context().setGeolocation({ latitude: 24.0707, longitude: 121.2952, accuracy: 8 }); await p.waitForTimeout(2300); // 真手機每秒都有新位置；模擬的只送一次，重畫後要再送
-  const r = await p.evaluate(() => { const c = document.getElementById('profCur'); return { card: document.getElementById('navCard').textContent, stroke: c.getAttribute('stroke'), x: +c.getAttribute('x1'), X: window.__gp.PROF.fn.X }; });
-  ok(r.card.length > 5, '導航板沒有內容'); ok(r.stroke === '#2f8cff', 'GPS 位置線沒有變藍');
+  const r = await p.evaluate(() => { const c = document.getElementById('profMe'); return { card: document.getElementById('navCard').textContent, stroke: c.getAttribute('stroke'), x: +c.getAttribute('x1') }; });
+  ok(r.card.length > 5, '導航板沒有內容'); ok(r.stroke === '#2f8cff' && r.x > 0, 'GPS 位置藍線沒畫出來 ' + r.x);
+});
+T('高度圖：導航中點選的位置不會被 GPS 拉回', async p => {
+  await loadGpx(p); await openNav(p); await navBtn(p, 'center'); await p.waitForFunction(() => window.__gp.GPS.last, null, { timeout: 8000 });
+  const pick = await p.evaluate(() => { const s = document.querySelector('#profSvg'), b = s.getBoundingClientRect(); s.dispatchEvent(new MouseEvent('click', { clientX: b.left + b.width * 0.8, clientY: b.top + b.height / 2, bubbles: true })); return { cur: window.__gp.PROF.cur, x: +document.getElementById('profCur').getAttribute('x1') }; });
+  for (const q of [[24.0707, 121.2952], [24.0712, 121.2958]]) { await p.context().setGeolocation({ latitude: q[0], longitude: q[1], accuracy: 8 }); await p.waitForTimeout(2300); }
+  const a = await p.evaluate(() => ({ cur: window.__gp.PROF.cur, x: +document.getElementById('profCur').getAttribute('x1'), me: +document.getElementById('profMe').getAttribute('x1') }));
+  ok(a.cur === pick.cur && Math.abs(a.x - pick.x) < 0.5, `選取被拉走：${pick.cur}→${a.cur}`); ok(a.me > 0 && Math.abs(a.me - a.x) > 5, '藍線沒有獨立顯示 ' + JSON.stringify(a));
+});
+T('高度圖：放大後直接拖＝平移、按住半秒再拖＝移動選取線', async p => {
+  await loadGpx(p); await openNav(p); await p.click('#navMode [data-pb="zoom"]'); await p.waitForTimeout(300);
+  const box = async () => { const b = await (await p.$('#profSvg')).boundingBox(); return b; };
+  let b = await box(); const st0 = await p.evaluate(() => ({ vS: window.__gp.PROF.vS, cur: window.__gp.PROF.cur }));
+  // 按住 0.7 秒再往右拖：選取線跟著手指，畫面不平移
+  await p.mouse.move(b.x + b.width * 0.4, b.y + b.height / 2); await p.mouse.down(); await p.waitForTimeout(700);
+  await p.mouse.move(b.x + b.width * 0.55, b.y + b.height / 2, { steps: 5 }); await p.mouse.move(b.x + b.width * 0.7, b.y + b.height / 2, { steps: 5 }); await p.waitForTimeout(100); await p.mouse.up(); await p.waitForTimeout(150);
+  const st1 = await p.evaluate(() => ({ vS: window.__gp.PROF.vS, cur: window.__gp.PROF.cur, x: +document.getElementById('profCur').getAttribute('x1'), X: window.__gp.PROF.fn.X(window.__gp.PROF.vS) }));
+  ok(Math.abs(st1.vS - st0.vS) < 1e-6, '按住拖的時候畫面不該平移'); ok(st1.cur > st0.cur, '按住拖沒有移動選取線');
+  // 直接拖：平移
+  b = await box(); await p.mouse.move(b.x + b.width * 0.7, b.y + b.height / 2); await p.mouse.down(); await p.mouse.move(b.x + b.width * 0.4, b.y + b.height / 2, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(300);
+  const st2 = await p.evaluate(() => ({ vS: window.__gp.PROF.vS }));
+  ok(st2.vS > st1.vS + 0.05, `直接拖沒有平移 ${st1.vS}→${st2.vS}`);
+});
+T('高度圖：整 500 m、整 5 km 大字，中間小字', async p => {
+  await loadGpx(p); await openNav(p); await shot(p, 'prof1');
+  const t = await p.evaluate(() => [...document.querySelectorAll('#profSvg text')].map(e => ({ s: e.textContent, w: e.getAttribute('font-weight'), y: +e.getAttribute('y') })));
+  const big = t.filter(x => x.w === '700').map(x => x.s);
+  ok(big.some(s => /^\d+$/.test(s) && +s % 500 === 0 && +s >= 500), '沒有整 500 高度大字：' + big.join(','));
+  ok(big.some(s => s === '0' || s === '5' || s === '10'), '沒有整 5 km 大字：' + big.join(','));
+  ok(!big.some(s => /^\d+$/.test(s) && +s % 500 !== 0 && +s % 5 !== 0), '非整數刻度用了大字：' + big.join(','));
+  await p.click('#navMode [data-pb="zoom"]'); await p.click('#navMode [data-pb="zoom"]'); await p.waitForTimeout(300); await shot(p, 'prof4');
+  const t4 = await p.evaluate(() => [...document.querySelectorAll('#profSvg text')].filter(e => e.getAttribute('font-size') === '9').map(e => e.textContent));
+  ok(t4.length > 0, '放大後沒有中間的小字刻度');
 });
 T('關閉導航：元件搬回、padding 歸零', async p => {
   await loadGpx(p); await openNav(p); await p.click('#navMode [data-pb="zoom"]'); await navBtn(p, 'close'); await p.waitForTimeout(400);

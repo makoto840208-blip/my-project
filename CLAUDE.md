@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v84**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v85**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -50,6 +50,7 @@
 - 路線 QR（v83）：`qrPack()` 軌跡精簡（水平 3 m／高度 5 m）＋整數差分、`deflate-raw` 壓縮、base64url，切成 `GPQ1|id|i/n|資料` 多張自動輪播（qrcode-generator，cdnjs）；掃描用 BarcodeDetector，沒有就用 `jsqr.js`；`qrFeed()` 收齊→`qrConfirm()` 確認才套用。導航開啟 3 秒後 `qrPreload()`。
 - 規劃畫面 QR（v84）：路線卡有「路線 QR（給隊友掃）」`#bQrShare`；「掃隊友的路線 QR」`#bQrScan` 只在 `pointer:coarse`＋有 getUserMedia 時顯示。QR 是多張輪播，只能當場用鏡頭掃，**不做截圖／上傳圖片掃描**；不在現場的隊友用房間同步或檔案。
 - 隊友裝備全螢幕（v84）：寬螢幕 `#params`/`#gear`/`#dash` 是 sticky（自成圖層），`.tcmp.fs` 會被標題列和儀表板蓋住；開全螢幕時 `body.tfs-on` 把它們改 static。
+- 高度圖（v85）：`#profMe` 藍線＝GPS 位置（`GPS.pKm`＋`profMe()`），`#profCur` 白線＝使用者點選（`PROF.cur`），兩條分開，GPS 更新不能動 `#profCur`（以前會把選取拉回目前位置）。放大時直接拖＝平移、按住 500 ms（震動）再拖＝移動選取線。刻度：整 500 m／整 5 km（很長的路線 10 km）粗體 12px，中間每 100 m 小字只寫後三位（2600→600）、每 1 km（放很大 0.5 km）小字，太擠就只畫線。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意

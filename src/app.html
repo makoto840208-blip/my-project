@@ -284,6 +284,7 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 #reditMode .rhead{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px solid var(--olive);background:var(--hdr)}#reditMode .rhead b{color:var(--coy2)}#reditMode .rhint{flex:1;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #reditMode .rbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:8px;padding:8px}
 #reditMode .rleft{min-height:0;display:flex;flex-direction:column}#reditMode .rright{min-height:0;overflow:auto;overscroll-behavior:contain}
+/* 高度圖長按要拖選取線，不能讓 Android 當成選字／跳 Google 搜尋 */#prof,#prof *,#profRead,#navProf{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #reditMode #profWrap{flex:1;min-height:0;display:flex;flex-direction:column;margin:0}#reditMode #profWrap>.proflbl{display:none}#reditMode .phint{display:none}#reditMode #profRead{min-height:0}
 #reditMode .profgrid{flex:1;min-height:0;display:flex!important;flex-direction:column;gap:6px;align-items:stretch!important}
 #reditMode .profgrid>div:first-child{flex:1;min-height:0;display:flex;flex-direction:column}#reditMode .mapbox{flex:1;min-height:120px}#reditMode #rmap{height:100%!important}
@@ -2356,7 +2357,7 @@ function onPos(pos){const c=pos.coords,la=c.latitude,lo=c.longitude,now=pos.time
     const end=idx[k+1];let up=0,ref=P[i][2];for(let j=i+1;j<=end;j++){const e=P[j][2];if(e==null||ref==null){ref=e;continue;}if(e-ref>=5){up+=e-ref;ref=e;}else if(ref-e>=5)ref=e;}
     const off=d>0.3?`　⚠︎ 離路線約 ${d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'}`:'';GPS.terr=P[i][2];
     prog=`${ic('pin')}<b>第 ${k+1} 天・路線 ${P[i][3].toFixed(1)} km</b>　到今天終點還有 ${(P[end][3]-P[i][3]).toFixed(1)} km、↑${Math.round(up)} m${off}`;
-    GPS.pKm=P[i][3];profMe();}
+    GPS.pKm=d<=1?P[i][3]:null;profMe();} /* 離路線 1 km 以上（例如在家）不畫藍線 */
   $('#mapMsg').innerHTML=prog+`　地形 ${GPS.terr!=null?GPS.terr+'m':'?'}${c.altitude!=null?`（GPS ${Math.round(c.altitude)}m）`:''}　<small>±${Math.round(c.accuracy)}m</small>`;
   const np=$('#navProg');if(np)np.innerHTML=P?'':prog;navHud();
   try{offCheck(la,lo,c.accuracy);excTrack(la,lo,c.altitude,c.accuracy);navBoard();locPush(false);folApply(false);}catch(e){}}

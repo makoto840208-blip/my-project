@@ -208,6 +208,13 @@ T('高度圖：導航中點選的位置不會被 GPS 拉回', async p => {
   const a = await p.evaluate(() => ({ cur: window.__gp.PROF.cur, x: +document.getElementById('profCur').getAttribute('x1'), me: +document.getElementById('profMe').getAttribute('x1') }));
   ok(a.cur === pick.cur && Math.abs(a.x - pick.x) < 0.5, `選取被拉走：${pick.cur}→${a.cur}`); ok(a.me > 0 && Math.abs(a.me - a.x) > 5, '藍線沒有獨立顯示 ' + JSON.stringify(a));
 });
+T('高度圖：人離路線很遠時不畫藍線、長按不會選到文字', async p => {
+  await p.context().setGeolocation({ latitude: 22.75, longitude: 121.14, accuracy: 8 }); // 在家（台東），離路線很遠
+  await loadGpx(p); await openNav(p); await navBtn(p, 'center'); await p.waitForFunction(() => window.__gp.GPS.last, null, { timeout: 8000 }); await p.waitForTimeout(800);
+  const far = await p.evaluate(() => +document.getElementById('profMe').getAttribute('x1')); ok(far < 0, '離路線很遠還在畫藍線 ' + far);
+  const us = await p.evaluate(() => { const t = document.querySelector('#profSvg text'), cs = getComputedStyle(t); return [cs.userSelect || cs.webkitUserSelect, cs.webkitTouchCallout]; });
+  ok(us[0] === 'none', '高度圖文字還能被選取：' + us.join(','));
+});
 T('高度圖：放大後直接拖＝平移、按住半秒再拖＝移動選取線', async p => {
   await loadGpx(p); await openNav(p); await p.click('#navMode [data-pb="zoom"]'); await p.waitForTimeout(300);
   const box = async () => { const b = await (await p.$('#profSvg')).boundingBox(); return b; };

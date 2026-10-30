@@ -588,6 +588,21 @@ T('網頁：規劃畫面有路線 QR、沒有掃描', async p => {
 T('手機：規劃畫面有路線 QR 和掃描', async p => {
   const v = await p.evaluate(() => ({ s: !document.querySelector('#bQrShare').hidden, c: !document.querySelector('#bQrScan').hidden })); ok(v.s && v.c, '按鈕沒顯示 ' + JSON.stringify(v));
 }, { vp: '直式' });
+T('清除整條：路線總覽和畫路線都有，按了直接清、可復原', async p => {
+  await loadGpx(p); const n0 = await p.evaluate(() => window.__gp.S.route.trk.p.length);
+  await p.evaluate(() => document.getElementById('reditBtn').click()); await p.waitForTimeout(400);
+  ok(/路線總覽/.test(await p.textContent('#reditMode .rhead')), '標題沒改成路線總覽');
+  await p.click('#reditMode [data-rx="clear"]'); await p.waitForTimeout(400);
+  let r = await p.evaluate(() => ({ trk: !!window.__gp.S.route.trk, red: !document.getElementById('reditMode').hidden, t: document.getElementById('toast').textContent }));
+  ok(!r.trk && !r.red && /復原/.test(r.t), '總覽清除不對 ' + JSON.stringify(r));
+  await p.click('#toast button'); await p.waitForTimeout(500);
+  ok(await p.evaluate(n => window.__gp.S.route.trk && window.__gp.S.route.trk.p.length === n, n0), '總覽清除後按復原沒救回來');
+  await openNav(p); await navBtn(p, 'draw'); await p.waitForTimeout(200);
+  ok(!!(await p.$('#navEdit [data-draw="clear"]')), '畫路線工具列沒有清除整條');
+  await p.click('#navEdit [data-draw="clear"]'); await p.waitForTimeout(400);
+  r = await p.evaluate(() => ({ trk: !!window.__gp.S.route.trk, draw: window.__gp.fn('DRAW').on }));
+  ok(!r.trk && r.draw, '畫路線清除後應該還在畫路線模式 ' + JSON.stringify(r));
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

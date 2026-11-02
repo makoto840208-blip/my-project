@@ -763,6 +763,14 @@ T('天氣：每個地點只列它那天，超出預報範圍的說哪天查得�
   ok(rows.length === 3, '列數不對：' + rows.join(' | '));
   ok(/11-16.*D1/.test(rows[0]) && /11-17.*D2/.test(rows[1]) && /11-18.*最高點.*還沒進入預報範圍（11-03 起查得到）/.test(rows[2]), '內容不對：' + rows.join(' | '));
 });
+T('天氣：每天一組（營地／終點＋當天最高點），最後一天有終點', async p => {
+  const P = await p.evaluate(() => { const G = window.__gp, S = G.S, mk = G.fn('newSeg');
+    const a = Object.assign(mk(1), { from: '登山口', to: '天池山莊', lat: 24.05, lon: 121.28, camp: 2860, slat: 24.0, slon: 121.2, start: 1500, tlat: 24.05, tlon: 121.28, top: 2860 });
+    const b = Object.assign(mk(2), { from: '天池山莊', to: '天池山莊', lat: 24.05, lon: 121.28, camp: 2860, tlat: 24.06, tlon: 121.28, top: 3335 });
+    const c = Object.assign(mk(3), { from: '天池山莊', to: '登山口', lat: 24.0, lon: 121.2, camp: 1500, tlat: 24.055, tlon: 121.285, top: 2900 });
+    S.route.segs = [a, b, c]; return G.fn('wxPoints')().map(q => q.label + '@' + q.day); });
+  ok(P.join('|') === 'D1 營地 天池山莊@1|D2 營地 天池山莊@2|D2 最高點 3335m@2|D3 終點 登山口@3|D3 最高點 2900m@3', '地點不對：' + P.join(' | '));
+});
 T('帶水：每段自己設定、全裝輕裝各取最多那段；輕裝頁身穿的也列、可切穿／內／掛', async p => {
   await p.evaluate(() => { const G = window.__gp, S = G.S; S.water = 2;
     const set = (t, g, loc) => { const s = S.slots.find(x => x.type === t); if (s) Object.assign(s, { filled: true, on: true, brand: 'B', model: t, g, qty: 1, loc }); };

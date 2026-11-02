@@ -3699,10 +3699,14 @@ function renderLoc(){const L=S.route.loc;if(!L)return;
   $('#wxLoc').innerHTML=`${ic('pin')}${esc(L.name)}　${L.ele?L.ele+' m':''}　<span style="color:var(--mut)">(${L.lat.toFixed(4)}, ${L.lon.toFixed(4)}；${L.src==='gpx'?'來自 GPX':L.src==='plan'?'依計畫書地名定位':L.src==='manual'?'手動座標':'OpenStreetMap 定位'})</span>`;}
 function wxPoints(){
   const segs=S.route.segs.filter(g=>g.lat&&g.lon),P=[];
-  if(segs.length){const days=[...new Set(segs.map(g=>g.day))].sort((a,b)=>a-b);
-    days.slice(0,-1).forEach(d=>{const g=segs.filter(x=>x.day===d).pop();P.push({label:`D${d} 營地 ${g.to||''}`.trim(),lat:g.lat,lon:g.lon,ele:g.camp||0,day:d});});
-    const ts=S.route.segs.filter(g=>g.tlat);if(ts.length){const t=ts.reduce((a,b)=>b.top>a.top?b:a);P.push({label:`最高點 ${t.top}m`,lat:t.tlat,lon:t.tlon,ele:t.top,day:t.day||0,top:true});}
-    else if(S.route.loc)P.push({label:S.route.loc.name,lat:S.route.loc.lat,lon:S.route.loc.lon,ele:S.route.loc.ele,day:0});
+  if(segs.length){/* 每天一組：過夜營地（最後一天＝終點），下面緊接當天最高點 */
+    const all=S.route.segs,days=[...new Set(all.map(g=>g.day))].sort((a,b)=>a-b),last=days[days.length-1],f0=all.find(g=>g.slat);
+    days.forEach(d=>{const ds=all.filter(x=>x.day===d),g=ds.filter(x=>x.lat&&x.lon).pop();
+      if(g)P.push({label:`D${d} ${d===last?'終點':'營地'} ${g.to||''}`.trim(),lat:g.lat,lon:g.lon,ele:g.camp||0,day:d});
+      else if(d===last&&f0)P.push({label:`D${d} 終點 ${f0.from||''}`.trim(),lat:f0.slat,lon:f0.slon,ele:f0.start||0,day:d});
+      const ts=ds.filter(x=>x.tlat);if(ts.length){const t=ts.reduce((a,b)=>b.top>a.top?b:a),e=P[P.length-1];
+        if(!(e&&e.day===d&&Math.abs(e.lat-t.tlat)<0.003&&Math.abs(e.lon-t.tlon)<0.003))P.push({label:`D${d} 最高點 ${t.top}m`,lat:t.tlat,lon:t.tlon,ele:t.top,day:d,top:true});}});
+    if(!P.length&&S.route.loc)P.push({label:S.route.loc.name,lat:S.route.loc.lat,lon:S.route.loc.lon,ele:S.route.loc.ele,day:0});
   }else if(S.route.loc){const L=S.route.loc;P.push({label:`${L.name}${L.ele?' '+L.ele+'m':''}`,lat:L.lat,lon:L.lon,ele:L.ele,day:0});}
   return P;
 }
@@ -3721,11 +3725,9 @@ async function fetchWx(){
   if(!navigator.onLine){renderWx('目前離線，顯示上次抓到的資料');return;}
   wxBusy=true;$('#wxOut').innerHTML='<div class="rec">抓取天氣中…</div>';
   try{
-    const out=[];
-    for(const p of P){
+    const out=await Promise.all(P.map(async p=>{
       const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}${p.ele?'&elevation='+p.ele:''}&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,weather_code&timezone=Asia%2FTaipei&start_date=${start}&end_date=${e2}`;
-      const r=await fetch(u);if(!r.ok)throw new Error('天氣服務 '+r.status);out.push(Object.assign({},p,{daily:(await r.json()).daily}));
-    }
+      const r=await fetch(u);if(!r.ok)throw new Error('天氣服務 '+r.status);return Object.assign({},p,{daily:(await r.json()).daily});}));
     S.wx={at:new Date().toISOString(),key:wxKey(),start,end:e2,pts:out,partial:end>lim};
     if(S.wxAuto!==false){const mins=out.flatMap(p=>p.daily.temperature_2m_min.filter(v=>v!=null)),maxs=out.flatMap(p=>p.daily.temperature_2m_max.filter(v=>v!=null));
       if(mins.length){S.tmin=Math.floor(Math.min(...mins));S.tmax=Math.ceil(Math.max(...maxs));fillParams();}}
@@ -3742,7 +3744,7 @@ function renderWx(msg){
     return p.daily.time.map((d,i)=>[d,i]).filter(([d])=>!wd||d===wd).map(([d,i])=>{const pp=p.daily.precipitation_probability_max[i],gu=p.daily.wind_gusts_10m_max[i],wc=p.daily.weather_code[i];
     return `<tr><td>${d.slice(5)}</td><td>${esc(p.label)}</td><td>${Math.round(p.daily.temperature_2m_min[i])}～${Math.round(p.daily.temperature_2m_max[i])}</td><td>${Math.round(p.daily.apparent_temperature_min[i])}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%</td><td>${(p.daily.precipitation_sum[i]||0).toFixed(1)}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${Math.round(gu)}</td><td class="${wc>=95?'w':''}">${WMO[wc]||wc}</td></tr>`;});}).join('');
   $('#wxOut').innerHTML=(msg?`<div class="rec">${esc(msg)}</div>`:'')+`<div style="overflow-x:auto"><table class="rtab wxt"><tr><th>日期</th><th>地點</th><th>°C</th><th>體感低</th><th>降雨</th><th>mm</th><th>陣風 km/h</th><th>天氣</th></tr>${rows}</table></div>
-    <div style="font-size:11px;color:var(--mut);margin-top:4px">Open-Meteo 預報，${age<1?'剛剛':Math.round(age)+' 小時前'}更新。營地列當天晚上、最高點列走到那天；預報只到 16 天內。氣溫已依該點海拔修正。</div>`;
+    <div style="font-size:11px;color:var(--mut);margin-top:4px">Open-Meteo 預報，${age<1?'剛剛':Math.round(age)+' 小時前'}更新。每天：營地（最後一天為終點）＋當天最高點；預報只到 16 天內。氣溫已依該點海拔修正。</div>`;
 }
 $('#bWxRe').addEventListener('click',()=>{const L=S.route.loc;if(L&&L.src==='osm'&&!S.route.segs.some(g=>g.lat)){L.q=null;autoGeo();}else if(!L)autoGeo();else wxCheck(true);});
 $('#bWxSet').addEventListener('click',()=>{const m=($('#wxCoord').value||'').match(/(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)/);

@@ -661,6 +661,18 @@ T('打包清單：由重到輕、佔背負橫條、數量、不帶／加回、�
   ok(await p.evaluate(id => window.__gp.S.slots.find(s => s.id === id).on, sid), '加回沒作用');
   await p.click('[data-gv=cat]'); ok(await p.evaluate(() => !document.getElementById('cats').hidden), '切不回分類');
 });
+T('背負組成：照分類拆、由重到輕、小的併其他、點了看明細', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; const set = (t, g) => { const s = S.slots.find(x => x.type === t); if (s) Object.assign(s, { filled: true, on: true, brand: 'B', model: t, g, qty: 1, loc: 'pack' }); };
+    set('tent', 1400); set('sleepbag', 900); set('stove', 90); set('headlamp', 60); G.fn('renderCats')(); G.fn('compute')(); });
+  const lg = await p.evaluate(() => [...document.querySelectorAll('#legend [data-comp]')].map(b => ({ k: b.dataset.comp, t: b.textContent, g: parseFloat(b.textContent.match(/([\d.]+)kg/)[1]) })));
+  await shot(p, 'comp');
+  ok(lg.some(x => x.k === 'sleep') && !lg.some(x => /基礎/.test(x.t)), '沒有照分類拆：' + lg.map(x => x.t).join(' | '));
+  const main = lg.filter(x => x.k !== 'other'); ok(main.every((x, i) => !i || main[i - 1].g >= x.g), '沒有由重到輕');
+  ok(lg.some(x => x.k === 'other'), '小於 3% 沒有併成其他：' + lg.map(x => x.t).join(' | '));
+  await p.click('#legend [data-comp="sleep"]'); await p.waitForTimeout(100);
+  const det = await p.textContent('#compDet'); ok(/tent/.test(det) && /1.40 kg/.test(det), '明細不對：' + det);
+  await p.click('#legend [data-comp="sleep"]'); ok(await p.evaluate(() => document.getElementById('compDet').hidden), '再點一次沒收起');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

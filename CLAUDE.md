@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v90**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v91**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -55,6 +55,7 @@
 - 收起路線（v88）：`#routeHide`（v90 起放在「路線計畫」卡標題旁，使用者指定位置；點擊要 stopPropagation 免得觸發卡片摺疊）→ `.wrap.routeoff` 整欄 #params 藏起來，只剩裝備＋儀表板；頂端 `#routeBar` 摘要（路線名稱＋`#rSum`，點了展開），狀態存 `gearPlanner.routeOff`；展開時 resize 地圖＋renderProfile。
 - 我的裝備庫（v89）：「我的裝備」卡 `#bMineMgr` → `mineOpen()` 視窗（`.gmine`），列 `DB.filter(owned)`；新增、改重量、**汰換**＝`d.retired`（留紀錄＝擁有過這型號，`dbFor()` 排除，不出現在選單／建議／一鍵配置）、恢復、**刪除**（builtin 只拿掉 owned），都有復原。使用者說：換新就直接新增新型號，不要「汰換時選取代品」。
 - 打包清單（v89）：裝備欄上方 `[data-gv]` 切換「分類／打包清單」（存 `gearPlanner.gview`）；`renderPack()` 由 compute 尾端呼叫（`PACK.c`）。每列：打勾（`s.packed`）、佔背負 %（身穿的算佔身穿 %）小橫條、數量 ±、✕＝這趟不帶（`s.on=false`，下方「不帶的 N 件」可加回）；水、食物也列出；排序由重到輕／依分類；複製文字（`packText()`）＋系統分享，不綁 LINE。
+- 背負組成（v91）：橫條照 CATS 分類拆（只算背包內＋外掛；飲水含水、另列食物、瓦斯），由重到輕，<3% 併「其他」；點色塊或圖例看明細（`COMP.sel`、`compDet()`）。「基礎 BASE」那格數字保留。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意

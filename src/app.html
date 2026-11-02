@@ -462,6 +462,10 @@ input:disabled,select:disabled{opacity:.6}
 .stack{display:flex;height:14px;border-radius:3px;overflow:hidden;margin-top:4px;background:var(--deep);border:1px solid var(--line)}
 .stack div{transition:width .25s}
 .legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-size:12px;color:var(--mut)}
+.stack>button{border:0;padding:0;margin:0;height:100%;cursor:pointer;min-width:0}
+.legend>button{background:none;border:0;padding:2px 0;color:var(--mut);font:inherit;font-size:12px;cursor:pointer;text-align:left}.legend>button.on{color:var(--txt)}.legend>button small{opacity:.7}
+@media (max-width:600px){.rh-x{display:none}}
+#compDet{margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;display:flex;flex-direction:column;gap:2px}#compDet b{color:var(--coy2);font-weight:600}#compDet div{display:flex;justify-content:space-between;gap:10px;color:var(--mut)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .vol{height:14px;border-radius:3px;background:var(--deep);border:1px solid var(--line);overflow:hidden;margin-top:4px}
 .vol div{height:100%;transition:width .25s}
@@ -614,7 +618,7 @@ html.oled .card{border-color:#1c2118}
       </div>
     </div>
     <div class="card" id="routeCard">
-      <div class="ch">路線計畫（行前登山計畫）<button class="btn sm" id="routeHide" type="button" style="margin-left:10px;font-size:12.5px;padding:3px 10px">◂ 收起路線（只看裝備）</button><span class="sum" id="rSum">–</span></div>
+      <div class="ch">路線計畫（行前登山計畫）<button class="btn sm" id="routeHide" type="button" style="margin-left:10px;font-size:12.5px;padding:3px 10px;white-space:nowrap">◂ 收起路線<span class="rh-x">（只看裝備）</span></button><span class="sum" id="rSum">–</span></div>
       <div class="cb">
         <div id="lockBar" class="rec" style="margin:0 0 10px;border-color:var(--coy)" hidden></div>
         <div class="fields">
@@ -765,6 +769,7 @@ html.oled .card{border-color:#1c2118}
         <div class="barlbl"><span>背負組成</span></div>
         <div class="stack" id="stack"></div>
         <div class="legend" id="legend"></div>
+        <div id="compDet" hidden></div>
         <div class="barlbl"><span>背包容積</span><span id="volTxt" class="mono">–</span></div>
         <div class="vol"><div id="volBar"></div></div>
       </div>
@@ -4161,6 +4166,11 @@ function potText(s){
   if(!p)return dbFor(s.type).length?'<b>單項潛力</b>已是資料庫中最輕的選項':'<b>單項潛力</b>資料庫沒有同類別可比較';
   return `<b>單項潛力</b>換成「${esc(p.b.brand+' '+p.b.model)}」可省 ${p.save}g`+(s.type==='shoes'?`，約等於背上少 ${kg(p.save*FOOT_LO)}–${kg(p.save*FOOT_HI)}kg`:'');
 }
+const COMP={sel:null,parts:[],waterG:0};
+function compDet(){const el=$('#compDet');if(!el)return;const q=COMP.sel&&COMP.parts.find(x=>x.k===COMP.sel);if(!q){el.hidden=true;el.innerHTML='';return;}
+  let L=q.L.map(x=>[dispName(x)||x.label,tot(x),x.qty]);if(q.k==='water'&&COMP.waterG)L.push(['水（依行程）',COMP.waterG,1]);if(q.k==='other')q.sub.forEach(r=>{if(r.k==='water'&&COMP.waterG)L.push(['水（依行程）',COMP.waterG,1]);if(r.k==='food')L.push(['食物（依行程）',r.g,1]);});if(q.k==='food')L=[['食物（依行程，到食物卡改）',q.g,1]];
+  L.sort((a,b)=>b[1]-a[1]);el.hidden=false;el.innerHTML=`<b>${esc(q.n)}　${kg(q.g)} kg</b>`+L.map(r=>`<div><span>${esc(r[0])}${r[2]>1?' ×'+r[2]:''}</span><span class="mono">${r[1]>=1000?kg(r[1])+' kg':Math.round(r[1])+' g'}</span></div>`).join('');}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-comp]');if(!b)return;COMP.sel=COMP.sel===b.dataset.comp?null:b.dataset.comp;compute();});
 function compute(){
   const RA=!!(S.route.auto&&S.route.segs.length),pd=S.days;
   if(RA){const L=S.route.segs;S.days=Math.min(7,Math.max(...L.map(g=>g.day)));S.km=+sum(L,g=>g.km).toFixed(1);S.elev=sum(L,g=>g.up);S.alt=Math.max(0,...L.map(g=>Math.max(g.top,g.camp)));}
@@ -4246,9 +4256,16 @@ function compute(){
   $('#ratio').style.color=lv==='g'?'#9bb58a':lv==='y'?'#d9bf6e':'#d9897a';
   $('#ratioTxt').textContent=(lv==='g'?'綠燈：負重合理':lv==='y'?'黃燈：偏重，需精簡':'紅燈：超載，建議減重')+'（經驗法則）';
   $('#gmark').style.left=Math.min(100,ratio/30*100)+'%';
-  const parts=[['基礎','#9a8460',base],['水','#7b97a6',waterG],['食物','#7d8a5a',foodG],['瓦斯','#a8664e',gas]];
-  $('#stack').innerHTML=parts.map(p=>`<div style="width:${pack?p[2]/pack*100:0}%;background:${p[1]}"></div>`).join('');
-  $('#legend').innerHTML=parts.map(p=>`<span><i style="background:${p[1]}"></i>${p[0]} ${kg(p[2])}kg</span>`).join('');
+  /* 背負組成：照分類拆（只算背包內＋外掛），由重到輕；不到 3% 併成「其他」；點一塊看裡面有哪些 */
+  {const CC={pack:'#9a8460',head:'#8f8070',top:'#6b8a6a',bottom:'#55705a',leg:'#7a8f7a',feet:'#6a5f52',sleep:'#6f7f9a',kitchen:'#8a5a48',water:'#7b97a6',meds:'#a0605e',tools:'#7f7f7a'};
+    const its=carried.filter(x=>!T(x)[3].cons),grp=CATS.map(([c,n])=>{const L=its.filter(x=>x.cat===c);let g=sum(L,tot);if(c==='water')g+=waterG;return {k:c,n:c==='water'?'飲水（含水）':n,col:CC[c],g,L};}).filter(q=>q.g>0);
+    if(foodG>0)grp.push({k:'food',n:'食物',col:'#a39a5a',g:foodG,L:[]});if(gas>0)grp.push({k:'gas',n:'瓦斯',col:'#c07a52',g:gas,L:carried.filter(x=>T(x)[3].cons)});
+    grp.sort((a,b)=>b.g-a.g);const big=grp.filter(q=>!pack||q.g/pack>=0.03),sm=grp.filter(q=>pack&&q.g/pack<0.03);
+    const parts=big.concat(sm.length?[{k:'other',n:'其他',col:'#5a5a55',g:sum(sm,q=>q.g),L:[].concat(...sm.map(q=>q.L)),sub:sm}]:[]);COMP.parts=parts;COMP.waterG=waterG;
+    if(COMP.sel&&!parts.some(q=>q.k===COMP.sel))COMP.sel=null;
+    $('#stack').innerHTML=parts.map(q=>`<button type="button" data-comp="${q.k}" title="${esc(q.n)} ${kg(q.g)}kg" style="width:${pack?q.g/pack*100:0}%;background:${q.col}${COMP.sel===q.k?';outline:2px solid var(--txt);outline-offset:-2px':''}"></button>`).join('');
+    $('#legend').innerHTML=parts.map(q=>`<button type="button" data-comp="${q.k}" class="${COMP.sel===q.k?'on':''}"><i style="background:${q.col}"></i>${esc(q.n)} ${kg(q.g)}kg <small>${pack?Math.round(q.g/pack*100):0}%</small></button>`).join('');
+    compDet();}
   if(cap){const f=vol/cap;$('#volTxt').textContent=`約 ${vol.toFixed(0)} / ${cap} L（${Math.round(f*100)}%）`;$('#volBar').style.width=Math.min(100,f*100)+'%';$('#volBar').style.background=f>1?'var(--r)':f>0.9?'var(--y)':f<0.5?'var(--b)':'var(--g)';}
   else{$('#volTxt').textContent=packS?`約 ${vol.toFixed(0)} L（背包未填容量）`:`約 ${vol.toFixed(0)} L（尚未選背包）`;$('#volBar').style.width='0';}
   renderPot();diagnose();

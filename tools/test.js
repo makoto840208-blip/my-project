@@ -803,6 +803,36 @@ T('高度圖（滑鼠）：點了白線就停在那，滑鼠移開不會跟著�
   const c1 = await p.evaluate(() => window.__gp.PROF.cur); await p.mouse.up();
   ok(c1 < c0 && c1 > 0, `按住拖沒有移動 ${c0}→${c1}`);
 }, { vp: '網頁' });
+T('省電模式：手機預設開、電腦預設關；山頭看畫面、文字不重疊、省電有上限', async p => {
+  await loadGpx(p); await p.waitForTimeout(300);
+  const st = await p.evaluate(() => ({ save: window.__gp.fn('PWR').save, coarse: matchMedia('(pointer:coarse)').matches }));
+  ok(st.save === st.coarse, '預設不對 ' + JSON.stringify(st));
+  const info = () => p.evaluate(() => { const els = [...document.querySelectorAll('#rmap .mk-pk span')].map(e => e.getBoundingClientRect()).filter(r => r.width);
+    let ov = 0; for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) { const a = els[i], b = els[j]; if (a.left < b.right - 2 && a.right > b.left + 2 && a.top < b.bottom - 2 && a.bottom > b.top + 2) ov++; }
+    return { n: els.length, ov, pr: window.__gp.MAP.m.getPixelRatio(), dpr: devicePixelRatio }; });
+  let r = await info(); ok(r.n > 0 && r.ov === 0, '山頭標籤不對 ' + JSON.stringify(r));
+  await p.evaluate(() => window.__gp.fn('pwrSet')(!window.__gp.fn('PWR').save)); await p.waitForTimeout(300);
+  const r2 = await info(); ok(r2.ov === 0, '切換後標籤重疊 ' + JSON.stringify(r2));
+  const save = await p.evaluate(() => window.__gp.fn('PWR').save);
+  ok(save ? r2.pr <= 2 : Math.abs(r2.pr - r2.dpr) < 0.01, '解析度不對 ' + JSON.stringify(r2));
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(await p.evaluate(s => window.__gp.fn('PWR').save === s, save), '重開沒記住');
+});
+T('省電模式（電腦）', async p => {
+  await loadGpx(p); await p.waitForTimeout(300);
+  const st = await p.evaluate(() => ({ save: window.__gp.fn('PWR').save, coarse: matchMedia('(pointer:coarse)').matches }));
+  ok(st.save === st.coarse, '預設不對 ' + JSON.stringify(st));
+  const info = () => p.evaluate(() => { const els = [...document.querySelectorAll('#rmap .mk-pk span')].map(e => e.getBoundingClientRect()).filter(r => r.width);
+    let ov = 0; for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) { const a = els[i], b = els[j]; if (a.left < b.right - 2 && a.right > b.left + 2 && a.top < b.bottom - 2 && a.bottom > b.top + 2) ov++; }
+    return { n: els.length, ov, pr: window.__gp.MAP.m.getPixelRatio(), dpr: devicePixelRatio }; });
+  let r = await info(); ok(r.n > 0 && r.ov === 0, '山頭標籤不對 ' + JSON.stringify(r));
+  await p.evaluate(() => window.__gp.fn('pwrSet')(!window.__gp.fn('PWR').save)); await p.waitForTimeout(300);
+  const r2 = await info(); ok(r2.ov === 0, '切換後標籤重疊 ' + JSON.stringify(r2));
+  const save = await p.evaluate(() => window.__gp.fn('PWR').save);
+  ok(save ? r2.pr <= 2 : Math.abs(r2.pr - r2.dpr) < 0.01, '解析度不對 ' + JSON.stringify(r2));
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(await p.evaluate(s => window.__gp.fn('PWR').save === s, save), '重開沒記住');
+}, { vp: '網頁' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

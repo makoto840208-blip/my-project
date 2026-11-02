@@ -2282,10 +2282,15 @@ function preDark(hex){const n=parseInt(hex.slice(1),16);let c0=[(n>>16&255)/255,
   const h=[-0.574*r+1.43*g+0.144*b,0.426*r+0.43*g+0.144*b,0.426*r+1.43*g-0.856*b].map(v=>Math.min(1,Math.max(0,v)));
   return '#'+h.map(v=>Math.round((1-v)*255).toString(16).padStart(2,'0')).join('');}
 const COL=c=>MAP.dark?preDark(c):c;
-function mapApplyStyle(){const m=MAP.m;if(!m||!MAP.loaded)return;let on3=false;try{on3=M3D.on;}catch(e){}const base0=mapBaseKey(),base=on3&&base0==='ctr'?'shade':base0,dark=document.getElementById('rmap').classList.contains('mapdark'),sp=(l,k,v)=>{try{m.setPaintProperty(l,k,v);}catch(e){}},vis=(l,on)=>{try{m.setLayoutProperty(l,'visibility',on?'visible':'none');}catch(e){}};
+/* 省電模式：開＝解析度最多 2 倍、3D 降解析度、3D 不疊陰影、純黑等高線 3D 換地形陰影、山頭有上限且移動時藏；關（電腦預設）＝全開 */
+const PWR={save:true};try{const v=localStorage.getItem('gearPlanner.pwrSave');PWR.save=v==null?matchMedia('(pointer:coarse)').matches:v==='1';}catch(e){}
+const prFull=()=>PWR.save?Math.min(window.devicePixelRatio||1,2):(window.devicePixelRatio||1);
+function pwrSet(v){PWR.save=!!v;try{localStorage.setItem('gearPlanner.pwrSave',v?'1':'0');}catch(e){}try{map3dPR();mapApplyStyle();pkMarkers();}catch(e){}pwrBtn();toast(v?'省電模式：開':'省電模式：關（全開，較耗電）');}
+function pwrBtn(){document.querySelectorAll('.lyrmenu [data-pwr]').forEach(b=>{b.classList.toggle('on',PWR.save);b.textContent=PWR.save?'省電模式：開':'省電模式：關（全開）';});}
+function mapApplyStyle(){const m=MAP.m;if(!m||!MAP.loaded)return;let on3=false;try{on3=M3D.on;}catch(e){}const base0=mapBaseKey(),base=on3&&base0==='ctr'&&PWR.save?'shade':base0,dark=document.getElementById('rmap').classList.contains('mapdark'),sp=(l,k,v)=>{try{m.setPaintProperty(l,k,v);}catch(e){}},vis=(l,on)=>{try{m.setLayoutProperty(l,'visibility',on?'visible':'none');}catch(e){}};
   const chg=MAP.dark!==(dark&&base!=='sat'&&base!=='ctr');
   ['nlsc','topo','osm','sat'].forEach(k=>vis('b-'+k,base===k||(dark&&base==='shade'&&k==='nlsc')));vis('b-ctr',base==='ctr');vis('bg',base==='ctr'||(base==='shade'&&!dark));sp('bg','background-color',base==='ctr'?'#000000':'#5f7f45');
-  vis('s-hs',base==='shade'&&!dark&&!on3);vis('s-dem',base==='shade'&&!dark);vis('s-topo',base==='shade'&&!dark);
+  vis('s-hs',base==='shade'&&!dark&&(!on3||!PWR.save));vis('s-dem',base==='shade'&&!dark);vis('s-topo',base==='shade'&&!dark);
   const cv=m.getCanvas();cv.style.filter=dark&&base!=='sat'&&base!=='ctr'?DARKF:'';sp('b-sat','raster-brightness-max',dark?.55:1);
   const D=dark&&base!=='sat'&&base!=='ctr';MAP.dark=D;
   sp('s-dem','hillshade-shadow-color','#22381a');sp('s-dem','hillshade-highlight-color','#d8e8b0');sp('s-dem','hillshade-accent-color','#2e4a22');
@@ -2297,9 +2302,9 @@ function mapSetRoute(P,idx,nTurn){MAP.lastRoute=[P,idx,nTurn];const feats=[];for
 function altsMap(){const f=[];let nav=false;try{nav=NAV.on;}catch(e){}if(!nav)(S.route.segs||[]).forEach(g=>{if(!g.ret&&g.alts&&g.alts.length>1)g.alts.forEach((o,k)=>{if(k!==g.altSel)f.push({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:o.lp.map(q=>[q[1],q[0]])}});});});try{mapSrc('alts',{type:'FeatureCollection',features:f});}catch(e){}}
 function mapSetBase(k){try{localStorage.setItem('gearPlanner.mapBase',k);}catch(e){}mapApplyStyle();}
 class LayerCtl{onAdd(){const d=document.createElement('div');d.className='maplibregl-ctrl maplibregl-ctrl-group lyrctl';
-    d.innerHTML=`<button type="button" title="切換底圖" aria-label="切換底圖" style="display:flex;align-items:center;justify-content:center"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><div class="lyrmenu" hidden>${Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}">${b.name}</button>`).join('')}<button type="button" data-3d style="border-top:1px solid var(--line)">3D 地形</button><button type="button" data-pks>山頭名稱</button></div>`;
-    const menu=d.querySelector('.lyrmenu');document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!d.contains(e.target))menu.hidden=true;},true);d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);}catch(err){}};
-    menu.onclick=e=>{if(e.target.closest('[data-3d]')){menu.hidden=true;map3dToggle();return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);menu.hidden=true;return;}const b=e.target.closest('[data-base]');if(b){mapSetBase(b.dataset.base);menu.hidden=true;}};this._d=d;return d;}onRemove(){this._d.remove();}}
+    d.innerHTML=`<button type="button" title="切換底圖" aria-label="切換底圖" style="display:flex;align-items:center;justify-content:center"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><div class="lyrmenu" hidden>${Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}">${b.name}</button>`).join('')}<button type="button" data-3d style="border-top:1px solid var(--line)">3D 地形</button><button type="button" data-pks>山頭名稱</button><button type="button" data-pwr style="border-top:1px solid var(--line)">省電模式</button></div>`;
+    const menu=d.querySelector('.lyrmenu');document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!d.contains(e.target))menu.hidden=true;},true);d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);pwrBtn();}catch(err){}};
+    menu.onclick=e=>{if(e.target.closest('[data-3d]')){menu.hidden=true;map3dToggle();return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);menu.hidden=true;return;}if(e.target.closest('[data-pwr]')){pwrSet(!PWR.save);menu.hidden=true;return;}const b=e.target.closest('[data-base]');if(b){mapSetBase(b.dataset.base);menu.hidden=true;}};this._d=d;return d;}onRemove(){this._d.remove();}}
 // 3D 地形：規劃和導航各自一個開關（導航預設關、打開先提醒耗電）；黑屏時關地形；導航中跟隨／跟著方向轉時降低繪製解析度
 const M3D={want:false,navWant:false,on:false};try{M3D.want=localStorage.getItem('gearPlanner.map3d')==='1';M3D.navWant=localStorage.getItem('gearPlanner.map3dNav')==='1';}catch(e){}
 function map3dApply(){const m=MAP.m;if(!m||!MAP.loaded)return;let nav=false,blk=false;try{nav=NAV.on;blk=!document.getElementById('navBlack').hidden;}catch(e){}
@@ -2314,7 +2319,7 @@ function map3dApply(){const m=MAP.m;if(!m||!MAP.loaded)return;let nav=false,blk=
   map3dPR();}
 // 導航中 3D 開著、又在跟隨或跟著方向轉（地圖一直重畫）時，繪製解析度降到 1 倍省電
 function map3dPR(){const m=MAP.m;if(!m||typeof m.setPixelRatio!=='function')return;let busy=false;try{busy=NAV.on&&(FOL.on||HEAD.on);}catch(e){}
-  const full=Math.min(window.devicePixelRatio||1,2),pr=M3D.on?Math.min(full,busy?1:1.5):full;/* 3D 平常 1.5 倍、跟隨或轉向時 1 倍；2D 照舊最多 2 倍 */try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
+  const full=prFull(),pr=M3D.on&&PWR.save?Math.min(full,busy?1:1.5):full;/* 3D 平常 1.5 倍、跟隨或轉向時 1 倍；2D 照舊最多 2 倍 */try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
 function map3dSet(v){M3D.want=!!v;try{localStorage.setItem('gearPlanner.map3d',v?'1':'0');}catch(e){}map3dApply();}
 function map3dNavSet(v){M3D.navWant=!!v;try{localStorage.setItem('gearPlanner.map3dNav',v?'1':'0');}catch(e){}map3dApply();}
 /* 電腦版：按住滑鼠中鍵拖＝上下改傾斜（平面↔立體，拉上去自動開 3D、壓回平面自動關）、左右旋轉 */
@@ -2393,7 +2398,7 @@ async function renderMap(P,idx,WP,nTurn,T){const box=$('#rmap');if(!box)return;M
   try{await loadMapLib();}catch(e){if(!MAP.m)box.innerHTML='<div class="rec" style="margin:8px">地圖要連網路才會顯示（高度剖面離線也能看）</div>';return;}
   if(!MAP.m){box.innerHTML='';const touch=matchMedia('(pointer:coarse)').matches;
     try{ctrRegister();}catch(e){}
-    MAP.m=new maplibregl.Map({container:box,style:mapStyle(),center:[121,23.7],zoom:7,attributionControl:{compact:true},cooperativeGestures:true,pixelRatio:Math.min(window.devicePixelRatio||1,2),fadeDuration:0,maxTileCacheSize:200,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,
+    MAP.m=new maplibregl.Map({container:box,style:mapStyle(),center:[121,23.7],zoom:7,attributionControl:{compact:true},cooperativeGestures:true,pixelRatio:prFull(),fadeDuration:0,maxTileCacheSize:200,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,
       locale:{'CooperativeGesturesHandler.WindowsHelpText':'按住 Ctrl 再滾動來縮放地圖','CooperativeGesturesHandler.MacHelpText':'按住 ⌘ 再滾動來縮放地圖','CooperativeGesturesHandler.MobileHelpText':'用兩指移動地圖，或按「全螢幕地圖」','NavigationControl.ResetBearing':'轉回正北','NavigationControl.ZoomIn':'放大','NavigationControl.ZoomOut':'縮小'}});
     MAP.m.touchZoomRotate.disableRotation();MAP.m.invalidateSize=()=>MAP.m.resize();try{midDrag3d(MAP.m);}catch(e){}MAP.touch=touch;
     MAP.m.addControl(new maplibregl.NavigationControl({showCompass:true,visualizePitch:false}),'top-right');MAP.m.addControl(new LayerCtl(),'top-right');MAP.m.addControl(new FitCtl(),'top-right');
@@ -2716,12 +2721,16 @@ async function pkDownloadAll(){if(PK.busy){toast('山頭資料下載中，等一
     if(msg)msg.textContent=ok?`✓ 全台山頭存好了：${L.length} 座。之後不用網路也能指認山頭、對山定位。`:`⚠︎ 抓到 ${L.length} 座，但手機儲存空間不夠存不下來，這次開著時有效；關掉 App 會不見`;}
   finally{PK.busy=false;if(b)b.disabled=false;pkAllBtn();}}
 function pkAllBtn(){const b=$('#pkAll');if(!b)return;b.innerHTML=ic('download')+(PK.full?`全台山頭 ✓ ${PK.list.length} 座（點一下更新）`:'下載全台山頭');}
-// 地圖上標山頭：只標路線附近較高的（最多 40 個），避免太亂
-function pkMarkers(){(PK.mks||[]).forEach(m=>m.remove());PK.mks=[];const m=MAP.m;if(!m||!MAP.loaded||!PK.show||!PK.list.length||!MAP.P)return;
-  const bb=pkBB(MAP.P),inb=p=>p.la>=bb[0]+0.1&&p.la<=bb[2]-0.1&&p.lo>=bb[1]+0.1&&p.lo<=bb[3]-0.1;
+// 地圖上標山頭：看目前畫面裡的山，由高到低放，文字框會重疊的就跳過（分散在整個畫面，不會全擠在主稜）；省電模式有上限、3D 移動時先藏
+function pkMarkers(){(PK.mks||[]).forEach(m=>m.remove());PK.mks=[];const m=MAP.m;if(!m||!MAP.loaded||!PK.show||!PK.list.length)return;
   let on3=false;try{on3=M3D.on;}catch(e){}
-  if(!PK.mvReg){PK.mvReg=true;const c=m.getContainer();m.on('movestart',()=>{if(M3D.on)c.classList.add('mv3d');});m.on('moveend',()=>c.classList.remove('mv3d'));}
-  PK.list.filter(p=>p.e&&inb(p)).sort((a,b)=>b.e-a.e).slice(0,on3?15:40).forEach(p=>{const el=mkEl('mk-pk',`<i></i><span>${esc(p.n)}<small> ${p.e}</small></span>`);PK.mks.push(new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([p.lo,p.la]).addTo(m));});}
+  if(!PK.mvReg){PK.mvReg=true;const c=m.getContainer();m.on('movestart',()=>{if(M3D.on&&PWR.save)c.classList.add('mv3d');});m.on('moveend',()=>{c.classList.remove('mv3d');clearTimeout(PK.mvT);PK.mvT=setTimeout(pkMarkers,120);});}
+  const c=m.getContainer(),Wc=c.clientWidth,Hc=c.clientHeight;if(!Wc||!Hc)return;const b=m.getBounds(),pad=on3?0.6:0.05,la0=b.getSouth()-pad,la1=b.getNorth()+pad,lo0=b.getWest()-pad,lo1=b.getEast()+pad;
+  const cap=PWR.save?(on3?40:80):1e9,boxes=[],fits=(x,y,w,h)=>!boxes.some(r=>x<r[0]+r[2]&&x+w>r[0]&&y<r[1]+r[3]&&y+h>r[1]);
+  const C=PK.list.filter(p=>p.e&&p.la>=la0&&p.la<=la1&&p.lo>=lo0&&p.lo<=lo1).sort((a,b)=>b.e-a.e);
+  for(const p of C){if(PK.mks.length>=cap)break;let q;try{q=m.project([p.lo,p.la]);}catch(e){continue;}if(!(q.x>=0&&q.x<=Wc&&q.y>=0&&q.y<=Hc))continue;
+    const w=String(p.n).length*12+String(p.e).length*7+18,h=20,x=q.x-w/2,y=q.y-h-6;if(!fits(x-3,y-3,w+6,h+6))continue;boxes.push([x,y,w,h]);
+    const el=mkEl('mk-pk',`<i></i><span>${esc(p.n)}<small> ${p.e}</small></span>`);PK.mks.push(new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([p.lo,p.la]).addTo(m));}}
 function pkShowSet(v){PK.show=!!v;try{localStorage.setItem('gearPlanner.peakShow',v?'1':'0');}catch(e){}pkMarkers();document.querySelectorAll('.lyrmenu [data-pks]').forEach(b=>{b.classList.toggle('on',PK.show);b.textContent=PK.show?'山頭名稱：開':'山頭名稱：關';});}
 // 目前的參考位置：新的 GPS → 推算位置 → 舊的 GPS → 地圖中心
 function pkRef(){const g=GPS.last;if(g&&Date.now()-g.t<10*60000)return {la:g.la,lo:g.lo,src:'gps'};if(NB.fix&&Date.now()-NB.fix.ts<3*3600e3)return {la:NB.fix.la,lo:NB.fix.lo,src:'fix'};if(g)return {la:g.la,lo:g.lo,src:'old'};

@@ -723,6 +723,38 @@ T('輕裝：分類｜打包清單｜輕裝、複製目前配置、✕留營地�
   ok(await p.evaluate(() => !document.getElementById('packList').hidden && !!window.__gp.S.lt && window.__gp.S.lt.off && Object.keys(window.__gp.S.lt.off).length === 2), '重開後輕裝沒記住');
   await p.click('#packList [data-pk=ltoff]'); ok(await p.evaluate(() => !window.__gp.S.lt), '不用輕裝沒作用');
 });
+T('路段時間軸：同一天多段、接上一段時間、自訂出發、在這裡過夜換天、輕裝段用輕裝重量', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; const s = S.slots.find(x => x.type === 'tent'); Object.assign(s, { filled: true, on: true, brand: 'B', model: 'heavy', g: 16000, qty: 1, loc: 'pack' });
+    S.lt = { off: { [s.id]: true } }; G.fn('compute')(); });
+  for (let i = 0; i < 3; i++) await p.click('#addSeg');
+  const segs = () => p.evaluate(() => window.__gp.S.route.segs.filter(g => !g.ret).map(g => ({ id: g.id, day: g.day, hrs: g.hrs, t: window.__gp.fn('SEGT').get(g.id) })));
+  let L = await segs(); ok(L.length === 3 && L.every(g => g.day === 1), '新增路段應該同一天 ' + JSON.stringify(L.map(g => g.day)));
+  await p.evaluate(() => { document.querySelectorAll('#segList .seg').forEach((r, i) => { const f = (k, v) => { const e = r.querySelector(`[data-s=${k}]`); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }; f('km', 4); f('up', 500); f('down', 100); }); });
+  await p.fill('#segList .seg >> nth=0 >> [data-s=t0]', '07:00'); await p.waitForTimeout(200);
+  L = await segs(); ok(L[0].t.st === 420 && Math.abs(L[1].t.st - L[0].t.en) < 0.01 && Math.abs(L[2].t.st - L[1].t.en) < 0.01, '沒有接上一段 ' + JSON.stringify(L.map(g => g.t)));
+  await p.fill('#segList .seg >> nth=1 >> [data-s=ts]', '12:00'); await p.waitForTimeout(200);
+  L = await segs(); ok(L[1].t.st === 720 && Math.abs(L[2].t.st - L[1].t.en) < 0.01, '自訂出發不對');
+  ok(/12:00 出發/.test(await p.textContent('#segList .seg >> nth=1 >> [data-st]')), '沒顯示出發到達');
+  const h0 = L[1].hrs; await p.selectOption('#segList .seg >> nth=1 >> [data-s=lt]', 'light'); await p.waitForTimeout(200);
+  L = await segs(); ok(L[1].hrs < h0, `輕裝段時數沒變少 ${h0}→${L[1].hrs}`);
+  await p.check('#segList .seg >> nth=1 >> [data-s=night]'); await p.waitForTimeout(200);
+  L = await segs(); ok(L[0].day === 1 && L[1].day === 1 && L[2].day === 2, '過夜沒換天 ' + JSON.stringify(L.map(g => g.day)));
+  await p.evaluate(() => document.querySelectorAll('#segList .seg')[1].scrollIntoView()); await shot(p, 'segrow');
+  await p.uncheck('#segList .seg >> nth=1 >> [data-s=night]'); await p.waitForTimeout(200);
+  L = await segs(); ok(L.every(g => g.day === 1), '取消過夜沒回來');
+});
+T('路段時間軸（軌跡）：高度圖切分段（虛線）不換天、過夜改換天（實線）', async p => {
+  await loadGpx(p); const d0 = await p.evaluate(() => ({ n: window.__gp.S.route.segs.filter(g => !g.ret).length, days: Math.max(...window.__gp.S.route.segs.map(g => g.day)) }));
+  await p.click('[data-psplit]'); await p.click('[data-pskind=seg]');
+  await p.evaluate(() => { const s = document.querySelector('#profSvg'), b = s.getBoundingClientRect(); s.dispatchEvent(new MouseEvent('click', { clientX: b.left + b.width * 0.45, clientY: b.top + b.height / 2, bubbles: true })); });
+  await p.waitForTimeout(300); await shot(p, 'segcut');
+  let d1 = await p.evaluate(() => ({ n: window.__gp.S.route.segs.filter(g => !g.ret).length, days: Math.max(...window.__gp.S.route.segs.map(g => g.day)), sc: (window.__gp.S.route.trk.sc || []).length, dash: document.querySelectorAll('#profSvg line[stroke-dasharray="4 3"]').length }));
+  ok(d1.n === d0.n + 1 && d1.days === d0.days && d1.sc === 1 && d1.dash >= 1, '分段不對 ' + JSON.stringify([d0, d1]));
+  const i = await p.evaluate(() => { const F = window.__gp.S.route.segs.filter(g => !g.ret), T = window.__gp.S.route.trk; return F.findIndex(g => T.sc.includes(g.ci)); });
+  await p.check(`#segList .seg >> nth=${i} >> [data-s=night]`); await p.waitForTimeout(300);
+  const d2 = await p.evaluate(() => ({ days: Math.max(...window.__gp.S.route.segs.map(g => g.day)), sc: window.__gp.S.route.trk.sc.length }));
+  ok(d2.days === d0.days + 1 && d2.sc === 0, '過夜沒變成換天 ' + JSON.stringify(d2));
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

@@ -472,6 +472,9 @@ input:disabled,select:disabled{opacity:.6}
 .dayrow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}.dayrow button{display:flex;flex-direction:column;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--mut);font:inherit;font-size:12px;padding:4px 8px;cursor:pointer}
 .dayrow button b{color:var(--txt);font-family:var(--mono);font-size:14px}.dayrow button small{font-size:11px}.dayrow button.on{border-color:var(--coy);color:var(--coy2)}.dayrow button.lt b{color:#9bb58a}
 #packList .pr.lnot .pn b{color:var(--mut)}
+/* 路段時間軸 */
+.segt .ngt{display:flex;align-items:center;gap:6px;align-self:end;padding-bottom:6px}.segt .ngt input{width:18px;height:18px}.segst b{color:var(--coy2)}
+.pskind{display:inline-flex;margin-left:6px;border:1px solid var(--line);border-radius:4px;overflow:hidden;vertical-align:middle}.pskind button{background:var(--panel);border:0;color:var(--mut);font:inherit;font-size:12px;padding:3px 8px;cursor:pointer}.pskind button.on{background:var(--olive);color:#f0ead8}
 /* 回報 */
 .fbb{float:right;margin-left:6px;width:28px;height:26px;padding:0;background:none;border:1px solid var(--line);border-radius:3px;color:var(--mut);cursor:pointer;font-size:13px}.potlist .p{position:relative;grid-template-columns:22px minmax(0,1fr) auto 28px!important}.potlist .p .fbb{float:none;align-self:start}
 .fbn{margin-top:4px;font-size:12.5px;color:var(--coy2)}.fbe{margin-top:6px}.fbe textarea{width:100%;font:inherit;font-size:13px}
@@ -1518,7 +1521,7 @@ function applyRoomPlan(pl,force){if(!pl||!pl.route||(!force&&num(pl.ts)<=num(S.r
   const keep={team:S.route.team};S.route=Object.assign(defaults().route,pl.route,{team:Math.max(num(keep.team,1),num(pl.route.team,1))});
   if(!Array.isArray(S.route.segs))S.route.segs=[];
   S.route.segs.forEach(g=>{g.hz=g.hz||Object.fromEntries(HZ.map(h=>[h[0],'u']));(['legs','pl']).forEach(f=>{if(g[f]&&!Array.isArray(g[f]))g[f]=Object.values(g[f]);});});
-  if(S.route.trk){const t=S.route.trk;['p','wps','cuts'].forEach(f=>{if(t[f]&&!Array.isArray(t[f]))t[f]=Object.values(t[f]);if(!t[f])t[f]=[];});}
+  if(S.route.trk){const t=S.route.trk;['p','wps','cuts','sc'].forEach(f=>{if(t[f]&&!Array.isArray(t[f]))t[f]=Object.values(t[f]);if(!t[f])t[f]=[];});}
   PLAN_P.forEach(k=>{if(pl.params&&pl.params[k]!=null)S[k]=pl.params[k];});
   S.roomPlanTs=num(pl.ts);RM.lastPlan=planKey(planPayload());fillParams();fillRoute();renderSegs();renderProfile();renderLoc();setDirty(true);compute();
   try{if(typeof wxCheck==='function')wxCheck(true);}catch(e){}
@@ -1538,14 +1541,14 @@ async function zip8(u8,de){if(typeof CompressionStream==='undefined')return null
 // 軌跡精簡（水平 3 m／高度 5 m 以內的點拿掉，航點、分段點一定留）＋整數差分
 function qrPack(){const pl=planPayload();pl.ts=num(S.roomPlanTs)||Date.now();const r=pl.route;delete r.team;const T=r.trk;let q=null;
   if(T&&T.p&&T.p.length>1){const P=T.p,n=P.length-1,o={la:P[0][0],lo:P[0][1]},XY=P.map(a=>pkXY(a[0],a[1],o)),keep=new Uint8Array(n+1);keep[0]=keep[n]=1;
-    (T.wps||[]).forEach(w=>{if(w.i>=0&&w.i<=n)keep[w.i]=1;});(T.cuts||[]).forEach(c=>{if(c>0&&c<n)keep[c]=1;});
+    (T.wps||[]).forEach(w=>{if(w.i>=0&&w.i<=n)keep[w.i]=1;});(T.cuts||[]).concat(T.sc||[]).forEach(c=>{if(c>0&&c<n)keep[c]=1;});
     const must=[];for(let i=0;i<=n;i++)if(keep[i])must.push(i);
     for(let k=0;k<must.length-1;k++){const st=[[must[k],must[k+1]]];while(st.length){const [a,b]=st.pop();if(b-a<2)continue;const [ax,ay]=XY[a],[bx,by]=XY[b],dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);let mi=-1,md=1;
       for(let i=a+1;i<b;i++){const h=L<1?Math.hypot(XY[i][0]-ax,XY[i][1]-ay):Math.abs((XY[i][0]-ax)*dy-(XY[i][1]-ay)*dx)/L,ea=P[a][2],eb=P[b][2],ei=P[i][2],v=(ea==null||eb==null||ei==null)?0:Math.abs(ei-(ea+(eb-ea)*(P[i][3]-P[a][3])/Math.max(1e-9,P[b][3]-P[a][3])));const d=Math.max(h/3,v/5);if(d>md){md=d;mi=i;}}
       if(mi>0){keep[mi]=1;st.push([a,mi],[mi,b]);}}}
     const map=new Int32Array(n+1);let j=-1;for(let i=0;i<=n;i++){if(keep[i])j++;map[i]=j;}
     q=[];let pa=0,po=0,pe=0;for(let i=0;i<=n;i++)if(keep[i]){const a=Math.round(P[i][0]*1e5),b=Math.round(P[i][1]*1e5),e=P[i][2]==null?-9999:Math.round(P[i][2]);q.push(a-pa,b-po,e-pe);pa=a;po=b;pe=e;}
-    T.wps=(T.wps||[]).map(w=>Object.assign({},w,{i:map[w.i]}));T.cuts=(T.cuts||[]).map(c=>map[c]);delete T.p;}
+    T.wps=(T.wps||[]).map(w=>Object.assign({},w,{i:map[w.i]}));T.cuts=(T.cuts||[]).map(c=>map[c]);if(T.sc)T.sc=T.sc.map(c=>map[c]);delete T.p;}
   return {v:1,pl,q};}
 function qrUnpack(o){if(!o||o.v!==1||!o.pl||!o.pl.route)throw new Error('格式不對');const pl=o.pl,T=pl.route.trk;
   if(T&&o.q){const p=[];let a=0,b=0,e=0,d=0;for(let i=0;i+2<o.q.length;i+=3){a+=o.q[i];b+=o.q[i+1];e+=o.q[i+2];const la=a/1e5,lo=b/1e5;if(p.length){const z=p[p.length-1];d+=hav({lat:z[0],lon:z[1]},{lat:la,lon:lo});}p.push([la,lo,e===-9999?null:e,+d.toFixed(4)]);}T.p=p;}
@@ -1670,6 +1673,18 @@ function altsHTML(g){if(!g.alts||!g.alts.length||!g.lp)return '';const C=gradeCf
   return `<div class="alts"><div class="altsh">${n>1?`找到 ${n} 條路線，${g.altManual?'你選了路線 '+(g.altSel+1):'已自動選坡度最平均的'}（點一列可以換）`:'這段路的坡度'}<span>${C.mode==='explore'?'探勘模式':'一般模式'}・上限 ${C.max===Infinity?'無':C.max+'%'}</span></div>
     <div style="overflow-x:auto"><table><tr><th></th><th>km</th><th>爬升<br>下降</th><th>平均<br>上／下坡</th><th>最陡<br>上／下坡</th><th>起伏<br>次數</th><th>判斷</th></tr>${rows}</table></div>
     <div class="altsn">最陡＝連續 100 m 的坡度；起伏＝爬超過 50 m 的上坡有幾段。地形資料解析度約 30 m，很短的陡坡（拉繩段）會算得比實際緩。僅供參考。</div></div>`;}
+/* 路段：在這裡過夜＝換天。軌跡路段看終點是不是換天點（T.cuts）；手動路段用 g.night */
+const segFwd=()=>S.route.segs.filter(x=>!x.ret);
+const segNightOf=g=>{const T=S.route.trk;return g.tk&&T?T.cuts.includes(g.ci):!!g.night;};
+function segTimeRow(g){const F=segFwd(),k=F.indexOf(g),first=F.findIndex(x=>x.day===g.day)===k,last=k===F.length-1;
+  return `<div class="sg segt" style="grid-template-columns:repeat(${3-(first?1:0)-(last?1:0)},1fr);margin-top:6px">${first?'':`<label>這段出發<input type="time" data-s="ts" value="${esc(g.ts||'')}" title="空白＝接上一段到達時間"></label>`}<label>背負<select data-s="lt"><option value="">全裝</option><option value="light"${g.lt==='light'?' selected':''}>輕裝${S.lt?'':'（先到裝備欄設定）'}</option></select></label>${last?'':`<label class="ngt"><input type="checkbox" data-s="night"${segNightOf(g)?' checked':''}>在這裡過夜</label>`}</div><div class="pnote segst" data-st></div>`;}
+/* 手動路段：天數由「在這裡過夜」往下數 */
+function segRenum(){const T=S.route.trk,F=segFwd();let day=1;const tk=F.filter(x=>x.tk);if(tk.length)day=Math.max(...tk.map(x=>x.day))+1;
+  F.filter(x=>!x.tk).forEach((g,i,A)=>{g.day=Math.min(7,day);if(g.night&&i<A.length-1)day++;});}
+function segNight(g,on){const T=S.route.trk;
+  if(g.tk&&T){const b=g.ci;T.sc=T.sc||[];if(on){T.sc=T.sc.filter(x=>x!==b);if(!T.cuts.includes(b))T.cuts.push(b);}else{T.cuts=T.cuts.filter(x=>x!==b);if(!T.sc.includes(b))T.sc.push(b);}
+    rebuildFromTrk({});toast(on?`「${g.to}」改成過夜（換天）`:`「${g.to}」改成同一天繼續走`);return;}
+  g.night=on;segRenum();syncReturn();renderSegs();renderProfile();setDirty(true);compute();}
 function segHTML(g){
   const ro=!!g.ret;
   const nf=(k,l,st,dis)=>`<label>${l}<input type="number" min="0" step="${st||1}" inputmode="decimal" data-s="${k}" value="${g[k]||''}"${dis?' disabled':''}></label>`;
@@ -1678,19 +1693,21 @@ function segHTML(g){
   const mulF=`<label>上河倍數 ×<input type="number" min="0.3" max="3" step="0.05" inputmode="decimal" data-s="mul" value="${g.sh>0&&g.mul?g.mul:''}" class="${g.mulManual?'':'autov'}" placeholder="${g.sh>0?'自動':'填上河時間才用得到'}"${g.sh>0?'':' disabled'}></label>`;
   return `<div class="seg${ro?' ret':''}" data-id="${g.id}">
     ${ro?`<div class="retlbl">↩ 第 ${g.day} 天回程：${esc(g.from)} → ${esc(g.to)}（由去程自動反算；距離與高度要改請改去程）</div>`:''}
-    <div class="sh">${ro?`<span class="retday">第 ${g.day} 天</span>`:`<select data-s="day">${[1,2,3,4,5,6,7].map(d=>`<option value="${d}"${g.day===d?' selected':''}>第 ${d} 天</option>`).join('')}</select>`}
+    <div class="sh"><span class="retday">第 ${g.day} 天</span>
     <input data-s="from" autocomplete="off" placeholder="起點（打字搜尋）" value="${esc(g.from)}"${ro?' disabled':''}><span>→</span><input data-s="to" autocomplete="off" placeholder="終點／營地（打字搜尋）" value="${esc(g.to)}"${ro?' disabled':''}>${ro?'<span></span>':'<button class="x" data-s="del" aria-label="刪除路段">✕</button>'}</div>
     ${ro?'':`<div class="psug" data-sug hidden></div><div class="gst" data-gst${g.gst?'':' hidden'}>${esc(g.gst||'')}</div>${altsHTML(g)}`}
     <div class="sg sg4">${nf('km','距離 km',0.1,ro)}${nf('start','起點海拔 m',10,ro)}${nf('camp','終點海拔 m',10,ro)}${nf('top','最高點 m',10,ro)}${nf('up','爬升 m',10,ro)}${nf('down','下降 m',10,ro)}${nf('sh','上河圖時間 h',0.1)}${mulF}${hrsF}<label data-hrw hidden>強度（平均心率）<select data-s="hrI"><option value="">自動</option>${Object.entries(HRLV).map(([k,t])=>`<option value="${k}"${g.hrI===k?' selected':''}>${t}</option>`).join('')}</select></label></div>
     ${(()=>{const fst=S.route.segs.find(x=>x.day===g.day);if(fst!==g)return '';const ds=S.route.segs.filter(x=>x.day===g.day),t0=(ds.find(x=>x.t0)||{}).t0||'',t1=(ds.find(x=>x.t1)||{}).t1||'';
       return `<div class="sg" style="grid-template-columns:1fr 1fr;margin-top:6px"><label>第 ${g.day} 天啟登時間<input type="time" data-s="t0" value="${esc(t0)}"></label><label>預計結束時間<input type="time" data-s="t1" value="${esc(t1)}" data-t1auto></label></div><div class="pnote" data-tn></div>`;})()}
+    ${ro?'':segTimeRow(g)}
     <div class="pnote" data-pn></div>
     <div class="sg" style="grid-template-columns:${g.day<Math.max(...S.route.segs.map(x=>x.day))?'1fr 1fr 1fr':'1fr 1fr'}">${(()=>{if(g.day>=Math.max(...S.route.segs.map(x=>x.day)))return '';const v=g.stay||guessStay(g);return `<label>今晚住哪${g.stay?'':' <small style="color:var(--mut)">(自動判斷)</small>'}<select data-s="stay">${Object.entries(STN).map(([k,t])=>`<option value="${k}"${v===k?' selected':''}>${t}</option>`).join('')}</select></label>`;})()}${sel('water','終點水源',WN)}${sel('sig','沿途手機訊號',SN)}</div>
     <div class="hz">${HZ.map(([k,n])=>`<button class="hzc ${g.hz[k]}" data-hz="${k}" title="點擊切換：? 未確認 → 有 → 無">${n}<b>${HZS[g.hz[k]]}</b></button>`).join('')}</div>
     <input class="nt" data-s="note" placeholder="撤退點／備註（例：大武祠可下撤）" value="${esc(g.note)}">
   </div>`;
 }
-function renderSegs(){if(typeof renderModeHint==='function')try{renderModeHint();}catch(e){}try{renderGradeBar();}catch(e){}const L=S.route.segs;$('#segList').innerHTML=L.length?L.map(segHTML).join(''):'<div style="color:var(--mut);font-size:13px;margin-bottom:8px">還沒有路段。照登山計畫書逐段填，或用「複製路線查詢提示詞」請 Gemini 整理後匯入。路況不確定就留「?」，App 會給預防建議。</div>';}
+function segMigrate(){const F=segFwd().filter(x=>!x.tk);F.forEach((g,i)=>{if(g.night===undefined)g.night=!!(F[i+1]&&F[i+1].day>g.day);});}
+function renderSegs(){try{segMigrate();}catch(e){}if(typeof renderModeHint==='function')try{renderModeHint();}catch(e){}try{renderGradeBar();}catch(e){}const L=S.route.segs;$('#segList').innerHTML=L.length?L.map(segHTML).join(''):'<div style="color:var(--mut);font-size:13px;margin-bottom:8px">還沒有路段。照登山計畫書逐段填，或用「複製路線查詢提示詞」請 Gemini 整理後匯入。路況不確定就留「?」，App 會給預防建議。</div>';}
 const segEl=$('#segList');
 $('#gradeBar').addEventListener('click',async e=>{const b=e.target.closest('[data-gm]');if(!b)return;const m=b.dataset.gm,G=S.route.grade=Object.assign({},S.route.grade||{});if((G.mode||'normal')===m)return;
   if(m==='explore'&&!(await disclaim('explore')))return;G.mode=m;setDirty(true);altRepick();renderGradeBar();syncReturn();renderSegs();renderProfile();compute();});
@@ -1700,6 +1717,7 @@ segEl.addEventListener('click',e=>{const tr=e.target.closest('[data-alt]');if(!t
 segEl.addEventListener('focusout',e=>{if(e.target.dataset&&(e.target.dataset.s==='hrs'||e.target.dataset.s==='mul'))setTimeout(compute,0);});
 const findG=el=>{const r=el.closest('.seg');return r?S.route.segs.find(x=>x.id===r.dataset.id):null;};
 segEl.addEventListener('input',e=>{const g=findG(e.target),k=e.target.dataset.s;if(!g||!k)return;
+  if(k==='ts'){g.ts=e.target.value;setDirty(true);compute();return;}if(k==='lt'||k==='night')return;
   if(k==='t0'||k==='t1'){S.route.segs.filter(x=>x.day===g.day).forEach(x=>{delete x[k];});g[k]=e.target.value;setDirty(true);compute();return;}
   if(k==='from'||k==='to'){g[k]=e.target.value;delete g.lp;delete g.alts;if(k==='from'){delete g.fromP;}else{delete g.toP;}showSug(e.target,g,k);}
   else if(k==='note')g[k]=e.target.value;
@@ -1709,6 +1727,8 @@ segEl.addEventListener('input',e=>{const g=findG(e.target),k=e.target.dataset.s;
   if(!g.ret&&k!=='note'&&k!=='hrs'){clearTimeout(segEl._t);segEl._t=setTimeout(()=>{if(syncReturn())renderSegs();compute();},500);}
   setDirty(true);compute();});
 segEl.addEventListener('change',e=>{const g=findG(e.target),k=e.target.dataset.s;if(!g)return;
+  if(k==='lt'){g.lt=e.target.value;if(g.lt==='light'&&!S.lt)toast('輕裝重量要先到裝備欄「輕裝」設定，現在先用全裝算');setDirty(true);compute();renderProfile();return;}
+  if(k==='night'){segNight(g,e.target.checked);return;}
   if((k==='from'||k==='to')&&!g.ret){const v=e.target.value.trim();setTimeout(()=>{if(!v||g[k+'P']||g._pick&&Date.now()-g._pick<1500)return;locateEnd(g,k,v);},350);return;}
   if(k==='day'){g.day=+e.target.value;S.route.segs.sort((a,b)=>a.day-b.day);syncReturn();renderSegs();}else if(k==='water'||k==='sig'||k==='hrI')g[k]=e.target.value;else if(k==='stay'){g.stay=e.target.value;renderSegs();}else return;setDirty(true);compute();});
 segEl.addEventListener('pointerdown',e=>{const b=e.target.closest('.psug button');if(b){const g=findG(b);if(g)g._pick=Date.now();}});
@@ -1719,7 +1739,7 @@ segEl.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)retu
   if(b.dataset.s==='del'){S.route.segs=S.route.segs.filter(x=>x!==g);if(!S.route.segs.some(x=>!x.ret))S.route.trk=null;syncReturn();renderSegs();renderProfile();}
   else if(b.dataset.hz){const k=b.dataset.hz,seq=['u','y','n'];g.hz[k]=seq[(seq.indexOf(g.hz[k])+1)%3];b.className='hzc '+g.hz[k];b.querySelector('b').textContent=HZS[g.hz[k]];}
   else return;setDirty(true);compute();});
-$('#addSeg').addEventListener('click',()=>{const L=S.route.segs.filter(x=>!x.ret),last=L[L.length-1];const g=newSeg(last?Math.min(7,last.day+1):1);if(last){g.from=last.to;g.start=last.camp||0;const p=endP(last,'to');if(p)g.fromP=p;}S.route.segs=[...L,g];syncReturn();renderSegs();setDirty(true);compute();});
+$('#addSeg').addEventListener('click',()=>{const L=S.route.segs.filter(x=>!x.ret),last=L[L.length-1];const g=newSeg(last?Math.min(7,last.day+(segNightOf(last)?1:0)):1);if(last){g.from=last.to;g.start=last.camp||0;const p=endP(last,'to');if(p)g.fromP=p;}S.route.segs=[...L,g];segRenum();syncReturn();renderSegs();setDirty(true);compute();});
 $('#bRImpShow').addEventListener('click',()=>{$('#rImp').hidden=!$('#rImp').hidden;});
 function routePrompt(){return `請幫我整理台灣登山路線的資料，只輸出 JSON，不要其他文字。
 
@@ -1786,6 +1806,7 @@ function sweatMul(){const L=(ME.sweat||[]).map(r=>{const loss=(r.pre-r.post)+(r.
 const courseC=(h,km,up,down)=>1.8*(h||0)+0.3*(km||0)+10*(up||0)/1000+0.6*(down||0)/1000;
 const ciGrade=c=>c<15?'輕鬆':c<25?'一般':c<35?'體力好':c<40?'單日極限':'建議分兩天';
 const altF=a=>1/Math.max(0.6,1-0.063*Math.max(0,(a||0)-600)/1000);
+const SEGT=new Map();
 function routeDays(packKg){
   const L=S.route.segs;if(!L.length)return [];
   const maxD=Math.max(...L.map(g=>g.day)),out=[];
@@ -1799,7 +1820,10 @@ function routeDays(packKg){
     HZ.forEach(([k])=>{o.hz[k]=gs.some(g=>g.hz[k]==='y')?'y':gs.some(g=>g.hz[k]==='u')?'u':'n';});
     o.eq=+(o.km+o.up/100).toFixed(1);o.ciH=0;o.nai=naismith(o.km,o.up,o.down);o.est=o.nai*lf;o.eta=etaOf(o.hz);
     const f=gs.find(g=>g.t0),e=gs.find(g=>g.t1);o.t0=f?hm2m(f.t0):null;o.t1m=e?hm2m(e.t1):null;
-    o.hrsUse=o.plan||o.est;o.t1a=o.t0!=null?o.t0+o.hrsUse*60:null;if(o.t1m!=null&&o.t0!=null&&o.t1m<o.t0)o.t1m+=1440;o.t1=o.t1m!=null?o.t1m:o.t1a;o.sun=sunFor(d);
+    o.hrsUse=o.plan||o.est;o.t1a=o.t0!=null?o.t0+o.hrsUse*60:null;
+    /* 路段時間軸：第一段從啟登時間，之後每段＝自訂出發或接上一段到達 */
+    if(o.t0!=null){let cur=o.t0,ok=true;gs.forEach(g=>{let st=g.ts&&g!==gs[0]?hm2m(g.ts):cur;if(st!=null&&cur!=null&&st<cur-600)st+=1440;const h=g.hrs>0?g.hrs:naismith(g.km,g.up,g.down)*lf;const en=st!=null?st+h*60:null;SEGT.set(g.id,{st,en,h,auto:!(g.ts&&g!==gs[0])});cur=en;});if(cur!=null)o.t1a=cur;}
+    else gs.forEach(g=>SEGT.set(g.id,{st:null,en:null,h:g.hrs>0?g.hrs:naismith(g.km,g.up,g.down)*lf}));if(o.t1m!=null&&o.t0!=null&&o.t1m<o.t0)o.t1m+=1440;o.t1=o.t1m!=null?o.t1m:o.t1a;o.sun=sunFor(d);
     out.push(o);
   }
   return out;
@@ -1972,16 +1996,18 @@ const trkPts=T=>trkFull(T).map(a=>({lat:a[0],lon:a[1],ele:a[2]==null?NaN:a[2],d:
 function rebuildFromTrk(opt){
   opt=opt||{};const T=S.route.trk;if(!T)return;const P=trkPts(T),n=P.length-1;
   T.cuts=[...new Set(T.cuts)].filter(i=>i>0&&i<n).sort((a,b)=>a-b);
-  const idx=[0,...T.cuts,n],nr=S.route.segs.filter(g=>!g.ret),hasTk=nr.some(g=>g.tk),old=hasTk?nr.filter(g=>g.tk):nr,man=hasTk?nr.filter(g=>!g.tk):[],same=old.length===idx.length-1;
+  T.sc=[...new Set(T.sc||[])].filter(i=>i>0&&i<n&&!T.cuts.includes(i)).sort((a,b)=>a-b);
+  const idx=[0,...[...T.cuts,...T.sc].sort((a,b)=>a-b),n],dayAt=a=>1+T.cuts.filter(c=>c<=a).length,nr=S.route.segs.filter(g=>!g.ret),hasTk=nr.some(g=>g.tk),old=hasTk?nr.filter(g=>g.tk):nr,man=hasTk?nr.filter(g=>!g.tk):[],same=old.length===idx.length-1;
   const WP=trkWps(T),mir=mirOn(),first=S.route.segs.find(g=>!g.ret);const near=(i,tol)=>{const w=WP.filter(w=>Math.abs(P[w.i].d-P[i].d)<=tol).sort((a,b)=>Math.abs(P[a.i].d-P[i].d)-Math.abs(P[b.i].d-P[i].d))[0];return w?w.n:(mir&&i===n&&first&&first.from&&!/^起點$/.test(first.from)?first.from:'');};
-  S.route.segs=idx.slice(0,-1).map((a,k)=>{const b=idx[k+1],st=segStats(P,a,b),sg=newSeg(Math.min(7,k+1)),o=old[k]||{};
+  S.route.segs=idx.slice(0,-1).map((a,k)=>{const b=idx[k+1],st=segStats(P,a,b),dy=dayAt(a),sg=newSeg(Math.min(7,dy)),o=old.find(x=>x.ai===a&&x.ci===b)||old.find(x=>x.ai===a)||(same?old[k]:null)||{};
     Object.assign(sg,st,{start:isFinite(P[a].ele)?Math.round(P[a].ele):0,slat:P[a].lat,slon:P[a].lon,hrs:0,
-      ai:a,ci:b,from:(o.from&&(o.ai===a||k===0&&o.ai==null&&same))?o.from:(near(a,0.3)||(k===0&&o.from)||(k===0?'起點':`第${k+1}天出發`)),to:(o.to&&(o.ci===b||o.ci==null&&same&&!opt.renameEnds))?o.to:(near(b,0.3)||(k===idx.length-2?'終點':`第${k+1}天營地`))});
+      ai:a,ci:b,from:(o.from&&(o.ai===a||k===0&&o.ai==null&&same))?o.from:(near(a,0.3)||(k===0&&o.from)||(k===0?'起點':T.cuts.includes(a)?`第${dy}天出發`:`${P[a].d.toFixed(1)} km 處`)),to:(o.to&&(o.ci===b||o.ci==null&&same&&!opt.renameEnds))?o.to:(near(b,0.3)||(k===idx.length-2?'終點':T.cuts.includes(b)?`第${dy}天營地`:`${P[b].d.toFixed(1)} km 處`))});
     if(o.id&&same)['sh','mul','mulManual','legs','pl'].forEach(f=>{if(o[f]!=null)sg[f]=o[f];});
     if(o.id)['water','sig','hz','note','stay'].forEach(f=>{if(o[f]!=null)sg[f]=o[f];});
+    if(o.id&&o.ai===a)['lt','ts','t0','t1'].forEach(f=>{if(o[f])sg[f]=o[f];});
     if(same&&o.kmText){sg.km=o.km;sg.kmText=true;}
     sg.tk=true;return sg;});
-  const nd=S.route.segs.length;man.forEach((g,i)=>{g.day=Math.min(7,nd+i+1);S.route.segs.push(g);});
+  const nd=Math.max(...S.route.segs.map(g=>g.day));man.forEach((g,i)=>{g.day=Math.min(7,nd+i+1);S.route.segs.push(g);});
   const loop=hav(P[0],P[n])<0.5;if(loop&&opt.detectLoop)S.route.mode='AA';
   if(!S.route.name&&T.title)S.route.name=T.title;
   const top=S.route.segs.reduce((a,b)=>b.top>a.top?b:a);
@@ -2102,11 +2128,11 @@ function disclaim(kind){const key=kind==='explore'?'gearPlanner.discX':'gearPlan
 async function calcDay(g,k){
   const a=endP(g,'from'),b=endP(g,'to'),T=S.route.trk;
   // 軌跡上的天：改終點＝移動分天點
-  if(T&&g.tk&&k==='to'&&b){const tk=S.route.segs.filter(x=>x.tk&&!x.ret),d=tk.indexOf(g),i=snapTrk(b,d>0?(T.cuts[d-1]||0)+1:0),F=trkFull(T);
+  if(T&&g.tk&&k==='to'&&b){const tk=S.route.segs.filter(x=>x.tk&&!x.ret),d=tk.indexOf(g),U=[...T.cuts,...(T.sc||[])].sort((x,y)=>x-y),i=snapTrk(b,d>0?(U[d-1]||0)+1:0),F=trkFull(T);
     if(i!=null){const nT=T.p.length-1;
       if(!T.wps.some(w=>w.n===g.to))T.wps.push({n:g.to,i:i<=nT?i:2*nT-i});
-      if(i>0&&i<F.length-1){if(d<T.cuts.length)T.cuts[d]=i;else T.cuts.push(i);}
-      g.gst='';rebuildFromTrk({renameEnds:true});toast(`已把第 ${g.day} 天終點設在「${g.to}」（軌跡 ${F[i][3].toFixed(1)} km），其餘天數跟著重算`);return;}
+      if(i>0&&i<F.length-1){const ob=U[d];if(ob!=null&&(T.sc||[]).includes(ob))T.sc[T.sc.indexOf(ob)]=i;else if(ob!=null&&T.cuts.includes(ob))T.cuts[T.cuts.indexOf(ob)]=i;else T.cuts.push(i);}
+      g.gst='';rebuildFromTrk({renameEnds:true});toast(`已把這段終點設在「${g.to}」（軌跡 ${F[i][3].toFixed(1)} km），其餘天數跟著重算`);return;}
   }
   if(g.tk){g.gst='';renderSegs();compute();return;}
   if(!a||!b){renderSegs();compute();return;}
@@ -3022,7 +3048,7 @@ async function drawFinish(){let pts=drawPts().map(q=>q.slice());if(pts.length<2)
   else if(inf.mode==='replace'){const j=inf.j,ins=pts.slice(1,-1);np=P.slice(0,A+1).concat(ins,P.slice(j));const sh=ins.length-(j-A-1);mapI=x=>x<=A?x:x>=j?x+sh:null;}
   else{const back=pts.slice(0,-1).reverse();const ins=pts.slice(1).concat(back.slice(1),[P[A].slice()]);np=P.slice(0,A+1).concat(ins,P.slice(A+1));mapI=x=>x<=A?x:x+ins.length;}
   let d=0;np=np.map((q,i)=>{if(i)d+=hav({lat:np[i-1][0],lon:np[i-1][1]},{lat:q[0],lon:q[1]});return [q[0],q[1],q[2],+d.toFixed(3)];});
-  T.p=np;T.wps=T.wps.map(w=>({n:w.n,i:mapI(w.i)})).filter(w=>w.i!=null);T.cuts=T.cuts.map(mapI).filter(c=>c!=null&&c>0&&c<np.length-1);
+  T.p=np;T.wps=T.wps.map(w=>({n:w.n,i:mapI(w.i)})).filter(w=>w.i!=null);T.cuts=T.cuts.map(mapI).filter(c=>c!=null&&c>0&&c<np.length-1);if(T.sc)T.sc=T.sc.map(mapI).filter(c=>c!=null&&c>0&&c<np.length-1);
   drawCancel();rebuildFromTrk({renameEnds:true});toast({append:'已接在路線後面',replace:'已改走你畫的路',detour:'已加上支線（去了再回來）'}[inf.mode]+'，距離和爬升重算了');}
 
 // ===== 偏離後回到路線：問要不要用實際走的路取代那段（完全不用網路）=====
@@ -3045,9 +3071,9 @@ const excHTML=()=>{const O=EXC.offer;if(!O||Date.now()-O.ts>2*3600e3)return '';r
 // 轉折處放控制點（≤ 約 50 個，營地／航點／分天點一定有）。拖點＝移動、點線＝加點／這段重算／不通繞路、點圓點＝刪除。
 // 只在導航畫面的「編輯路線」模式能改，平常路線是鎖住的。接法：沿步道（要網路，沒有就自動直線）或直線（離線可用，高度用地形資料）。
 const ED={on:false,ctl:[],sel:null,selSeg:null,segI:null,snap:true,busy:false,drag:null,tapT:0,msg:''};
-const edMust=i=>{const T=S.route.trk;if(!T)return false;return i===0||i===T.p.length-1||T.cuts.includes(i)||T.wps.some(w=>w.i===i);};
+const edMust=i=>{const T=S.route.trk;if(!T)return false;return i===0||i===T.p.length-1||T.cuts.includes(i)||(T.sc||[]).includes(i)||T.wps.some(w=>w.i===i);};
 function edCtl(){const T=S.route.trk;if(!T)return [];const P=T.p,n=P.length-1;if(n<1)return [0];const o={la:P[0][0],lo:P[0][1]},XY=P.map(q=>pkXY(q[0],q[1],o));
-  const must=new Set([0,n]);T.wps.forEach(w=>{if(w.i>=0&&w.i<=n)must.add(w.i);});T.cuts.forEach(c=>{if(c>0&&c<n)must.add(c);});
+  const must=new Set([0,n]);T.wps.forEach(w=>{if(w.i>=0&&w.i<=n)must.add(w.i);});T.cuts.concat(T.sc||[]).forEach(c=>{if(c>0&&c<n)must.add(c);});
   const dp=eps=>{const keep=new Uint8Array(n+1);keep[0]=keep[n]=1;const st=[[0,n]];while(st.length){const [a,b]=st.pop();if(b-a<2)continue;const [ax,ay]=XY[a],[bx,by]=XY[b],dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);let mi=-1,md=eps;
       for(let i=a+1;i<b;i++){const d=L<1?Math.hypot(XY[i][0]-ax,XY[i][1]-ay):Math.abs((XY[i][0]-ax)*dy-(XY[i][1]-ay)*dx)/L;if(d>md){md=d;mi=i;}}if(mi>0){keep[mi]=1;st.push([a,mi],[mi,b]);}}return keep;};
   let eps=15,keep;for(let k=0;k<14;k++){keep=dp(eps);let c=0;for(let i=0;i<=n;i++)c+=keep[i];if(c<=50)break;eps*=1.5;}
@@ -3065,7 +3091,7 @@ function edReplace(i0,i1,newPts,loc){const T=S.route.trk,P=T.p,sh=newPts.length-
   for(let i=0;i<np.length;i++)if(np[i][2]==null){let a=i-1;while(a>=0&&np[a][2]==null)a--;let b=i+1;while(b<np.length&&np[b][2]==null)b++;np[i][2]=a>=0&&b<np.length?Math.round(np[a][2]+(np[b][2]-np[a][2])*(i-a)/(b-a)):a>=0?np[a][2]:b<np.length?np[b][2]:null;}
   let d=0;T.p=np.map((q,i)=>{if(i)d+=hav({lat:np[i-1][0],lon:np[i-1][1]},{lat:q[0],lon:q[1]});return [+q[0].toFixed(5),+q[1].toFixed(5),q[2]==null?null:Math.round(q[2]),+d.toFixed(3)];});
   const mapI=j=>j<i0?j:j>i1?j+sh:j===i0?i0:j===i1?i0+newPts.length-1:null;
-  T.wps=T.wps.map(w=>({n:w.n,i:mapI(w.i)})).filter(w=>w.i!=null);T.cuts=T.cuts.map(mapI).filter(c=>c!=null&&c>0&&c<T.p.length-1);
+  T.wps=T.wps.map(w=>({n:w.n,i:mapI(w.i)})).filter(w=>w.i!=null);T.cuts=T.cuts.map(mapI).filter(c=>c!=null&&c>0&&c<T.p.length-1);if(T.sc)T.sc=T.sc.map(mapI).filter(c=>c!=null&&c>0&&c<T.p.length-1);
   ED.ctl=[...new Set([...ED.ctl.filter(c=>c<i0),...loc.map(l=>i0+l),...ED.ctl.filter(c=>c>i1).map(c=>c+sh)])].filter(c=>c>=0&&c<T.p.length).sort((a,b)=>a-b);
   rebuildFromTrk({renameEnds:true});}
 function edCan(){if(S.room&&RM.isOwner===false){toast('路線由管理員規劃，你不能改');return false;}if(!S.route.trk||S.route.trk.p.length<2){toast('要先有路線（GPX、畫的、或貼行程算出的）才能編輯');return false;}return true;}
@@ -3109,7 +3135,7 @@ function edMove(k,ll){return edDo(async()=>{const T=S.route.trk,P=T.p,c=ED.ctl,n
   ED.msg=(how==='fallback'?'找不到步道（或沒網路），這段先用直線。':'')+'新路段：'+edStatTxt(edStats(pts));});}
 function edDel(k){return edDo(async()=>{const T=S.route.trk,P=T.p,c=ED.ctl,n=P.length-1,L=c.length-1;if(c.length<3){toast('路線至少要兩個點；要整條刪掉請按「清除整條」');return;}
   if(edMust(c[k])&&k!==0&&k!==L){toast('營地／航點不能刪，可以拖動');return;}
-  const lost=(a,b)=>T.cuts.some(x=>x>a&&x<b)||T.wps.some(w=>w.i>a&&w.i<b);
+  const lost=(a,b)=>T.cuts.concat(T.sc||[]).some(x=>x>a&&x<b)||T.wps.some(w=>w.i>a&&w.i<b);
   if(k===0){const w=lost(-1,c[1]);undoPush();edReplace(0,c[1],[P[c[1]]],[0]);if(w)ED.msg='剪掉的範圍裡有營地／航點，一起刪了。';}
   else if(k===L){const w=lost(c[L-1],n+1);undoPush();edReplace(c[L-1],n,[P[c[L-1]]],[0]);if(w)ED.msg='剪掉的範圍裡有營地／航點，一起刪了。';}
   else{const a=await edLeg(P[c[k-1]],P[c[k+1]],ED.snap);undoPush();edReplace(c[k-1],c[k+1],a.pts,[0,a.pts.length-1]);ED.msg=(a.how==='fallback'?'找不到步道，先用直線。':'')+'接起來的路段：'+edStatTxt(edStats(a.pts));}
@@ -3211,10 +3237,10 @@ function editUI(){const nb=document.querySelector('#navMode .navbtns');if(!nb)re
 const TRIM={on:false,a:null,b:null,side:'all'};
 // 路線修改的復原：最多 20 步，只放記憶體（太大不存）；T.undo 只留最後一步給舊流程相容。清除整條路線也能復原
 const UNDO=[];
-function undoPush(){const T=S.route.trk;const u=T?JSON.stringify({p:T.p,wps:T.wps,cuts:T.cuts,mode:S.route.mode,src:T.src,title:T.title||''}):JSON.stringify({none:true,mode:S.route.mode,segs:S.route.segs});UNDO.push(u);if(UNDO.length>20)UNDO.shift();if(T)T.undo=u;}
+function undoPush(){const T=S.route.trk;const u=T?JSON.stringify({p:T.p,wps:T.wps,cuts:T.cuts,sc:T.sc||[],mode:S.route.mode,src:T.src,title:T.title||''}):JSON.stringify({none:true,mode:S.route.mode,segs:S.route.segs});UNDO.push(u);if(UNDO.length>20)UNDO.shift();if(T)T.undo=u;}
 function undoDo(){let T=S.route.trk;const raw=UNDO.length?UNDO.pop():(T&&T.undo);if(!raw)return false;const u=JSON.parse(raw);
   if(u.none){S.route.trk=null;S.route.mode=u.mode;if(Array.isArray(u.segs))S.route.segs=u.segs;try{mapClearRoute();}catch(e){}fillRoute();syncReturn();renderSegs();renderProfile();setDirty(true);compute();}
-  else{if(!T)T=S.route.trk={p:[],wps:[],cuts:[],src:u.src||'draw',title:u.title||''};T.p=u.p;T.wps=u.wps;T.cuts=u.cuts;S.route.mode=u.mode;fillRoute();rebuildFromTrk({renameEnds:true});}
+  else{if(!T)T=S.route.trk={p:[],wps:[],cuts:[],src:u.src||'draw',title:u.title||''};T.p=u.p;T.wps=u.wps;T.cuts=u.cuts;T.sc=u.sc||[];S.route.mode=u.mode;fillRoute();rebuildFromTrk({renameEnds:true});}
   T=S.route.trk;if(T){if(UNDO.length)T.undo=UNDO[UNDO.length-1];else delete T.undo;}try{if(ED.on){ED.ctl=edCtl();ED.sel=ED.selSeg=null;edRender();edBar();}}catch(e){}return true;}
 function trimBar(){const bar=NAV.on?$('#navEdit'):$('#trimBar');$('#trimBar').hidden=NAV.on||!TRIM.on;if(NAV.on&&!DRAW.on)$('#navEdit').hidden=!TRIM.on;
   try{editUI();}catch(e){}const T=S.route.trk;if(!TRIM.on||!T)return;const P=trkFull(T);
@@ -3241,7 +3267,7 @@ function trimDo(){const T=S.route.trk;if(!T||TRIM.a==null||TRIM.b==null)return;
   T.p=P.slice(0,a+1).concat(P.slice(b).map(q=>[q[0],q[1],q[2],+(q[3]-dd).toFixed(3)]));
   const mapI=j=>j<=a?j:j>=b?j-shift:null;
   T.wps=T.wps.map(w=>({n:w.n,i:mapI(w.i)})).filter(w=>w.i!=null);
-  T.cuts=T.cuts.map(mapI).filter(c=>c!=null&&c>0&&c<T.p.length-1);
+  T.cuts=T.cuts.map(mapI).filter(c=>c!=null&&c>0&&c<T.p.length-1);if(T.sc)T.sc=T.sc.map(mapI).filter(c=>c!=null&&c>0&&c<T.p.length-1);
   TRIM.on=false;TRIM.a=TRIM.b=null;rebuildFromTrk({renameEnds:true});trimBar();trimDraw();toast(`已刪掉 ${dd.toFixed(1)} km，爬升下降重新計算了`);}
 $('#trimBtn').addEventListener('click',()=>{if(!S.route.trk){toast('要有 GPX 軌跡或貼行程文字算出的路線才能刪減');return;}
   if(S.room&&RM.isOwner===false){toast('路線由管理員規劃，你不能改');return;}TRIM.on=!TRIM.on;TRIM.a=TRIM.b=null;renderProfile();trimBar();trimDraw();});
@@ -3250,6 +3276,7 @@ function trimClick(e){const sd=e.target.closest('[data-side]');if(sd){TRIM.side=
 $('#trimBar').addEventListener('click',trimClick);$('#navEdit').addEventListener('click',e=>{if(ED.on)edClick(e);else if(TRIM.on)trimClick(e);else if(DRAW.on)drawClick(e);});
 $('#trimUndo').addEventListener('click',()=>{if(undoDo()){try{trimBar();}catch(e){}toast(UNDO.length?`已復原（還可以再退 ${UNDO.length} 步）`:'已復原');}});
 const PROF={split:false,a:null,b:null,rt:'',key:null,zoom:1,vS:0,dragged:false};
+document.addEventListener('click',e=>{const k=e.target.closest('[data-pskind]');if(k){PROF.sk=k.dataset.pskind;renderProfile();}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-psplit]');if(!b)return;PROF.split=!PROF.split;PROF.a=PROF.b=null;PROF.rt='';renderProfile();});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pb]');if(!b||!PROF.fn)return;const F=PROF.fn,P=F.P,k=b.dataset.pb,c=PROF.cur||0;
   if(k==='l'||k==='r'){const step=Math.max(0.02,F.D/300),t=P[c][3]+(k==='r'?step:-step);let i=c;if(k==='r')while(i<F.n&&P[i][3]<t)i++;else while(i>0&&P[i][3]>t)i--;F.setCur(i,true);return;}
@@ -3261,7 +3288,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('[data-restx]'))retur
 function profMe(){const el=document.getElementById('profMe'),F=PROF.fn;if(!el||!F)return;const ok=GPS.pKm!=null&&F.P===MAP.P&&GPS.pKm<=F.D+1e-6,x=ok?F.X(GPS.pKm):-10;el.setAttribute('x1',x);el.setAttribute('x2',x);}
 function renderProfile(){
   let T=S.route.trk;const virt=!T;if(!T)T=virtualTrk();$('#profWrap').hidden=!T;if(!T){if(NAV.on)$('#prof').innerHTML='<div style="color:#aaa;font-size:13px;padding:10px">還沒有路線。到選單按「畫路線」在地圖上畫。</div>';return;}
-  if(!virt&&!S.route.segs.some(g=>g.tk))S.route.segs.filter(g=>!g.ret).slice(0,T.cuts.length+1).forEach(g=>g.tk=true);
+  if(!virt&&!S.route.segs.some(g=>g.tk))S.route.segs.filter(g=>!g.ret).slice(0,T.cuts.length+(T.sc||[]).length+1).forEach(g=>g.tk=true);
   const pbx=$('#prof'),H=170,W=(NAV.on||document.body.classList.contains('redit'))&&pbx.clientWidth&&pbx.clientHeight?Math.max(320,Math.round(H*pbx.clientWidth/Math.max(60,pbx.clientHeight))):600;
   const P=trkFull(T),WP=trkWps(T),pl=38,pb=21,pt=8,n=P.length-1,D=P[n][3]||1,mir=mirOn(),nTurn=T.p.length-1;
   const es=P.map(x=>x[2]).filter(v=>v!=null);if(!es.length){$('#prof').innerHTML='<div class="rec">這條軌跡沒有高度資料</div>';return;}
@@ -3277,7 +3304,7 @@ function renderProfile(){
   /* 距離：整 5 km 大字（路線很長改 10 km）；每 1 km（放很大時 0.5 km）小字，太擠就只畫刻度 */
   const kmPx=(W-pl-6)/visD,xMs=kmPx>=70?0.5:1,xMj=kmPx*5<26?10:5,xMinLbl=xMs*kmPx>=24,xMaj=[],xMin=[];
   for(let k=0;k*xMs<=D+1e-9;k++){const v=+(k*xMs).toFixed(2);(Math.abs(v/xMj-Math.round(v/xMj))<1e-6?xMaj:xMin).push(v);}
-  const cuts=T.cuts.map(i=>X(P[i][3]));
+  const cuts=T.cuts.map(i=>X(P[i][3])),scs=(T.sc||[]).filter(i=>i<P.length).map(i=>X(P[i][3])),ltz=virt?[]:S.route.segs.filter(g=>g.tk&&!g.ret&&g.lt==='light'&&g.ai!=null&&g.ci!=null&&g.ci<P.length).map(g=>[X(P[g.ai][3]),X(P[g.ci][3])]);
   const days=[0,...T.cuts,n];
   const tier=[-1e9,-1e9];const seen=new Set();
   const wl=WP.map(w=>{const x=X(P[w.i][3]),e=P[w.i][2];if(e==null)return '';const y=Y(e);const nm=w.n.slice(0,7),wd=nm.length*10+4;
@@ -3291,11 +3318,13 @@ function renderProfile(){
     <g clip-path="url(#profClipT)"><g class="ppan">${xMin.map(v=>`<line x1="${X(v)}" x2="${X(v)}" y1="${H-pb}" y2="${H-pb+3}" stroke="var(--mut)" stroke-width="0.8"/>${xMinLbl?`<text x="${X(v)}" y="${H-5}" font-size="9" fill="var(--mut)" text-anchor="middle">${v}</text>`:''}`).join('')}${xMaj.map(v=>`<line x1="${X(v)}" x2="${X(v)}" y1="${H-pb}" y2="${H-pb+5}" stroke="var(--txt)" stroke-width="1.2"/><text x="${X(v)}" y="${H-4}" font-size="12.5" font-weight="700" fill="var(--txt)" text-anchor="middle">${v}</text>`).join('')}</g></g>
     <g clip-path="url(#profClip)"><g class="ppan" id="profPan">${xMaj.filter(v=>v>0).map(v=>`<line x1="${X(v)}" x2="${X(v)}" y1="${pt}" y2="${H-pb}" stroke="var(--mut)" stroke-width="0.6" opacity=".45"/>`).join('')}<path d="${area}" fill="rgba(95,174,78,.18)"/><path d="${path}" fill="none" stroke="#8fae7a" stroke-width="1.6"/>
     ${days.slice(0,-1).map((a,k)=>`<text x="${(X(P[a][3])+X(P[days[k+1]][3]))/2}" y="${pt+10}" font-size="11" fill="var(--coy2)" text-anchor="middle" font-weight="600">D${k+1}</text>`).join('')}
-    ${cuts.map(x=>`<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="var(--coy)" stroke-width="1.4" stroke-dasharray="4 3"/>`).join('')}
+    ${ltz.map(([a,b])=>`<rect x="${a}" y="${pt}" width="${Math.max(0,b-a)}" height="${H-pb-pt}" fill="rgba(155,181,138,.13)"/><text x="${(a+b)/2}" y="${H-pb-4}" font-size="9.5" fill="#9bb58a" text-anchor="middle">輕裝</text>`).join('')}
+    ${cuts.map(x=>`<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="var(--coy)" stroke-width="1.8"/>`).join('')}
+    ${scs.map(x=>`<line x1="${x}" x2="${x}" y1="${pt}" y2="${H-pb}" stroke="var(--coy2)" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`).join('')}
     ${mir?`<rect x="${X(P[nTurn][3])}" y="${pt}" width="${X(D)-X(P[nTurn][3])}" height="${H-pb-pt}" fill="rgba(255,255,255,.03)"/><line x1="${X(P[nTurn][3])}" x2="${X(P[nTurn][3])}" y1="${pt+14}" y2="${H-pb}" stroke="var(--mut)" stroke-width="0.8"/><text x="${X(P[nTurn][3])+3}" y="${H-pb-4}" font-size="9.5" fill="var(--mut)">折返・回程 →</text>`:''}
     ${TRIM.on&&TRIM.a!=null?`<line x1="${X(P[TRIM.a][3])}" x2="${X(P[TRIM.a][3])}" y1="${pt}" y2="${H-pb}" stroke="#e0715f" stroke-width="2"/>`:''}
     ${TRIM.on&&TRIM.a!=null&&TRIM.b!=null?`<rect x="${X(P[TRIM.a][3])}" y="${pt}" width="${X(P[TRIM.b][3])-X(P[TRIM.a][3])}" height="${H-pb-pt}" fill="rgba(224,113,95,.28)"/><line x1="${X(P[TRIM.b][3])}" x2="${X(P[TRIM.b][3])}" y1="${pt}" y2="${H-pb}" stroke="#e0715f" stroke-width="2"/>`:''}
-    ${wl}<rect id="profAB" x="-10" y="${pt}" width="0" height="${H-pb-pt}" fill="rgba(255,60,220,.2)"/><line id="profA" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profB" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profRest" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ffe14d" stroke-width="1" stroke-dasharray="2 2"/><text id="profRestT" x="-30" y="${pt+22}" font-size="10" fill="#ffe14d">◆</text><line id="profMe" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#2f8cff" stroke-width="2"/><line id="profCur" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#fff" stroke-width="1" opacity=".85"/></g></g></svg>${virt?'':`<button type="button" class="profsplit${PROF.split?' on':''}" data-psplit>${PROF.split?ic('trim')+'分天編輯中（點圖切開／取消）・完成':ic('trim')+'編輯分天'}</button>`}`;
+    ${wl}<rect id="profAB" x="-10" y="${pt}" width="0" height="${H-pb-pt}" fill="rgba(255,60,220,.2)"/><line id="profA" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profB" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ff3cdc" stroke-width="1.6"/><line id="profRest" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#ffe14d" stroke-width="1" stroke-dasharray="2 2"/><text id="profRestT" x="-30" y="${pt+22}" font-size="10" fill="#ffe14d">◆</text><line id="profMe" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#2f8cff" stroke-width="2"/><line id="profCur" x1="-10" x2="-10" y1="${pt}" y2="${H-pb}" stroke="#fff" stroke-width="1" opacity=".85"/></g></g></svg>${virt?'':`<button type="button" class="profsplit${PROF.split?' on':''}" data-psplit>${PROF.split?ic('trim')+'切段中（點圖切開／再點取消）・完成':ic('trim')+'切天／切段'}</button>${PROF.split?`<span class="pskind"><button type="button" data-pskind="day" class="${PROF.sk!=='seg'?'on':''}">換天（實線）</button><button type="button" data-pskind="seg" class="${PROF.sk==='seg'?'on':''}">分段（虛線）</button></span>`:''}`}`;
   renderMap(P,[0,...T.cuts,n],WP,mir?nTurn:-1,T);try{trimBar();}catch(e){}
   $('#profInfo').textContent=virt?`${D.toFixed(1)} km｜依你輸入的起終點沿步道算出｜分天請在下面每天的終點改`:`${D.toFixed(1)} km${mir?'（含鏡射回程）':''}｜${T.src==='route'?'依步道自動規劃':T.src==='draw'?'手繪路線':'GPX 軌跡'}｜點兩個位置看兩點間距離與爬升；要改分天按右上「編輯分天」`;
   if(NAV.on)npSize();
@@ -3336,9 +3365,12 @@ function renderProfile(){
   svg.addEventListener('click',ev=>{if(PROF.dragged)return;const i=at(ev);if(TRIM.on){trimTap(i);return;}
     if(virt||!PROF.split){setCur(i);return;}
     if(i<=0||i>=n)return;
-    const near=T.cuts.find(c=>Math.abs(P[c][3]-P[i][3])<Math.max(0.3,D*0.015));
-    const w=WP.find(w=>Math.abs(P[w.i][3]-P[i][3])<Math.max(0.3,D*0.015));
-    if(near!=null){T.cuts=T.cuts.filter(c=>c!==near);toast('已取消這裡的分天');}else{T.cuts.push(w?w.i:i);toast(`已在 ${P[w?w.i:i][3].toFixed(1)} km${w?'（'+w.n+'）':''} 切開`);}
+    const tol=Math.max(0.3,D*0.015),near=T.cuts.find(c=>Math.abs(P[c][3]-P[i][3])<tol),nearS=(T.sc||[]).find(c=>Math.abs(P[c][3]-P[i][3])<tol);
+    const w=WP.find(w=>Math.abs(P[w.i][3]-P[i][3])<tol),at2=w?w.i:i,seg=PROF.sk==='seg';
+    if(near!=null){T.cuts=T.cuts.filter(c=>c!==near);toast('已取消這裡的換天');}
+    else if(nearS!=null){T.sc=T.sc.filter(c=>c!==nearS);toast('已取消這裡的分段');}
+    else if(seg){T.sc=(T.sc||[]).concat(at2);toast(`已在 ${P[at2][3].toFixed(1)} km${w?'（'+w.n+'）':''} 分段（同一天）`);}
+    else{T.cuts.push(at2);toast(`已在 ${P[at2][3].toFixed(1)} km${w?'（'+w.n+'）':''} 換天`);}
     rebuildFromTrk({renameEnds:true});});
 }
 function gpxSummary(how){
@@ -4024,9 +4056,9 @@ function planFor(g,packKg,PM){
   return {h:0,m,how:''};
 }
 function applyPlans(packKg){
-  const PM=paceModel();
+  const PM=paceModel(),LT=ltCalc();
   S.route.segs.forEach(g=>{
-    const r=planFor(g,packKg,PM);
+    const r=planFor(g,g.lt==='light'&&LT?LT.pack/1000:packKg,PM);
     if(!(g.mulManual&&g.mul>0&&g.sh>0)){g.mulManual=false;g.mul=r.m;}
     if(!g.hrsManual)g.hrs=r.h||0;
     const row=document.querySelector(`.seg[data-id="${g.id}"]`);if(!row)return;
@@ -4232,6 +4264,9 @@ function compute(){
   else{rec=moveL*0.5+campL+moveL*0.4;recTxt=`最後水源到營地 ${(moveL*0.5).toFixed(1)}L ＋ 營地煮食飲用 ${campL}L ＋ 隔天到下一個水源 ${(moveL*0.4).toFixed(1)}L`;}
   applyPlans(pack/1000);
   const RD=routeDays(pack/1000);
+  /* 每段的出發→到達 */
+  try{S.route.segs.forEach(g=>{const el=document.querySelector(`.seg[data-id="${g.id}"] [data-st]`);if(!el)return;const t=SEGT.get(g.id);if(!t){el.textContent='';return;}
+    el.innerHTML=t.st!=null?`<b>${m2hm(t.st)} 出發 → ${m2hm(t.en)} 到達</b>（約 ${hm2(t.h)}${g.lt==='light'&&C.lt?'，輕裝重量算':''}）${t.auto?'':'　出發時間是你自訂的'}`:(g.ts?'':'填這天的啟登時間，就會算出每段幾點出發、幾點到');});}catch(e){}
   if(RD.length){RD.forEach(d=>{const h=d.plan||d.est;d.ci=courseC(h,d.km,d.up,d.down);d.ciK=d.ci*(Mb+Lk);const e=walkEnergy(d.km,d.up,d.down,h,Mb,Lk,d.eta);d.kWalk=e.kcal;d.rate=rateOf(e.w,Math.max(d.top||0,d.camp||0));d.moveL=h*d.rate;d.campL=2.5+((d.camp||0)>=2500?0.4:0);});
     let best=0,bt='';RD.forEach((d,i)=>{const mv=d.moveL,nx=RD[i+1],h=d.plan||d.est;let r,t;
     if(!nx){r=Math.max(1.5,mv*0.6);t=`第 ${d.day} 天行進約 ${h.toFixed(1)}h × ${d.rate}L/h`;}

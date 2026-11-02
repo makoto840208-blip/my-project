@@ -3371,6 +3371,7 @@ function renderProfile(){
     if(drag){const r=svg.getBoundingClientRect();if(!drag.moved&&Math.abs(ev.clientX-drag.x)>6){drag.moved=true;try{svg.setPointerCapture(drag.id);}catch(e){}}
       if(drag.moved){drag.dx=Math.max(-(D-visD-vS)*kx,Math.min(vS*kx,(ev.clientX-drag.x)*W/r.width));panG.forEach(g=>g.setAttribute('transform',`translate(${drag.dx.toFixed(1)},0)`));}return;}
     if(zoom>1&&ev.pointerType!=='mouse')return;
+    if(ev.pointerType==='mouse'&&!(ev.buttons&1))return;/* 滑鼠只移過去不算：點一下放白線、按住左鍵拖才跟著走（不然點完把滑鼠移開，白線會被拖走） */
     lastEv={clientX:ev.clientX};if(!raf)raf=requestAnimationFrame(upd);},{passive:true});
   const dragEnd=()=>{if(!drag)return;const d=drag;drag=null;clearTimeout(d.t);if(d.hold){PROF.dragged=true;setTimeout(()=>{PROF.dragged=false;},0);return;}if(!d.moved)return;PROF.vS=vS-d.dx/kx;PROF.dragged=true;setTimeout(()=>{PROF.dragged=false;renderProfile();},0);};
   svg.addEventListener('pointerup',dragEnd);svg.addEventListener('pointercancel',dragEnd);

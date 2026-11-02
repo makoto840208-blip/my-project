@@ -793,6 +793,16 @@ T('3D：滑鼠中鍵往上拖開 3D、改傾斜，壓回平面關 3D', async p =
   await p.mouse.move(cx, cy); await p.mouse.down({ button: 'middle' }); await p.mouse.move(cx, cy + 300, { steps: 6 }); await p.mouse.up({ button: 'middle' }); await p.waitForTimeout(700);
   r = await p.evaluate(() => ({ on: window.__gp.fn('M3D').on, pitch: window.__gp.MAP.m.getPitch() })); ok(!r.on && r.pitch < 1, '壓回平面沒關 3D ' + JSON.stringify(r));
 }, { vp: '網頁' });
+T('高度圖（滑鼠）：點了白線就停在那，滑鼠移開不會跟著跑；按住拖才移動', async p => {
+  await loadGpx(p); await openNav(p); const b = await (await p.$('#profSvg')).boundingBox(), y = b.y + b.height / 2;
+  await p.mouse.move(b.x + b.width * 0.7, y, { steps: 3 }); await p.mouse.down(); await p.mouse.up(); await p.waitForTimeout(150);
+  const c0 = await p.evaluate(() => window.__gp.PROF.cur);
+  await p.mouse.move(b.x + b.width * 0.1, y, { steps: 6 }); await p.mouse.move(b.x + b.width * 0.1, b.y - 100, { steps: 3 }); await p.waitForTimeout(150);
+  ok(await p.evaluate(c => window.__gp.PROF.cur === c, c0), '滑鼠移開白線跑掉了');
+  await p.mouse.move(b.x + b.width * 0.5, y); await p.mouse.down(); await p.mouse.move(b.x + b.width * 0.3, y, { steps: 6 }); await p.waitForTimeout(100);
+  const c1 = await p.evaluate(() => window.__gp.PROF.cur); await p.mouse.up();
+  ok(c1 < c0 && c1 > 0, `按住拖沒有移動 ${c0}→${c1}`);
+}, { vp: '網頁' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

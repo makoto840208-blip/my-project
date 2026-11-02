@@ -603,6 +603,28 @@ T('清除整條：路線總覽和畫路線都有，按了直接清、可復原',
   r = await p.evaluate(() => ({ trk: !!window.__gp.S.route.trk, draw: window.__gp.fn('DRAW').on }));
   ok(!r.trk && r.draw, '畫路線清除後應該還在畫路線模式 ' + JSON.stringify(r));
 });
+T('收起路線：只看裝備＋儀表板、頂端有摘要、會記住', async p => {
+  await loadGpx(p); await p.evaluate(() => { const i = document.querySelector('[data-r=name]'); i.value = '東都南崗山'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  await p.click('#routeHide'); await p.waitForTimeout(300); await shot(p, 'off');
+  const vis = sel => p.evaluate(s => { const e = document.querySelector(s); return !!e && e.offsetParent !== null && e.getBoundingClientRect().height > 0; }, sel);
+  ok(!(await vis('#params')), '路線欄沒有收起來'); ok(await vis('#routeBar'), '頂端沒有路線摘要'); ok(await vis('#gear'), '裝備不見了');
+  const t = await p.textContent('#routeBar'); ok(/東都南崗山/.test(t) && /km/.test(t), '摘要內容不對：' + t);
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(!(await vis('#params')), '重開後沒有記住收起狀態');
+  await p.click('#routeBar'); await p.waitForTimeout(600);
+  ok(await vis('#params'), '展開後路線欄沒回來'); ok(await p.evaluate(() => { const c = document.querySelector('#rmap canvas'); return !c || c.getBoundingClientRect().width > 50; }), '展開後地圖大小不對');
+});
+T('收起路線（網頁）', async p => {
+  await loadGpx(p); await p.evaluate(() => { const i = document.querySelector('[data-r=name]'); i.value = '東都南崗山'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  await p.click('#routeHide'); await p.waitForTimeout(300); await shot(p, 'off');
+  const vis = sel => p.evaluate(s => { const e = document.querySelector(s); return !!e && e.offsetParent !== null && e.getBoundingClientRect().height > 0; }, sel);
+  ok(!(await vis('#params')), '路線欄沒有收起來'); ok(await vis('#routeBar'), '頂端沒有路線摘要'); ok(await vis('#gear'), '裝備不見了');
+  const t = await p.textContent('#routeBar'); ok(/東都南崗山/.test(t) && /km/.test(t), '摘要內容不對：' + t);
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(!(await vis('#params')), '重開後沒有記住收起狀態');
+  await p.click('#routeBar'); await p.waitForTimeout(600);
+  ok(await vis('#params'), '展開後路線欄沒回來'); ok(await p.evaluate(() => { const c = document.querySelector('#rmap canvas'); return !c || c.getBoundingClientRect().width > 50; }), '展開後地圖大小不對');
+}, { vp: '網頁' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

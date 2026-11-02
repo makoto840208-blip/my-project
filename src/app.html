@@ -77,6 +77,16 @@ body.hdroff header{display:none}
 }
 .wrap.dashoff #dash{display:none}body.dashoff #dashTab{display:flex}
 .dashbar{display:flex;justify-content:flex-end;margin-bottom:8px}
+/* 收起路線：整欄「行程／路線」藏起來，只看裝備＋儀表板；頂端留一條路線摘要 */
+#routeBar{grid-area:rbar;display:none;align-items:center;gap:10px;width:100%;background:var(--panel);border:1px solid var(--coy);border-radius:6px;color:var(--coy2);font:inherit;font-size:13.5px;cursor:pointer;padding:9px 12px;text-align:left}
+#routeBar .rb-n{color:var(--txt);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}#routeBar .rb-s{color:var(--mut);font-family:var(--mono);font-size:12.5px;white-space:nowrap}#routeBar .rb-a{margin-left:auto;color:var(--coy2);white-space:nowrap}
+.wrap.routeoff #routeBar{display:flex}.wrap.routeoff #params{display:none}
+.wrap.routeoff{grid-template-columns:minmax(0,1fr);grid-template-areas:"rbar" "dash" "gear";grid-template-rows:auto}
+.wrap.routeoff.dashoff{grid-template-areas:"rbar" "tab" "gear"}
+@media (min-width:1000px){.wrap.routeoff{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"rbar rbar" "gear dash"}
+  .wrap.routeoff.dashoff{grid-template-columns:minmax(0,1fr);grid-template-areas:"rbar" "gear"}
+  .wrap.routeoff #dash{position:sticky;top:calc(var(--hh,76px) + 8px);align-self:start;max-height:calc(100dvh - var(--hh,76px) - 16px);overflow:auto}
+  .wrap.routeoff #gear{position:static;max-height:none;overflow:visible}}
 @media (max-width:999px){.wrap.dashoff{grid-template-areas:"tab" "params" "gear"}}
 #params{grid-area:params}#dash{grid-area:dash}#gear{grid-area:gear}#params,#dash,#gear{min-width:0}/* 不讓寬表格撐開整頁（手機會被縮小、右邊被切），表格自己左右捲 */
 .ch.fold-h{cursor:pointer;user-select:none}.ch.fold-h::after{content:'▾';margin-left:8px;color:var(--mut);font-size:12px;transition:transform .15s}
@@ -545,7 +555,9 @@ html.oled .card{border-color:#1c2118}
 <button id="hdrShow" type="button" title="展開導覽列" hidden>﹀</button>
 
 <main class="wrap">
+  <button id="routeBar" type="button" title="展開路線"><span class="rb-n"></span><span class="rb-s"></span><span class="rb-a">展開路線 ▾</span></button>
   <section id="params">
+    <div class="dashbar"><button class="btn sm" id="routeHide" type="button">◂ 收起路線（只看裝備）</button></div>
     <div class="card">
       <div class="ch">行程與生理參數</div>
       <div class="cb">
@@ -4565,6 +4577,12 @@ document.addEventListener('visibilitychange',async()=>{if(!SY.code)return;
   b.addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>toast('這個瀏覽器不支援全螢幕，可以「加到主畫面」用 App 開'));});
   document.addEventListener('fullscreenchange',()=>{b.innerHTML=ic('expand')+(document.fullscreenElement?'離開全螢幕':'全螢幕');});})();
 // 儀表板整個收起
+(()=>{const w=document.querySelector('main.wrap');let ro=false;try{ro=localStorage.getItem('gearPlanner.routeOff')==='1';}catch(e){}
+  const rb=$('#routeBar'),rbUpd=()=>{const nm=(document.querySelector('[data-r=name]')||{}).value||'';rb.querySelector('.rb-n').textContent=nm||'路線';rb.querySelector('.rb-s').textContent=($('#rSum').textContent||'').replace(/^[–-]$/,'');};
+  const rset=v=>{w.classList.toggle('routeoff',v);try{localStorage.setItem('gearPlanner.routeOff',v?'1':'0');}catch(e){}rbUpd();if(!v)setTimeout(()=>{if(MAP.m){MAP.m.invalidateSize();MAP.m.resize();}try{renderProfile();}catch(e){}},80);};
+  rset(ro);$('#routeHide').addEventListener('click',()=>{rset(true);scrollTo(0,0);});rb.addEventListener('click',()=>{rset(false);scrollTo(0,0);});
+  try{new MutationObserver(rbUpd).observe($('#rSum'),{childList:true,characterData:true,subtree:true});document.querySelector('[data-r=name]').addEventListener('input',rbUpd);}catch(e){}
+})();
 (()=>{const w=document.querySelector('main.wrap');let off=false;try{off=localStorage.getItem('gearPlanner.dashOff')==='1';}catch(e){}
   const set=v=>{w.classList.toggle('dashoff',v);document.body.classList.toggle('dashoff',v);try{localStorage.setItem('gearPlanner.dashOff',v?'1':'0');}catch(e){}$('#dashHide').textContent='收起儀表板 ▴';
     setTimeout(()=>{if(MAP.m)MAP.m.invalidateSize();try{renderProfile();}catch(e){}},80);};

@@ -617,7 +617,7 @@ html.oled .card{border-color:#1c2118}
         </div>
         <div class="sublbl">水 · 背水量（公升）</div>
         <div class="water">
-          <label class="f">背水量 (L)<input type="number" data-p="water" min="0" step="0.1" inputmode="decimal"></label>
+          <label class="f">背水量 (L)<small style="color:var(--mut);font-weight:400">　預設值，各路段可另外設定</small><input type="number" data-p="water" min="0" step="0.1" inputmode="decimal"></label>
           <label class="f">水源情境<select data-p="wscene">
             <option value="plenty">沿途水源充沛</option>
             <option value="camp">營地有水</option>
@@ -1677,7 +1677,7 @@ function altsHTML(g){if(!g.alts||!g.alts.length||!g.lp)return '';const C=gradeCf
 const segFwd=()=>S.route.segs.filter(x=>!x.ret);
 const segNightOf=g=>{const T=S.route.trk;return g.tk&&T?T.cuts.includes(g.ci):!!g.night;};
 function segTimeRow(g){const F=segFwd(),k=F.indexOf(g),first=F.findIndex(x=>x.day===g.day)===k,last=k===F.length-1;
-  return `<div class="sg segt" style="grid-template-columns:repeat(${3-(first?1:0)-(last?1:0)},1fr);margin-top:6px">${first?'':`<label>這段出發<input type="time" data-s="ts" value="${esc(g.ts||'')}" title="空白＝接上一段到達時間"></label>`}<label>背負<select data-s="lt"><option value="">全裝</option><option value="light"${g.lt==='light'?' selected':''}>輕裝${S.lt?'':'（先到裝備欄設定）'}</option></select></label>${last?'':`<label class="ngt"><input type="checkbox" data-s="night"${segNightOf(g)?' checked':''}>在這裡過夜</label>`}</div><div class="pnote segst" data-st></div>`;}
+  return `<div class="sg segt" style="grid-template-columns:repeat(auto-fit,minmax(118px,1fr));margin-top:6px">${first?'':`<label>這段出發<input type="time" data-s="ts" value="${esc(g.ts||'')}" title="空白＝接上一段到達時間"></label>`}<label>背負<select data-s="lt"><option value="">全裝</option><option value="light"${g.lt==='light'?' selected':''}>輕裝${S.lt?'':'（先到裝備欄設定）'}</option></select></label><label>這段帶水 L<input type="number" min="0" step="0.5" inputmode="decimal" data-s="wL" value="${g.wL!=null?g.wL:''}" placeholder="${segWater(Object.assign({},g,{wL:null}))}" title="空白＝${g.lt==='light'?'輕裝預設':'生理參數的背水量'}"></label>${last?'':`<label class="ngt"><input type="checkbox" data-s="night"${segNightOf(g)?' checked':''}>在這裡過夜</label>`}</div><div class="pnote segst" data-st></div>`;}
 /* 手動路段：天數由「在這裡過夜」往下數 */
 function segRenum(){const T=S.route.trk,F=segFwd();let day=1;const tk=F.filter(x=>x.tk);if(tk.length)day=Math.max(...tk.map(x=>x.day))+1;
   F.filter(x=>!x.tk).forEach((g,i,A)=>{g.day=Math.min(7,day);if(g.night&&i<A.length-1)day++;});}
@@ -1717,7 +1717,8 @@ segEl.addEventListener('click',e=>{const tr=e.target.closest('[data-alt]');if(!t
 segEl.addEventListener('focusout',e=>{if(e.target.dataset&&(e.target.dataset.s==='hrs'||e.target.dataset.s==='mul'))setTimeout(compute,0);});
 const findG=el=>{const r=el.closest('.seg');return r?S.route.segs.find(x=>x.id===r.dataset.id):null;};
 segEl.addEventListener('input',e=>{const g=findG(e.target),k=e.target.dataset.s;if(!g||!k)return;
-  if(k==='ts'){g.ts=e.target.value;setDirty(true);compute();return;}if(k==='lt'||k==='night')return;
+  if(k==='ts'){g.ts=e.target.value;setDirty(true);compute();return;}
+  if(k==='wL'){const v=e.target.value.trim();if(v==='')delete g.wL;else g.wL=Math.max(0,num(v,0));setDirty(true);compute();return;}if(k==='lt'||k==='night')return;
   if(k==='t0'||k==='t1'){S.route.segs.filter(x=>x.day===g.day).forEach(x=>{delete x[k];});g[k]=e.target.value;setDirty(true);compute();return;}
   if(k==='from'||k==='to'){g[k]=e.target.value;delete g.lp;delete g.alts;if(k==='from'){delete g.fromP;}else{delete g.toP;}showSug(e.target,g,k);}
   else if(k==='note')g[k]=e.target.value;
@@ -1727,7 +1728,7 @@ segEl.addEventListener('input',e=>{const g=findG(e.target),k=e.target.dataset.s;
   if(!g.ret&&k!=='note'&&k!=='hrs'){clearTimeout(segEl._t);segEl._t=setTimeout(()=>{if(syncReturn())renderSegs();compute();},500);}
   setDirty(true);compute();});
 segEl.addEventListener('change',e=>{const g=findG(e.target),k=e.target.dataset.s;if(!g)return;
-  if(k==='lt'){g.lt=e.target.value;if(g.lt==='light'&&!S.lt)toast('輕裝重量要先到裝備欄「輕裝」設定，現在先用全裝算');setDirty(true);compute();renderProfile();return;}
+  if(k==='lt'){g.lt=e.target.value;const wi=e.target.closest('.seg').querySelector('[data-s=wL]');if(wi)wi.placeholder=segWater(Object.assign({},g,{wL:null}));if(g.lt==='light'&&!S.lt)toast('輕裝重量要先到裝備欄「輕裝」設定，現在先用全裝算');setDirty(true);compute();renderProfile();return;}
   if(k==='night'){segNight(g,e.target.checked);return;}
   if((k==='from'||k==='to')&&!g.ret){const v=e.target.value.trim();setTimeout(()=>{if(!v||g[k+'P']||g._pick&&Date.now()-g._pick<1500)return;locateEnd(g,k,v);},350);return;}
   if(k==='day'){g.day=+e.target.value;S.route.segs.sort((a,b)=>a.day-b.day);syncReturn();renderSegs();}else if(k==='water'||k==='sig'||k==='hrI')g[k]=e.target.value;else if(k==='stay'){g.stay=e.target.value;renderSegs();}else return;setDirty(true);compute();});
@@ -2316,6 +2317,14 @@ function map3dPR(){const m=MAP.m;if(!m||typeof m.setPixelRatio!=='function')retu
   const full=Math.min(window.devicePixelRatio||1,2),pr=M3D.on?Math.min(full,busy?1:1.5):full;/* 3D 平常 1.5 倍、跟隨或轉向時 1 倍；2D 照舊最多 2 倍 */try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
 function map3dSet(v){M3D.want=!!v;try{localStorage.setItem('gearPlanner.map3d',v?'1':'0');}catch(e){}map3dApply();}
 function map3dNavSet(v){M3D.navWant=!!v;try{localStorage.setItem('gearPlanner.map3dNav',v?'1':'0');}catch(e){}map3dApply();}
+/* 電腦版：按住滑鼠中鍵拖＝上下改傾斜（平面↔立體，拉上去自動開 3D、壓回平面自動關）、左右旋轉 */
+function midDrag3d(m){const el=m.getCanvasContainer();let D=null;
+  el.addEventListener('mousedown',e=>{if(e.button!==1)return;e.preventDefault();D={x:e.clientX,y:e.clientY,p:m.getPitch(),b:m.getBearing(),on:false};});
+  el.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
+  addEventListener('mousemove',e=>{if(!D)return;const dx=e.clientX-D.x,dy=e.clientY-D.y;
+    if(!M3D.on&&!D.on&&dy<-25){D.on=true;try{map3dToggle();}catch(err){}setTimeout(()=>{if(D){D.p=m.getPitch();D.y=e.clientY;}},650);return;}
+    if(!M3D.on)return;try{m.jumpTo({pitch:Math.max(0,Math.min(70,D.p-dy*0.4)),bearing:D.b+dx*0.4});}catch(err){}});
+  addEventListener('mouseup',e=>{if(!D||e.button!==1)return;D=null;try{if(M3D.on&&m.getPitch()<6)map3dToggle();}catch(err){}});}
 async function map3dToggle(){let nav=false;try{nav=NAV.on;}catch(e){}if(!nav){map3dSet(!M3D.want);return;}
   if(M3D.navWant){map3dNavSet(false);return;}
   let skip=false;try{skip=localStorage.getItem('gearPlanner.nav3dWarn')==='1';}catch(e){}
@@ -2386,7 +2395,7 @@ async function renderMap(P,idx,WP,nTurn,T){const box=$('#rmap');if(!box)return;M
     try{ctrRegister();}catch(e){}
     MAP.m=new maplibregl.Map({container:box,style:mapStyle(),center:[121,23.7],zoom:7,attributionControl:{compact:true},cooperativeGestures:true,pixelRatio:Math.min(window.devicePixelRatio||1,2),fadeDuration:0,maxTileCacheSize:200,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,
       locale:{'CooperativeGesturesHandler.WindowsHelpText':'按住 Ctrl 再滾動來縮放地圖','CooperativeGesturesHandler.MacHelpText':'按住 ⌘ 再滾動來縮放地圖','CooperativeGesturesHandler.MobileHelpText':'用兩指移動地圖，或按「全螢幕地圖」','NavigationControl.ResetBearing':'轉回正北','NavigationControl.ZoomIn':'放大','NavigationControl.ZoomOut':'縮小'}});
-    MAP.m.touchZoomRotate.disableRotation();MAP.m.invalidateSize=()=>MAP.m.resize();MAP.touch=touch;
+    MAP.m.touchZoomRotate.disableRotation();MAP.m.invalidateSize=()=>MAP.m.resize();try{midDrag3d(MAP.m);}catch(e){}MAP.touch=touch;
     MAP.m.addControl(new maplibregl.NavigationControl({showCompass:true,visualizePitch:false}),'top-right');MAP.m.addControl(new LayerCtl(),'top-right');MAP.m.addControl(new FitCtl(),'top-right');
     MAP.m.on('click',e=>{if(ED.on){edMapClick(e);return;}if(DRAW.on)drawTap({lat:e.lngLat.lat,lng:e.lngLat.lng});else if(TRIM.on)trimTap(null,{lat:e.lngLat.lat,lng:e.lngLat.lng});else if(MEAS.on)measTap({lat:e.lngLat.lat,lng:e.lngLat.lng});});
     MAP.m.on('rotatestart',e=>{if(e.originalEvent&&HEAD.on)headStop();});try{edHook();}catch(e){}
@@ -3286,6 +3295,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-pb]');if(!
 document.addEventListener('click',e=>{if(!e.target.closest('[data-restx]'))return;e.stopPropagation();S.restKm=null;setDirty(true);navBoard();try{PROF.fn&&PROF.fn.profRange();}catch(err){}},true);
 /* 高度圖上的「我的位置」藍線（GPS），跟使用者點選的白線分開，GPS 更新不會把選取拉走 */
 function profMe(){const el=document.getElementById('profMe'),F=PROF.fn;if(!el||!F)return;const ok=GPS.pKm!=null&&F.P===MAP.P&&GPS.pKm<=F.D+1e-6,x=ok?F.X(GPS.pKm):-10;el.setAttribute('x1',x);el.setAttribute('x2',x);}
+/* 點高度圖：那個點不在地圖畫面裡就把地圖移過去（跟隨模式時不動） */
+function profReveal(q){const m=MAP.m;if(!m||!MAP.loaded||!q)return;try{if(typeof FOL!=='undefined'&&FOL.on)return;const pt=m.project([q[1],q[0]]),c=m.getContainer(),pd=m.getPadding?m.getPadding():{top:0,bottom:0,left:0,right:0},mg=30;
+  if(pt.x<pd.left+mg||pt.x>c.clientWidth-pd.right-mg||pt.y<pd.top+mg||pt.y>c.clientHeight-pd.bottom-mg)m.easeTo({center:[q[1],q[0]],duration:350});}catch(e){}}
 function renderProfile(){
   let T=S.route.trk;const virt=!T;if(!T)T=virtualTrk();$('#profWrap').hidden=!T;if(!T){if(NAV.on)$('#prof').innerHTML='<div style="color:#aaa;font-size:13px;padding:10px">還沒有路線。到選單按「畫路線」在地圖上畫。</div>';return;}
   if(!virt&&!S.route.segs.some(g=>g.tk))S.route.segs.filter(g=>!g.ret).slice(0,T.cuts.length+(T.sc||[]).length+1).forEach(g=>g.tk=true);
@@ -3363,7 +3375,7 @@ function renderProfile(){
   const dragEnd=()=>{if(!drag)return;const d=drag;drag=null;clearTimeout(d.t);if(d.hold){PROF.dragged=true;setTimeout(()=>{PROF.dragged=false;},0);return;}if(!d.moved)return;PROF.vS=vS-d.dx/kx;PROF.dragged=true;setTimeout(()=>{PROF.dragged=false;renderProfile();},0);};
   svg.addEventListener('pointerup',dragEnd);svg.addEventListener('pointercancel',dragEnd);
   svg.addEventListener('click',ev=>{if(PROF.dragged)return;const i=at(ev);if(TRIM.on){trimTap(i);return;}
-    if(virt||!PROF.split){setCur(i);return;}
+    if(virt||!PROF.split){setCur(i);profReveal(P[i]);return;}
     if(i<=0||i>=n)return;
     const tol=Math.max(0.3,D*0.015),near=T.cuts.find(c=>Math.abs(P[c][3]-P[i][3])<tol),nearS=(T.sc||[]).find(c=>Math.abs(P[c][3]-P[i][3])<tol);
     const w=WP.find(w=>Math.abs(P[w.i][3]-P[i][3])<tol),at2=w?w.i:i,seg=PROF.sk==='seg';
@@ -3679,7 +3691,7 @@ function wxPoints(){
   const segs=S.route.segs.filter(g=>g.lat&&g.lon),P=[];
   if(segs.length){const days=[...new Set(segs.map(g=>g.day))].sort((a,b)=>a-b);
     days.slice(0,-1).forEach(d=>{const g=segs.filter(x=>x.day===d).pop();P.push({label:`D${d} 營地 ${g.to||''}`.trim(),lat:g.lat,lon:g.lon,ele:g.camp||0,day:d});});
-    const ts=S.route.segs.filter(g=>g.tlat);if(ts.length){const t=ts.reduce((a,b)=>b.top>a.top?b:a);P.push({label:`最高點 ${t.top}m`,lat:t.tlat,lon:t.tlon,ele:t.top,day:0});}
+    const ts=S.route.segs.filter(g=>g.tlat);if(ts.length){const t=ts.reduce((a,b)=>b.top>a.top?b:a);P.push({label:`最高點 ${t.top}m`,lat:t.tlat,lon:t.tlon,ele:t.top,day:t.day||0,top:true});}
     else if(S.route.loc)P.push({label:S.route.loc.name,lat:S.route.loc.lat,lon:S.route.loc.lon,ele:S.route.loc.ele,day:0});
   }else if(S.route.loc){const L=S.route.loc;P.push({label:`${L.name}${L.ele?' '+L.ele+'m':''}`,lat:L.lat,lon:L.lon,ele:L.ele,day:0});}
   return P;
@@ -3714,10 +3726,13 @@ async function fetchWx(){
 function renderWx(msg){
   const W=S.wx;if(!W){$('#wxOut').innerHTML=msg?`<div class="rec">${esc(msg)}</div>`:'';return;}
   const age=(Date.now()-new Date(W.at).getTime())/3600e3;
-  const rows=W.pts.flatMap(p=>p.daily.time.map((d,i)=>{const pp=p.daily.precipitation_probability_max[i],gu=p.daily.wind_gusts_10m_max[i],wc=p.daily.weather_code[i];
-    return `<tr><td>${d.slice(5)}</td><td>${esc(p.label)}</td><td>${Math.round(p.daily.temperature_2m_min[i])}～${Math.round(p.daily.temperature_2m_max[i])}</td><td>${Math.round(p.daily.apparent_temperature_min[i])}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%</td><td>${(p.daily.precipitation_sum[i]||0).toFixed(1)}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${Math.round(gu)}</td><td class="${wc>=95?'w':''}">${WMO[wc]||wc}</td></tr>`;})).join('');
+  /* 每個地點只列它那天：D 營地＝那天晚上；最高點＝走到那天；沒有天數的（只有一個地點）列全部 */
+  const d0=S.route.date||W.start,want=p=>p.day>0?addDays(d0,p.day-1):null,lim=addDays(W.at.slice(0,10),15);
+  const rows=W.pts.flatMap(p=>{const wd=want(p);if(wd&&!p.daily.time.includes(wd))return [`<tr><td>${wd.slice(5)}</td><td>${esc(p.label)}</td><td colspan="6" style="color:var(--mut);text-align:left">${wd>lim?`還沒進入預報範圍（${addDays(wd,-15).slice(5)} 起查得到）`:'這天沒有預報資料'}</td></tr>`];
+    return p.daily.time.map((d,i)=>[d,i]).filter(([d])=>!wd||d===wd).map(([d,i])=>{const pp=p.daily.precipitation_probability_max[i],gu=p.daily.wind_gusts_10m_max[i],wc=p.daily.weather_code[i];
+    return `<tr><td>${d.slice(5)}</td><td>${esc(p.label)}</td><td>${Math.round(p.daily.temperature_2m_min[i])}～${Math.round(p.daily.temperature_2m_max[i])}</td><td>${Math.round(p.daily.apparent_temperature_min[i])}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%</td><td>${(p.daily.precipitation_sum[i]||0).toFixed(1)}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${Math.round(gu)}</td><td class="${wc>=95?'w':''}">${WMO[wc]||wc}</td></tr>`;});}).join('');
   $('#wxOut').innerHTML=(msg?`<div class="rec">${esc(msg)}</div>`:'')+`<div style="overflow-x:auto"><table class="rtab wxt"><tr><th>日期</th><th>地點</th><th>°C</th><th>體感低</th><th>降雨</th><th>mm</th><th>陣風 km/h</th><th>天氣</th></tr>${rows}</table></div>
-    <div style="font-size:11px;color:var(--mut);margin-top:4px">Open-Meteo 預報，${age<1?'剛剛':Math.round(age)+' 小時前'}更新${W.partial?'；後段日期超出 16 天預報範圍':''}。氣溫已依該點海拔修正。</div>`;
+    <div style="font-size:11px;color:var(--mut);margin-top:4px">Open-Meteo 預報，${age<1?'剛剛':Math.round(age)+' 小時前'}更新。營地列當天晚上、最高點列走到那天；預報只到 16 天內。氣溫已依該點海拔修正。</div>`;
 }
 $('#bWxRe').addEventListener('click',()=>{const L=S.route.loc;if(L&&L.src==='osm'&&!S.route.segs.some(g=>g.lat)){L.q=null;autoGeo();}else if(!L)autoGeo();else wxCheck(true);});
 $('#bWxSet').addEventListener('click',()=>{const m=($('#wxCoord').value||'').match(/(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)/);
@@ -3848,12 +3863,12 @@ function packText(){const c=PACK.c||{},W=live(),nm=(document.querySelector('[dat
   CATS.forEach(([k,cn])=>{const R=W.filter(x=>x.cat===k);if(!R.length)return;L.push('',`[${cn}]`);R.forEach(x=>L.push(`${x.packed?'☑':'☐'} ${dispName(x)||x.label}${x.qty>1?' ×'+x.qty:''}  ${tot(x)} g${x.loc==='worn'?'（穿）':x.loc==='out'?'（掛）':''}`));});
   if(c.waterG)L.push('',`水 ${(c.waterG/1000).toFixed(1)} kg`);if(c.foodG)L.push(`食物 ${(c.foodG/1000).toFixed(2)} kg`);return L.join('\n');}
 function renderPack(){const box=document.querySelector('#packList .cb');if(!box||PACK.view==='cat')return;const c=PACK.c;if(!c)return;
-  if(PACK.view==='light'){if(!S.lt)S.lt={off:{}};const LT=ltCalc()||{its:[],pack:0,waterG:0,foodG:0},L=LT.its.slice().sort((a,b)=>tot(b)-tot(a)),off=live().filter(x=>x.loc!=='worn'&&!lightTake(x)),pk=Math.max(1,LT.pack);
-    box.innerHTML=`<div class="pk-sum">輕裝背負 <b>${kg(LT.pack)} kg</b>（${L.length} 件 ${kg(sum(L,tot))} kg＋水＋一天行動糧 ${kg(LT.foodG)} kg）　已裝 ${L.filter(x=>x.packedL).length}／${L.length}</div>
-      <div class="pk-tools"><label style="display:flex;align-items:center;gap:4px;font-size:13px">輕裝背水 <input type="number" min="0" step="0.5" inputmode="decimal" data-ltw value="${S.lt.w!=null?S.lt.w:''}" placeholder="${Math.min(S.water,1.5)}" style="width:62px"> L</label><button class="btn sm" data-pk="ltreset">重新從目前配置複製</button><button class="btn sm warn" data-pk="ltoff">不用輕裝</button></div>
-      <div style="font-size:12.5px;color:var(--mut);margin-bottom:6px">攻頂、往返營地時背的。不帶上去的按 ✕ 留營地；左邊勾＝已裝進攻頂包。身穿的本來就穿著，不列。</div>
-      ${L.map(x=>{const pc=tot(x)/pk*100;return `<div class="pr${x.packedL?' done':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packedL"${x.packedL?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}</small><div class="pbar"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></div></div><div class="pq"></div><div class="pw">${tot(x)} g<small>${pc.toFixed(0)}%</small></div><button type="button" class="px" data-pk="ltx" aria-label="留營地" title="留營地">✕</button></div>`;}).join('')||'<div style="color:var(--mut);padding:10px 0">全部都留營地了。</div>'}
-      <div class="pr pfix"><span></span><div class="pn"><b>水</b><small>輕裝背水量</small></div><div class="pq"></div><div class="pw">${kg(LT.waterG)} kg</div><span class="px"></span></div>
+  if(PACK.view==='light'){if(!S.lt)S.lt={off:{}};const LT=ltCalc()||{its:[],wornIts:[],pack:0,worn:0,waterG:0,foodG:0},L=LT.its.concat(LT.wornIts).sort((a,b)=>(ltLoc(a)==='worn')-(ltLoc(b)==='worn')||tot(b)-tot(a)),off=live().filter(x=>!lightTake(x)),pk=Math.max(1,LT.pack),hasLS=S.route.segs.some(g=>!g.ret&&g.lt==='light');
+    box.innerHTML=`<div class="pk-sum">輕裝背負 <b>${kg(LT.pack)} kg</b>（${LT.its.length} 件 ${kg(sum(LT.its,tot))} kg＋水 ${kg(LT.waterG)} kg＋一天行動糧 ${kg(LT.foodG)} kg）・身穿 <b>${kg(LT.worn)} kg</b>　已裝 ${L.filter(x=>x.packedL).length}／${L.length}</div>
+      <div class="pk-tools"><span style="font-size:12.5px;color:var(--mut);align-self:center">水：${hasLS?'看輕裝路段「這段帶水」（取最多的那段）':`還沒有路段標輕裝，先用 ${ltWDef()}L`}</span><button class="btn sm" data-pk="ltreset">重新從目前配置複製</button><button class="btn sm warn" data-pk="ltoff">不用輕裝</button></div>
+      <div style="font-size:12.5px;color:var(--mut);margin-bottom:6px">攻頂、往返營地時的配置。不帶的按 ✕ 留營地；在營地換衣服的，點「穿／內／掛」切換；左邊勾＝已裝。</div>
+      ${L.map(x=>{const lc=ltLoc(x),pc=lc==='worn'?0:tot(x)/pk*100;return `<div class="pr${lc==='worn'?' worn':''}${x.packedL?' done':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packedL"${x.packedL?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}${lc!==x.loc?`・全裝時${LOC[x.loc]}`:''}</small>${lc==='worn'?'':`<div class="pbar"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></div>`}</div><div class="pq">${x.type==='pack'?'':`<button type="button" class="loc ${lc}" data-pk="ltloc" title="輕裝時：${LOCN[lc]}（點擊切換）" style="width:auto;padding:0 8px">${LOC[lc]}</button>`}</div><div class="pw">${tot(x)} g<small>${lc==='worn'?'身穿':pc.toFixed(0)+'%'}</small></div><button type="button" class="px" data-pk="ltx" aria-label="留營地" title="留營地">✕</button></div>`;}).join('')||'<div style="color:var(--mut);padding:10px 0">全部都留營地了。</div>'}
+      <div class="pr pfix"><span></span><div class="pn"><b>水</b><small>輕裝路段帶水</small></div><div class="pq"></div><div class="pw">${kg(LT.waterG)} kg</div><span class="px"></span></div>
       ${off.length?`<details><summary>留營地 ${off.length} 件</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;return;}
   const W=live(),off=S.slots.filter(s=>s.filled&&!s.on),pk=Math.max(1,c.pack),wn=Math.max(1,c.worn);
   const rows=W.map(x=>({x,g:tot(x),pc:x.loc==='worn'?tot(x)/wn*100:tot(x)/pk*100}));
@@ -3880,6 +3895,7 @@ $('#packList').addEventListener('click',async e=>{const b=e.target.closest('[dat
   if(a==='packedL'){s.packedL=b.checked;setDirty(true);renderPack();return;}
   if(a==='ltx'){S.lt.off[s.id]=true;delete s.packedL;setDirty(true);compute();toastAct(`「${dispName(s)||s.label}」留營地`,'復原',()=>{delete S.lt.off[s.id];setDirty(true);compute();});return;}
   if(a==='lton'){delete S.lt.off[s.id];setDirty(true);compute();return;}
+  if(a==='ltloc'){const seq=['worn','pack','out'],nx=seq[(seq.indexOf(ltLoc(s))+1)%3];S.lt.loc=S.lt.loc||{};if(nx===s.loc)delete S.lt.loc[s.id];else S.lt.loc[s.id]=nx;setDirty(true);compute();return;}
   if(a==='plus'||a==='minus'){s.qty=Math.max(1,s.qty+(a==='plus'?1:-1));rerow(s);}
   else if(a==='off'){s.on=false;rerow(s);toastAct(`這趟不帶「${dispName(s)||s.label}」`,'復原',()=>{s.on=true;rerow(s);setDirty(true);compute();});}
   else if(a==='on'){s.on=true;rerow(s);}
@@ -4058,7 +4074,7 @@ function planFor(g,packKg,PM){
 function applyPlans(packKg){
   const PM=paceModel(),LT=ltCalc();
   S.route.segs.forEach(g=>{
-    const r=planFor(g,g.lt==='light'&&LT?LT.pack/1000:packKg,PM);
+    const wK=segWater(g),base=g.lt==='light'&&LT?(LT.pack-LT.waterG)/1000:packKg-waterMax(false),r=planFor(g,base+wK,PM);
     if(!(g.mulManual&&g.mul>0&&g.sh>0)){g.mulManual=false;g.mul=r.m;}
     if(!g.hrsManual)g.hrs=r.h||0;
     const row=document.querySelector(`.seg[data-id="${g.id}"]`);if(!row)return;
@@ -4229,10 +4245,16 @@ const COMP={sel:null,parts:[],waterG:0,mode:'full'};
 /* 輕裝配置：S.lt={off:{slotId:true}（留營地的）,w:公升}。第一次打開「輕裝」整份複製目前配置（off 空的＝全部帶），再一件件刪。
    不綁天數：攻頂、往返營地都用這份；路段可以標「輕裝」，時間照輕裝重量算。 */
 const ltOn=()=>!!S.lt;
+/* 每段出發帶多少水：路段自己填 g.wL；沒填＝全裝用生理參數的背水量、輕裝用 1.5L（或背水量較少時用背水量） */
+const ltWDef=()=>S.lt&&S.lt.w!=null?S.lt.w:Math.min(S.water,1.5);
+const segWater=g=>g.wL!=null?g.wL:(g.lt==='light'?ltWDef():S.water);
+function waterMax(light){const F=S.route.segs.filter(g=>!g.ret&&(g.lt==='light')===light);return F.length?Math.max(...F.map(segWater)):(light?ltWDef():S.water);}
+/* 輕裝時每件裝備的位置（營地可能換衣服）：S.lt.loc[slotId]，沒設＝跟全裝一樣 */
+const ltLoc=x=>(S.lt&&S.lt.loc&&S.lt.loc[x.id])||x.loc;
 const lightTake=x=>!(S.lt&&S.lt.off&&S.lt.off[x.id]);
-function ltCalc(){if(!S.lt)return null;const W=live(),its=W.filter(x=>x.loc!=='worn'&&lightTake(x)),days=Math.max(1,S.days||1);
-  const FDay=sum(S.food.filter(f=>f.on&&f.g>0&&f.per==='day'),f=>f.g),wG=(S.lt.w!=null?S.lt.w:Math.min(S.water,1.5))*1000;
-  return {its,waterG:wG,foodG:FDay,pack:sum(its,tot)+wG+FDay};}
+function ltCalc(){if(!S.lt)return null;const W=live().filter(lightTake),its=W.filter(x=>ltLoc(x)!=='worn'),wn=W.filter(x=>ltLoc(x)==='worn');
+  const FDay=sum(S.food.filter(f=>f.on&&f.g>0&&f.per==='day'),f=>f.g),wG=waterMax(true)*1000;
+  return {its,worn:sum(wn,tot),wornIts:wn,waterG:wG,foodG:FDay,pack:sum(its,tot)+wG+FDay};}
 document.addEventListener('click',e=>{const c=e.target.closest('[data-cmode]');if(c){COMP.mode=c.dataset.cmode;COMP.sel=null;compute();}});
 /* 水量邊打邊存（用 change 的話，點別的按鈕時會先重畫、吃掉第一下） */
 let LWT=0;document.addEventListener('input',e=>{const i=e.target.closest('[data-ltw]');if(!i||!S.lt)return;const v=i.value.trim(),nw=v===''?undefined:Math.max(0,num(v,0));if(nw===S.lt.w)return;if(nw==null)delete S.lt.w;else S.lt.w=nw;setDirty(true);clearTimeout(LWT);LWT=setTimeout(compute,350);});
@@ -4248,7 +4270,7 @@ function compute(){
   if(pd!==S.days)renderFood();
   const W=live(),worn=sum(W.filter(x=>x.loc==='worn'),tot),carried=W.filter(x=>x.loc!=='worn');
   const gas=sum(carried.filter(x=>T(x)[3].cons),tot),base=sum(carried.filter(x=>!T(x)[3].cons),tot);
-  const waterG=S.water*1000,days=Math.max(1,S.days);
+  const waterG=waterMax(false)*1000,WL=waterG/1000,days=Math.max(1,S.days);
   const FI=S.food.filter(f=>f.on&&f.g>0),mult=f=>f.per==='day'?days:1;
   const foodG=sum(FI,f=>f.g*mult(f)),foodDayG=sum(FI.filter(f=>f.per==='day'),f=>f.g),foodDayK=sum(FI.filter(f=>f.per==='day'),f=>f.g*f.kcal/100);
   const pack=base+gas+waterG+foodG,skin=pack+worn,ratio=pack/(Math.max(1,S.body)*1000)*100;
@@ -4266,7 +4288,7 @@ function compute(){
   const RD=routeDays(pack/1000);
   /* 每段的出發→到達 */
   try{S.route.segs.forEach(g=>{const el=document.querySelector(`.seg[data-id="${g.id}"] [data-st]`);if(!el)return;const t=SEGT.get(g.id);if(!t){el.textContent='';return;}
-    el.innerHTML=t.st!=null?`<b>${m2hm(t.st)} 出發 → ${m2hm(t.en)} 到達</b>（約 ${hm2(t.h)}${g.lt==='light'&&C.lt?'，輕裝重量算':''}）${t.auto?'':'　出發時間是你自訂的'}`:(g.ts?'':'填這天的啟登時間，就會算出每段幾點出發、幾點到');});}catch(e){}
+    el.innerHTML=t.st!=null?`<b>${m2hm(t.st)} 出發 → ${m2hm(t.en)} 到達</b>（約 ${hm2(t.h)}，${g.lt==='light'&&C.lt?'輕裝':'全裝'}帶水 ${segWater(g)}L）${t.auto?'':'　出發時間是你自訂的'}`:(g.ts?'':'填這天的啟登時間，就會算出每段幾點出發、幾點到');});}catch(e){}
   if(RD.length){RD.forEach(d=>{const h=d.plan||d.est;d.ci=courseC(h,d.km,d.up,d.down);d.ciK=d.ci*(Mb+Lk);const e=walkEnergy(d.km,d.up,d.down,h,Mb,Lk,d.eta);d.kWalk=e.kcal;d.rate=rateOf(e.w,Math.max(d.top||0,d.camp||0));d.moveL=h*d.rate;d.campL=2.5+((d.camp||0)>=2500?0.4:0);});
     let best=0,bt='';RD.forEach((d,i)=>{const mv=d.moveL,nx=RD[i+1],h=d.plan||d.est;let r,t;
     if(!nx){r=Math.max(1.5,mv*0.6);t=`第 ${d.day} 天行進約 ${h.toFixed(1)}h × ${d.rate}L/h`;}
@@ -4274,7 +4296,7 @@ function compute(){
     else{r=mv*0.5+d.campL+nx.moveL*0.4;t=`第 ${d.day} 天營地${d.water==='n'?'無水':'水源未確認（以無水估）'}：到營地 ${(mv*.5).toFixed(1)}L＋營地 ${d.campL}L＋隔天 ${(nx.moveL*.4).toFixed(1)}L`;}
     if(r>best){best=r;bt=t;}});rec=best;recTxt='依路線，'+bt;}
   const packS=W.find(x=>x.type==='pack'),cap=packS?num(packS.attrs.cap):0;
-  const vol=(sum(carried.filter(x=>x.loc==='pack'&&x.type!=='pack'),x=>x.v*x.qty)+foodG/1000*FOOD_L_PER_KG)*PACKING+S.water;
+  const vol=(sum(carried.filter(x=>x.loc==='pack'&&x.type!=='pack'),x=>x.v*x.qty)+foodG/1000*FOOD_L_PER_KG)*PACKING+WL;
   const bottles=W.filter(x=>x.type==='bottle'),bottleCap=sum(bottles,x=>num(x.attrs.cap)*x.qty);
   // 每日熱量：行走（Pandolf）＋其餘時間約 1 kcal/kg/h（約 1 MET）；單日行程只算行程中的時間
   let kNeed;
@@ -4306,7 +4328,7 @@ function compute(){
   const ciL=RD.length?Math.max(...RD.map(d=>d.ciK||0))/1000:0;
   const hot=S.tmax>=25,longD=(RD.length?Math.max(...RD.map(d=>d.plan||d.est)):hours)>=4;
   const wTip=`<div style="font-size:12px;color:var(--mut);margin-top:4px">${SM.n?`已套用你量的出汗率（${SM.n} 筆，約一般人的 ${SM.m.toFixed(2)} 倍）。`:''}行進中少量多次，每小時約 0.4–0.8L，以整天體重減少不超過 2%（約 ${(Mb*0.02).toFixed(1)}kg）為目標${hot&&longD?'；天熱又走超過 4 小時，水裡加電解質（鈉約 20–30 mEq/L，一般運動飲料濃度）':''}${S.alt>=2500?'；2500m 以上呼吸失水較多，已每天多算約 0.75L':''}。${ciL?`<br>對照山本公式（體力度×體重＋背負）：最累那天行動中脫水約 ${ciL.toFixed(1)}L，建議途中補回 7–8 成（${(ciL*0.7).toFixed(1)}–${(ciL*0.8).toFixed(1)}L），夏天再多一些。`:''}</div>`;
-  $('#wrec').innerHTML=RD.length?`依路線建議背水 <b>${rec.toFixed(1)}L</b>（${recTxt}）；目前 <b style="color:${S.water<rec*0.9?'#d9897a':'#9bb58a'}">${S.water}L</b>。`+wTip:eq>0?`建議背水 <b>${rec.toFixed(1)}L</b>（${recTxt}）；目前 <b style="color:${S.water<rec*0.9?'#d9897a':'#9bb58a'}">${S.water}L</b>，每日行進需水約 ${moveL.toFixed(1)}L。`+wTip:'填入距離與爬升後，會依水源情境估算建議背水量。';
+  $('#wrec').innerHTML=RD.length?`依路線建議背水 <b>${rec.toFixed(1)}L</b>（${recTxt}）；目前 <b style="color:${WL<rec*0.9?'#d9897a':'#9bb58a'}">${WL}L</b>。`+wTip:eq>0?`建議背水 <b>${rec.toFixed(1)}L</b>（${recTxt}）；目前 <b style="color:${WL<rec*0.9?'#d9897a':'#9bb58a'}">${WL}L</b>，每日行進需水約 ${moveL.toFixed(1)}L。`+wTip:'填入距離與爬升後，會依水源情境估算建議背水量。';
 
   CATS.forEach(([c])=>{const all=S.slots.filter(x=>x.cat===c),its=W.filter(x=>x.cat===c),el=document.querySelector(`[data-sum="${c}"]`);if(el)el.textContent=kg(sum(its,tot))+' kg · '+its.length+'/'+all.length;});
   S.slots.forEach(s=>{const row=document.querySelector(`.row[data-id="${s.id}"]`);if(!row)return;
@@ -4491,11 +4513,11 @@ function diagnose(){
   }else if(p)D.push(['i','背包沒有容量數字','在背包的 ⓘ 填入容量（L），才能計算裝不裝得下。','']);
 
   if(c.eq>0){
-    if(S.water<c.rec*0.9)D.push([S.water<c.rec*0.6?'r':'y',`背水量不足：${S.water}L / 建議 ${c.rec.toFixed(1)}L`,`${c.recTxt}。先查清楚沿途水源，能分段取水就不要一次背滿。`,EST]);
-    else D.push(['g',`背水量足夠：${S.water}L`,`建議約 ${c.rec.toFixed(1)}L。`+(S.water>c.rec*1.4?`目前多背約 ${(S.water-c.rec).toFixed(1)}kg，水源可靠的話可以減量。`:''),EST]);
+    if((c.waterG/1000)<c.rec*0.9)D.push([(c.waterG/1000)<c.rec*0.6?'r':'y',`背水量不足：${(c.waterG/1000)}L / 建議 ${c.rec.toFixed(1)}L`,`${c.recTxt}。先查清楚沿途水源，能分段取水就不要一次背滿。`,EST]);
+    else D.push(['g',`背水量足夠：${(c.waterG/1000)}L`,`建議約 ${c.rec.toFixed(1)}L。`+((c.waterG/1000)>c.rec*1.4?`目前多背約 ${((c.waterG/1000)-c.rec).toFixed(1)}kg，水源可靠的話可以減量。`:''),EST]);
   }
-  if(c.bottles.length&&c.bottleCap&&c.bottleCap<S.water)D.push(['r',`裝水容器不夠：${c.bottleCap}L < 背水 ${S.water}L`,'增加水袋數量，空袋可捲起不佔空間。','']);
-  if(ready&&!c.bottles.length&&S.water>0)D.push(['i','還沒選裝水容器','選了水袋或水瓶並填容量後，會檢查裝不裝得下背水量。','']);
+  if(c.bottles.length&&c.bottleCap&&c.bottleCap<(c.waterG/1000))D.push(['r',`裝水容器不夠：${c.bottleCap}L < 背水 ${(c.waterG/1000)}L`,'增加水袋數量，空袋可捲起不佔空間。','']);
+  if(ready&&!c.bottles.length&&c.waterG>0)D.push(['i','還沒選裝水容器','選了水袋或水瓶並填容量後，會檢查裝不裝得下背水量。','']);
   if(has('filter')&&S.tmin<=0)D.push(['y','濾水器有結凍風險','中空纖維濾芯結凍後可能受損而且看不出來，夜間放進睡袋。','製造商說明']);
 
   if(c.foodDayG&&c.eq>0){
@@ -4644,7 +4666,7 @@ $('#bPrint').addEventListener('click',()=>{
   }).join('');
   const FI=S.food.filter(f=>f.on&&f.g>0);
   const food=`<section><h2><span>食物與水（${S.days} 天）</span><span>${kg(c.foodG+c.waterG)} kg</span></h2><table>${FI.map(f=>`<tr><td class="c">☐</td><td>${esc(f.n)}</td><td class="r">${f.per==='day'?f.g+'g × '+S.days:'整趟'}</td><td class="r">${f.g*(f.per==='day'?S.days:1)}g</td></tr>`).join('')}
-    <tr><td class="c">☐</td><td>水（${c.RD&&c.RD.length?'依路線，建議 '+c.rec.toFixed(1)+'L':WS[S.wscene]}）</td><td class="r">${S.water}L</td><td class="r">${c.waterG}g</td></tr></table></section>`;
+    <tr><td class="c">☐</td><td>水（${c.RD&&c.RD.length?'依路線，建議 '+c.rec.toFixed(1)+'L':WS[S.wscene]}）</td><td class="r">${(c.waterG/1000).toFixed(1)}L</td><td class="r">${c.waterG}g</td></tr></table></section>`;
   const warns=(c.diag||[]).filter(x=>x[0]==='r'||x[0]==='y').map(x=>`<li>${x[0]==='r'?'■':'□'} ${esc(x[1])}</li>`).join('');
   $('#print').innerHTML=`<h1>登山裝備檢查清單</h1>
     <div class="meta"><span>列印日期：${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</span><span>體重 ${S.body}kg</span><span>${S.days} 天</span><span>${S.km}km／爬升 ${S.elev}m／最高 ${S.alt}m</span><span>氣溫 ${S.tmin}～${S.tmax}°C</span><span>等效距離 ${c.eq.toFixed(1)}km</span></div>

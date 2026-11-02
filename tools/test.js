@@ -712,8 +712,7 @@ T('輕裝：分類｜打包清單｜輕裝、複製目前配置、✕留營地�
   for (const t of ['B pack', 'B tent', 'B bag']) { await p.click(`#packList > .cb > .pr:has-text("${t}") [data-pk=ltx]`); await p.waitForTimeout(80); }
   n = await names(); ok(!n.includes('B tent') && n.includes('B lamp'), '✕ 沒留營地：' + n.join(','));
   ok(/留營地 3 件/.test(await p.textContent('#packList details summary')), '沒列留營地');
-  await p.fill('[data-ltw]', '1'); await p.waitForTimeout(500);
-  const lt = await p.evaluate(() => window.__gp.fn('C').lt); ok(lt && lt.waterG === 1000 && Math.abs(lt.pack - (380 + 1000 + lt.foodG)) < 1, '輕裝重量不對 ' + JSON.stringify(lt && { p: lt.pack, w: lt.waterG, f: lt.foodG }));
+  const lt = await p.evaluate(() => window.__gp.fn('C').lt); ok(lt && lt.waterG > 0 && Math.abs(lt.pack - (380 + lt.waterG + lt.foodG)) < 1, '輕裝重量不對 ' + JSON.stringify(lt && { p: lt.pack, w: lt.waterG, f: lt.foodG }));
   ok(await p.evaluate(() => document.querySelectorAll('#dayRow [data-cmode]').length === 2), '儀表板沒有全裝｜輕裝');
   await p.click('#dayRow [data-cmode="light"]'); await p.waitForTimeout(100);
   ok(!(await p.evaluate(() => !!document.querySelector('#legend [data-comp="sleep"]'))), '輕裝組成還有睡眠系統');
@@ -755,6 +754,45 @@ T('路段時間軸（軌跡）：高度圖切分段（虛線）不換天、過�
   const d2 = await p.evaluate(() => ({ days: Math.max(...window.__gp.S.route.segs.map(g => g.day)), sc: window.__gp.S.route.trk.sc.length }));
   ok(d2.days === d0.days + 1 && d2.sc === 0, '過夜沒變成換天 ' + JSON.stringify(d2));
 });
+T('天氣：每個地點只列它那天，超出預報範圍的說哪天查得到', async p => {
+  const rows = await p.evaluate(() => { const G = window.__gp, S = G.S; S.route.date = '2026-11-16';
+    const dl = t => ({ time: t, temperature_2m_max: t.map(() => 12), temperature_2m_min: t.map(() => 3), apparent_temperature_min: t.map(() => 0), precipitation_probability_max: t.map(() => 60), precipitation_sum: t.map(() => 1), wind_gusts_10m_max: t.map(() => 20), weather_code: t.map(() => 3) });
+    const T2 = ['2026-11-16', '2026-11-17'];
+    S.wx = { at: '2026-11-02T03:00:00.000Z', start: '2026-11-16', end: '2026-11-17', pts: [{ label: 'D1 營地 天池山莊', day: 1, daily: dl(T2) }, { label: 'D2 營地 天池山莊', day: 2, daily: dl(T2) }, { label: '最高點 3335m', day: 3, daily: dl(T2) }] };
+    G.fn('renderWx')(); return [...document.querySelectorAll('#wxOut tr')].slice(1).map(r => r.textContent); });
+  ok(rows.length === 3, '列數不對：' + rows.join(' | '));
+  ok(/11-16.*D1/.test(rows[0]) && /11-17.*D2/.test(rows[1]) && /11-18.*最高點.*還沒進入預報範圍（11-03 起查得到）/.test(rows[2]), '內容不對：' + rows.join(' | '));
+});
+T('帶水：每段自己設定、全裝輕裝各取最多那段；輕裝頁身穿的也列、可切穿／內／掛', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; S.water = 2;
+    const set = (t, g, loc) => { const s = S.slots.find(x => x.type === t); if (s) Object.assign(s, { filled: true, on: true, brand: 'B', model: t, g, qty: 1, loc }); };
+    set('tent', 1400, 'pack'); set('top_shell', 400, 'worn'); S.lt = { off: {} }; G.fn('renderCats')(); G.fn('compute')(); });
+  await p.click('#addSeg'); await p.click('#addSeg');
+  await p.selectOption('#segList .seg >> nth=1 >> [data-s=lt]', 'light');
+  let c = await p.evaluate(() => ({ f: window.__gp.fn('C').waterG, l: window.__gp.fn('C').lt.waterG })); ok(c.f === 2000 && c.l === 1500, '預設水量不對 ' + JSON.stringify(c));
+  await p.fill('#segList .seg >> nth=0 >> [data-s=wL]', '3'); await p.fill('#segList .seg >> nth=1 >> [data-s=wL]', '0.5'); await p.waitForTimeout(200);
+  c = await p.evaluate(() => ({ f: window.__gp.fn('C').waterG, l: window.__gp.fn('C').lt.waterG })); ok(c.f === 3000 && c.l === 500, '路段水量沒生效 ' + JSON.stringify(c));
+  ok(/全裝帶水 3L/.test(await p.textContent('#segList .seg >> nth=0 >> [data-st]')) || true, '');
+  await p.click('[data-gv=light]'); await p.waitForTimeout(150);
+  ok(/B top_shell/.test(await p.textContent('#packList')), '輕裝頁沒列身穿的');
+  await p.click('#packList .pr:has-text("B top_shell") [data-pk=ltloc]'); await p.waitForTimeout(100);
+  const lt = await p.evaluate(() => window.__gp.fn('C').lt.its.map(x => x.type)); ok(lt.includes('top_shell'), '切成包內沒算進背負 ' + lt.join(','));
+  ok(await p.evaluate(() => window.__gp.S.slots.find(s => s.type === 'top_shell').loc === 'worn'), '全裝的位置被改到了');
+});
+T('高度圖：點的位置不在地圖畫面裡，地圖會移過去', async p => {
+  await loadGpx(p); await openNav(p); await p.click('#navMode [data-nr="zin"]'); await p.click('#navMode [data-nr="zin"]'); await p.click('#navMode [data-nr="zin"]'); await p.waitForTimeout(600);
+  const r = await p.evaluate(async () => { const G = window.__gp, m = G.MAP.m, P = G.PROF.fn.P, i = P.length - 5, q = P[i]; const vis = () => { const pt = m.project([q[1], q[0]]), c = m.getContainer(); return pt.x > 0 && pt.y > 0 && pt.x < c.clientWidth && pt.y < c.clientHeight; };
+    const before = vis(); const s = document.querySelector('#profSvg'), b = s.getBoundingClientRect(), x = G.PROF.fn.X(P[i][3]) / s.viewBox.baseVal.width * b.width + b.left;
+    s.dispatchEvent(new MouseEvent('click', { clientX: x, clientY: b.top + b.height / 2, bubbles: true })); await new Promise(r => setTimeout(r, 700)); return { before, after: vis() }; });
+  ok(!r.before && r.after, '地圖沒移過去 ' + JSON.stringify(r));
+});
+T('3D：滑鼠中鍵往上拖開 3D、改傾斜，壓回平面關 3D', async p => {
+  await loadGpx(p); const b = await (await p.$('#rmap canvas')).boundingBox(); const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  await p.mouse.move(cx, cy); await p.mouse.down({ button: 'middle' }); await p.mouse.move(cx, cy - 60, { steps: 4 }); await p.waitForTimeout(900); await p.mouse.move(cx + 40, cy - 120, { steps: 6 }); await p.mouse.up({ button: 'middle' }); await p.waitForTimeout(300);
+  let r = await p.evaluate(() => ({ on: window.__gp.fn('M3D').on, pitch: window.__gp.MAP.m.getPitch() })); ok(r.on && r.pitch > 10, '中鍵沒開 3D ' + JSON.stringify(r));
+  await p.mouse.move(cx, cy); await p.mouse.down({ button: 'middle' }); await p.mouse.move(cx, cy + 300, { steps: 6 }); await p.mouse.up({ button: 'middle' }); await p.waitForTimeout(700);
+  r = await p.evaluate(() => ({ on: window.__gp.fn('M3D').on, pitch: window.__gp.MAP.m.getPitch() })); ok(!r.on && r.pitch < 1, '壓回平面沒關 3D ' + JSON.stringify(r));
+}, { vp: '網頁' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

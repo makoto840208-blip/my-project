@@ -917,6 +917,55 @@ T('全程沒有頁面錯誤', async p => {
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));
 });
 
+// ======== 分家（v105）：規劃頁 index.html＋導航頁 nav.html ========
+const goSplit = async (p, url) => { await p.goto('https://app.test/' + url); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 }); await p.evaluate(() => { try { localStorage.setItem('gearPlanner.disc', '1'); } catch (e) {} }); };
+const planSaved = async p => { await p.evaluate(() => { window.__gp.fn('savePlan')(); }); };
+T('分家：建置產出 index.html（規劃）＋nav.html（導航），各有自己的 manifest 和圖示', async p => {
+  const a = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8'), n = fs.readFileSync(path.join(PUB, 'nav.html'), 'utf8');
+  ok(/const PAGE='plan'/.test(a) && /const PAGE='nav'/.test(n), 'PAGE 沒換'); ok(/manifest-nav\.json/.test(n) && /href="manifest\.json"/.test(a), 'manifest 連結不對'); ok(/<title>登山導航<\/title>/.test(n), '標題沒換');
+  const m = JSON.parse(fs.readFileSync(path.join(PUB, 'manifest-nav.json'), 'utf8')), m0 = JSON.parse(fs.readFileSync(path.join(PUB, 'manifest.json'), 'utf8'));
+  ok(m.start_url === './nav.html' && m.id === './nav.html' && m0.id === './' && m0.start_url === './', 'manifest id／start_url 不對 ' + JSON.stringify([m.id, m0.id]));
+  ok(m.icons.every(i => fs.existsSync(path.join(PUB, i.src))), '導航圖示檔不存在');
+  const sw = fs.readFileSync(path.join(PUB, 'sw.js'), 'utf8'); ok(/nav\.html/.test(sw) && /manifest-nav\.json/.test(sw) && /ignoreSearch/.test(sw), 'sw 沒快取 nav.html／沒忽略 ?go=');
+  const D = fs.readdirSync(path.join(R, 'dist')).find(f => f.endsWith('_vt.zip')); ok(!!D, '沒有 zip');
+}, { vp: '直式' });
+T('分家：規劃頁的全螢幕地圖跳到 nav.html，導航自動打開、路線帶過去、規劃介面藏起來', async p => {
+  await goSplit(p, '?gptest&split'); await loadGpx(p); await planSaved(p); const n0 = await p.evaluate(() => window.__gp.S.route.trk.p.length);
+  await Promise.all([p.waitForURL(/nav\.html/, { timeout: 10000 }), p.evaluate(() => document.querySelector('#mapBig').click())]);
+  await p.waitForFunction(() => window.__gp && window.__gp.NAV.on, null, { timeout: 25000 }); await p.waitForTimeout(500);
+  const r = await p.evaluate(() => ({ path: location.pathname, wrap: getComputedStyle(document.querySelector('main.wrap')).display, hdr: getComputedStyle(document.querySelector('header')).display, nm: document.getElementById('navMode').hidden, n: window.__gp.S.route.trk && window.__gp.S.route.trk.p.length, P: window.__gp.MAP.P && window.__gp.MAP.P.length, cls: document.documentElement.className, mapIn: !!document.querySelector('#navMode .navmap #rmap'), prof: !!document.querySelector('#navProfMain #prof') }));
+  ok(r.path === '/nav.html' && r.wrap === 'none' && r.hdr === 'none' && !r.nm && /navpage/.test(r.cls), '導航頁沒有藏起規劃介面 ' + JSON.stringify(r)); ok(r.n === n0 && r.P > 100, '路線沒帶過來 ' + JSON.stringify({ n0, r }));
+  ok(r.mapIn && r.prof, '地圖／高度圖沒進導航版面'); await shot(p, 'nav頁'); ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));
+});
+T('分家：nav.html?go=draw 直接進畫路線、?go=edit 直接進編輯器', async p => {
+  await goSplit(p, '?gptest&split'); await loadGpx(p); await planSaved(p);
+  await Promise.all([p.waitForURL(/nav\.html\?go=edit/, { timeout: 10000 }), p.evaluate(() => document.querySelector('#editOpen').click())]);
+  await p.waitForFunction(() => window.__gp && window.__gp.NAV.on && window.__gp.fn('ED').on, null, { timeout: 25000 });
+  await p.goto('https://app.test/nav.html?go=draw&gptest'); await p.waitForFunction(() => window.__gp && window.__gp.NAV.on && window.__gp.fn('DRAW').on, null, { timeout: 25000 });
+  ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));
+});
+T('分家：導航頁關閉導航回規劃頁，資料是同一份（導航頁改的規劃頁看得到）', async p => {
+  await goSplit(p, '?gptest&split'); await loadGpx(p); await planSaved(p);
+  await Promise.all([p.waitForURL(/nav\.html/, { timeout: 10000 }), p.evaluate(() => document.querySelector('#mapBig').click())]);
+  await p.waitForFunction(() => window.__gp && window.__gp.NAV.on, null, { timeout: 25000 }); await p.waitForTimeout(400);
+  await p.evaluate(() => { const G = window.__gp; G.S.route.name = '導航頁改的名字'; G.fn('savePlan')(); });
+  await Promise.all([p.waitForURL(u => !/nav\.html/.test(u.pathname), { timeout: 10000 }), navBtn(p, 'close')]);
+  await p.waitForFunction(() => window.__gp && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  const r = await p.evaluate(() => ({ name: window.__gp.S.route.name, hasTrk: !!window.__gp.S.route.trk, nav: window.__gp.NAV.on, wrap: getComputedStyle(document.querySelector('main.wrap')).display }));
+  ok(r.name === '導航頁改的名字' && r.hasTrk && !r.nav && r.wrap !== 'none', '回規劃頁後資料不對 ' + JSON.stringify(r));
+});
+T('分家：另一頁存過資料，切回這一頁會重新載入；有沒存的修改就不動', async p => {
+  await goSplit(p, '?gptest&split'); await loadGpx(p); await planSaved(p);
+  const other = (nm) => p.evaluate(nm => { const G = window.__gp, k = G.fn('plKey')(G.fn('PL').cur), d = JSON.parse(localStorage.getItem(k)); d.route.name = nm; localStorage.setItem(k, JSON.stringify(d)); }, nm);
+  const vis = () => p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await p.evaluate(() => { window.__marker = 1; }); await other('A頁改的'); await p.evaluate(() => { window.__gp.fn('dirty=true'); }); await vis(); await p.waitForTimeout(600);
+  ok(await p.evaluate(() => window.__marker === 1), '有未存修改卻重載了');
+  await p.evaluate(() => { window.__gp.fn('dirty=false'); }); await Promise.all([p.waitForNavigation({ timeout: 15000 }), vis()]);
+  await p.waitForFunction(() => window.__gp && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(await p.evaluate(() => window.__gp.S.route.name === 'A頁改的'), '沒有重新載入另一頁存的資料');
+  await vis(); await p.waitForTimeout(500); ok(await p.evaluate(() => window.__gp.S.route.name === 'A頁改的'), '多餘的重載');
+}, { vp: '直式' });
+
 // ---- 執行 ----
 (async () => {
   if (!fs.existsSync(path.join(PUB, 'index.html'))) { console.log('沒有 public/index.html，先跑 python3 tools/build.py t'); process.exit(2); }

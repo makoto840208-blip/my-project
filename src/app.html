@@ -581,6 +581,7 @@ html.oled .card{border-color:#1c2118}
   #print .plan table td,#print .plan table th{border:.4pt solid #666;padding:.6mm 1mm;font-size:7.8pt;text-align:left;font-weight:400}
   #print .plan th{background:#eee}
 }
+html.navpage header,html.navpage #hdrShow,html.navpage main.wrap,html.navpage #reditMode,html.navpage #print,html.navpage #ckPrint{display:none!important}
 </style>
 </head>
 <body>
@@ -936,6 +937,10 @@ html.oled .card{border-color:#1c2118}
 (function(){
 'use strict';
 const KEY='gearPlanner.v3',DBKEY='gearPlanner.db';const APPVER='dev';
+const PAGE='plan'; /* build 產 nav.html 時換成 'nav'：同一份程式、同一份資料，導航是獨立頁面 */
+/* 線上版：規劃頁的導航／畫路線／編輯按鈕改成跳到 nav.html；本機 file:// 與 ?gptest（舊測試）維持同頁，?gptest&split 才走分家流程 */
+const NAVSEP=PAGE==='plan'&&location.protocol!=='file:'&&(!/[?&]gptest/.test(location.search)||/[?&]split/.test(location.search));
+if(PAGE==='nav')document.documentElement.classList.add('navpage');
 const FOOT=5,FOOT_LO=4.7,FOOT_HI=6.3,PACKING=1.25,FOOD_L_PER_KG=2.5;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2506,6 +2511,17 @@ function navHud(){if(!NAV.on)return;const g=GPS.last,R=GPS.rec,set=(k,v)=>{const
   set('up',R?`${Math.round(R.up)}<small> m</small>`:'–');
   set('pos',g?`${g.la.toFixed(5)}, ${g.lo.toFixed(5)}<small> ±${Math.round(g.ac)}m</small>`:'等待 GPS…');
   const rb=$('#navRec');if(rb){rb.classList.toggle('on',!!(R&&R.on));}}
+async function navBoot(){const go=(location.search.match(/[?&]go=(\w+)/)||[])[1]||'';
+  try{await loadMapLib();}catch(e){}
+  await Promise.resolve();
+  if(!MAP.m&&!(S.route.trk||virtualTrk())){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:{lat:23.75,lon:121.0};await renderMap([[L0.lat,L0.lon,null,0]],[0,0],[],-1,{src:'none'});if(!S.route.trk&&!virtualTrk()){MAP.P=null;MAP.idx=null;mapClearRoute();}}
+  if(MAP.ready)await MAP.ready;
+  if(!MAP.m){toast('地圖要連網路才會顯示（先在規劃頁下載離線地圖）');return;}
+  if(go==='draw')$('#bDraw').click();
+  else if(go==='edit'&&S.route.trk){await navOpen();edOn(true);}
+  else{await navOpen();if(!S.route.trk){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:null;MAP.m.jumpTo(L0?{center:[L0.lon,L0.lat],zoom:13}:{center:[121.0,23.75],zoom:8});}}}
+function goNav(go){try{clearTimeout(saveT);if(dirty)savePlan();}catch(e){}const q=[];if(go)q.push('go='+go);if(/[?&]gptest/.test(location.search))q.push('gptest');location.href='nav.html'+(q.length?'?'+q.join('&'):'');}
+function goPlan(){try{clearTimeout(saveT);if(dirty)savePlan();}catch(e){}location.href='./'+(/[?&]gptest/.test(location.search)?'?gptest&split':'');}
 async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網路一次，或先下載離線地圖）');return;}setTimeout(()=>{try{qrPreload();}catch(e){}},3000);
   NAV.on=true;try{mapNavMode(true);}catch(e){}try{altsMap();map3dApply();}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
   try{navPinsApply();}catch(e){}NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'),$('#profRead'));try{document.querySelectorAll('#rmap .maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(e=>e.classList.remove('maplibregl-compact-show'));}catch(e){}try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
@@ -2519,13 +2535,14 @@ function navClose(){NAV.on=false;try{$('#navStrip').hidden=true;if(ED.on)edOn(fa
   if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();}try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}try{map3dApply();}catch(e){}/* 3D 要在清 padding 之後，不然傾斜動畫會被打斷 */
   if(NAV.profHome){NAV.profHome.append($('#prof'),$('#profRead'));}
   try{if(NAV.fsByMe&&document.fullscreenElement)document.exitFullscreen();}catch(e){}NAV.fsByMe=false;try{if(GPS.wake){GPS.wake.release();GPS.wake=null;}}catch(e){}
-  if(!GPS.byBtn&&!(GPS.rec&&GPS.rec.on))gpsStop();bkHeadOff();setTimeout(()=>MAP.m&&MAP.m.invalidateSize(),120);try{renderProfile();}catch(e){}}
+  if(!GPS.byBtn&&!(GPS.rec&&GPS.rec.on))gpsStop();bkHeadOff();setTimeout(()=>MAP.m&&MAP.m.invalidateSize(),120);try{renderProfile();}catch(e){}if(PAGE==='nav')goPlan();}
 document.addEventListener('visibilitychange',async()=>{if(NAV.on&&!document.hidden){try{if(navigator.wakeLock)GPS.wake=await navigator.wakeLock.request('screen');}catch(e){}}});
-$('#mapBig').addEventListener('click',navOpen);
+$('#mapBig').addEventListener('click',()=>{if(NAVSEP)goNav('');else navOpen();});
 $('#bDraw').addEventListener('click',async()=>{if(S.room&&RM.isOwner===false){toast('路線由管理員規劃，你不能改');return;}
+  if(NAVSEP){goNav('draw');return;}
   if(!MAP.m){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:{lat:23.75,lon:121.0};await renderMap([[L0.lat,L0.lon,null,0]],[0,0],[],-1,{src:'none'});if(!S.route.trk&&!virtualTrk()){MAP.P=null;MAP.idx=null;mapClearRoute();}}
   if(!MAP.m)return;await navOpen();if(!S.route.trk){const L0=S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:null;MAP.m.jumpTo(L0?{center:[L0.lon,L0.lat],zoom:13}:{center:[121.0,23.75],zoom:8});}
-  if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}DRAW.on=true;DRAW.taps=[];DRAW.legs=[];drawBar();editUI();});$('#editOpen').addEventListener('click',async()=>{await navOpen();if(S.route.trk)edOn(true);});
+  if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}DRAW.on=true;DRAW.taps=[];DRAW.legs=[];drawBar();editUI();});$('#editOpen').addEventListener('click',async()=>{if(NAVSEP){goNav('edit');return;}await navOpen();if(S.route.trk)edOn(true);});
 $('#navMode').addEventListener('click',e=>{const b0=e.target.closest('[data-nav]');if(b0&&b0.dataset.nav!=='menu'){const st=$('#navStrip');if(st&&!st.hidden)st.hidden=true;}const b=e.target.closest('[data-nav]');const mn=document.querySelector('#navMode .navmenu');if(mn&&!mn.hidden&&(!b||b.dataset.nav!=='menu'))mn.hidden=true;if(!b)return;const a=b.dataset.nav;
   if(a==='prof'){navProfMin(!$('#navProf').classList.contains('min'));return;}
   if(a==='dark'){setMapDark(!document.getElementById('rmap').classList.contains('mapdark'));return;}
@@ -3802,7 +3819,8 @@ function wxDiag(D,W){
 const PLK='gearPlanner.plans';let PL=null,saveT=null;
 const plKey=id=>'gearPlanner.plan.'+id;
 function readPlan(id){try{const d=JSON.parse(localStorage.getItem(plKey(id))||'null');if(d&&Array.isArray(d.slots)){const o=Object.assign(defaults(),d);o.route=Object.assign(defaults().route,d.route||{});return migrate(o);}}catch(e){}return defaults();}
-function savePlan(){if(!PL)return;try{localStorage.setItem(plKey(PL.cur),JSON.stringify(S));localStorage.setItem(PLK,JSON.stringify(PL));return true;}catch(e){toast('儲存失敗（瀏覽器可能封鎖儲存）');return false;}}
+let PSIG='';const planSig=()=>{try{return (localStorage.getItem(PLK)||'')+'|'+(PL?localStorage.getItem(plKey(PL.cur))||'':'');}catch(e){return '';}};
+function savePlan(){if(!PL)return;try{localStorage.setItem(plKey(PL.cur),JSON.stringify(S));localStorage.setItem(PLK,JSON.stringify(PL));PSIG=planSig();return true;}catch(e){toast('儲存失敗（瀏覽器可能封鎖儲存）');return false;}}
 function seedPlans(){
   PL={cur:null,list:[]};
   let old=null;try{const r=localStorage.getItem(KEY);if(r)old=JSON.parse(r);}catch(e){}
@@ -4944,7 +4962,7 @@ async function doInstall(){if(isStand()){toast('你已經是用 App 開的了');
     :ios?'iPhone／iPad：用 <b>Safari</b> 開這個網址 → 點下方「分享」（方框加向上箭頭）→「<b>加入主畫面</b>」→「加入」。'
     :'Android：Chrome 右上角「⋮」→「<b>安裝應用程式</b>」或「加到主畫面」。電腦：網址列右邊的安裝圖示，或「⋮」→「投放、儲存及分享」→「將網頁安裝為應用程式」。';
   $('#bSet').click();const el=$('#installHow');el.innerHTML=how;el.hidden=false;el.scrollIntoView({block:'center'});}
-async function shareApp(){const u=location.origin+location.pathname,t=`登山負重規劃師（by 台灣面具仔日常 TWGASMASKER）\n算背負重量、飲水、熱量、路線高度和分天，還能跟隊友同步裝備。\n${u}\n手機打開後可以「加到主畫面」當 App 用。`;
+async function shareApp(){const u=location.origin+location.pathname.replace(/nav\.html$/,''),t=`登山負重規劃師（by 台灣面具仔日常 TWGASMASKER）\n算背負重量、飲水、熱量、路線高度和分天，還能跟隊友同步裝備。\n${u}\n手機打開後可以「加到主畫面」當 App 用。`;
   try{if(navigator.share){await navigator.share({title:'登山負重規劃師',text:t});return;}}catch(e){if(e&&e.name==='AbortError')return;}
   const ok=await copyText(t);toast(ok?'介紹和網址已複製，貼給朋友就好':'複製失敗，網址是 '+u);}
 ['#bInstall','#bInstall2','#bInstall3'].forEach(i=>{const el=$(i);if(el)el.addEventListener('click',doInstall);});['#bShareApp','#bShareApp2'].forEach(i=>{const el=$(i);if(el)el.addEventListener('click',shareApp);});
@@ -4957,12 +4975,17 @@ if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!isStand())$('#bInstall').hidd
 PL=null;try{PL=JSON.parse(localStorage.getItem(PLK)||'null');}catch(e){}
 if(!PL||!Array.isArray(PL.list)||!PL.list.length)seedPlans();
 if(!PL.list.some(x=>x.id===PL.cur))PL.cur=PL.list[0].id;
-S=readPlan(PL.cur);
+S=readPlan(PL.cur);PSIG=planSig();
+if(PAGE==='nav'){try{$('#navMode').hidden=false;$('#navMode .navmap').appendChild($('#rmap'));}catch(e){}}
 renderDBInfo();renderMine();renderPace();fillMe();renderTabs();rerenderAll();
 roomFromHash();syBoot().then(syFromHash);window.addEventListener('hashchange',()=>{roomFromHash();syFromHash();});
 try{const pd=JSON.parse(localStorage.getItem(AIK)||'null');if(pd&&pd.plan===PL.cur&&Date.now()-pd.ts<6*3600e3){const sl=S.slots.find(x=>x.id===pd.id)||S.slots.find(x=>x.type===pd.type&&x.label===pd.label&&!x.filled);if(sl){pd.id=sl.id;try{localStorage.setItem(AIK,JSON.stringify(pd));}catch(e){}}}if(pd&&pd.plan===PL.cur&&S.slots.some(x=>x.id===pd.id)){picking.add(pd.id);asking.add(pd.id);renderCats();setTimeout(()=>{const el=document.querySelector(`.row[data-id="${pd.id}"]`);if(el)el.scrollIntoView({block:'center'});},300);}}catch(e){}
 try{if(navigator.storage&&navigator.storage.persist&&location.protocol!=='file:')navigator.storage.persist();}catch(e){}
 $('#state').textContent='已載入';
+/* 規劃頁與導航頁共用同一份資料（localStorage／IndexedDB）：切回來時，如果另一頁存過，就重新載入；有沒存的修改就不動 */
+(()=>{const chk=()=>{if(document.hidden||dirty||!PL)return;if(planSig()!==PSIG){PSIG=planSig();location.reload();}};
+  document.addEventListener('visibilitychange',chk);addEventListener('pageshow',e=>{if(e.persisted)chk();});})();
+if(PAGE==='nav')navBoot();
 })();
 </script>
 </body>

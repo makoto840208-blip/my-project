@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'tw.twgasmasker.gearplanner'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'tw.twgasmasker.gearplanner'
+        minSdk 24
+        targetSdk 34
+        versionCode 107
+        versionName '107'
+    }
+
+    signingConfigs {
+        release {
+            /* 金鑰由 GitHub Actions 產生並快取（android/release.jks），不放進 repo */
+            storeFile file('../release.jks')
+            storePassword 'gearplanner'
+            keyAlias 'gp'
+            keyPassword 'gearplanner'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

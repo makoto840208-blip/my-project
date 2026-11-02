@@ -990,7 +990,7 @@ T('黑屏語音：偏離路線、沒定位、天黑前到不了會念出來', as
   ok(/還沒定位/.test(await p.evaluate(() => window.__gp.fn('bkText')('status'))), '沒定位沒說');
   const t = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0] + 0.002, lo: q[1], al: q[2], ac: 5, t: Date.now() }; G.fn('navBoard')(); return G.fn('bkText')('status'); });
   ok(/偏離路線 \d+ 公尺/.test(t), '偏離沒說：' + t);
-  const d = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 5, t: Date.now() }; G.fn('navBoard')(); G.fn('NB').say.nx.h = 40; return G.fn('bkText')('status'); });
+  const d = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 5, t: Date.now() }; G.fn('navBoard')(); G.fn('NB').say.end.h = 40; return G.fn('bkText')('status'); });
   ok(/注意，天黑前到不了|已經天黑了/.test(d), '天黑前到不了沒警告：' + d);
 });
 
@@ -1045,6 +1045,54 @@ T('導航頁精簡：不畫裝備清單／食物／配置（節點少很多）�
   const r = await p.evaluate(() => ({ n: document.querySelectorAll('*').length, cats: document.querySelectorAll('#cats .row').length, C: !!window.__gp.fn('C'), nb: document.getElementById('navCard').textContent.length, kg: window.__gp.fn('C').packKg }));
   ok(r.cats === 0 && r.n < nPlan, `導航頁沒精簡 ${JSON.stringify({ r, nPlan })}`); ok(r.C && r.nb > 5, '導航板沒內容'); ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));
 }, { vp: '直式' });
+
+// ======== v107：跟著方向轉改成每格畫面平滑追蹤 ========
+const fireHead = p => p.evaluate(() => { try { DeviceOrientationEvent.requestPermission = async () => 'granted'; } catch (e) {} window.__nf = 0; window.__fire = H => { window.__nf++; const a = ((360 - (H + 4.5)) % 360 + 360) % 360; dispatchEvent(new DeviceOrientationEvent('deviceorientationabsolute', { alpha: a, beta: 0, gamma: 0, absolute: true })); }; });
+const rec = p => p.evaluate(() => { const m = window.__gp.MAP.m; window.__bs = []; window.__cs = []; window.__rc = 0; window.__mv = 0; m.on('render', () => window.__rc++); m.on('move', () => window.__mv++); const t = () => { const c = m.getCenter(); window.__bs.push(m.getBearing()); window.__cs.push([c.lng, c.lat]); requestAnimationFrame(t); }; t(); });
+T('轉向平滑：羅盤轉向每格畫面平滑追上、小抖動不重畫、到位就停', async p => {
+  await loadGpx(p); await openNav(p); await fireHead(p);
+  await p.evaluate(async () => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} await G.fn('headToggle')(); }); await rec(p);
+  ok(await p.evaluate(() => window.__gp.fn('HEAD').on), '羅盤轉向沒開');
+  await p.evaluate(() => { window.__nf = 0; for (let i = 0; i < 30; i++) setTimeout(() => window.__fire(120), i * 16); }); await p.waitForFunction(() => window.__nf >= 30, null, { timeout: 30000 });
+  await p.waitForFunction(() => { const G = window.__gp; return Math.abs(((G.MAP.m.getBearing() - G.fn('HEAD').last + 540) % 360) - 180) < 1; }, null, { timeout: 30000, polling: 100 }); await p.waitForTimeout(500);
+  const r = await p.evaluate(() => { const G = window.__gp, b = window.__bs, m = G.MAP.m, w = d => ((d + 540) % 360) - 180; let mx = 0; for (let i = 1; i < b.length; i++) mx = Math.max(mx, Math.abs(w(b[i] - b[i - 1]))); return { last: m.getBearing(), tgt: G.fn('HEAD').last, mx, uniq: new Set(b.map(x => Math.round(x * 10))).size }; });
+  ok(Math.abs(((r.last - r.tgt + 540) % 360) - 180) < 1, `沒追上目標 ${JSON.stringify(r)}`); ok(r.uniq >= 6, `不是平滑轉（只有 ${r.uniq} 種角度）`); ok(r.mx <= 9.6, `一格跳太多 ${r.mx}°`);
+  await p.evaluate(() => { window.__mv = 0; window.__nf = 0; for (let i = 0; i < 60; i++) setTimeout(() => window.__fire(120 + (i % 2 ? 1 : -1)), i * 16); }); await p.waitForFunction(() => window.__nf >= 60, null, { timeout: 30000 }); await p.waitForTimeout(1500);
+  const mv = await p.evaluate(() => window.__mv); ok(mv <= 2, `±1° 小抖動還一直移動相機（${mv} 次）`);
+  await p.evaluate(() => { window.__mv = 0; }); await p.waitForTimeout(700); ok((await p.evaluate(() => window.__mv)) === 0, '到位後相機還在動（耗電）');
+  await p.evaluate(() => { window.__gp.fn('headStop')(); }); ok(await p.evaluate(() => !window.__gp.fn('CAM').raf), '關掉羅盤轉向後追蹤迴圈還在跑');
+});
+T('轉向平滑：跟隨時位置與方向都平滑追上，到位就停', async p => {
+  await loadGpx(p); await openNav(p); await fireHead(p);
+  await p.evaluate(() => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} const P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 8, t: Date.now() }; G.fn('folToggle')(true); }); await p.waitForTimeout(1200); await rec(p);
+  await p.evaluate(() => { const G = window.__gp, g = G.GPS.last; G.GPS.last = Object.assign({}, g, { la: g.la + 0.0008, lo: g.lo + 0.0006, t: Date.now() }); window.__nf = 0; for (let i = 0; i < 40; i++) setTimeout(() => window.__fire(75), i * 16); G.fn('folApply')(false); }); await p.waitForFunction(() => window.__nf >= 40, null, { timeout: 30000 });
+  await p.waitForFunction(() => { const G = window.__gp, m = G.MAP.m, g = G.GPS.last, c = m.getCenter(), ppd = 512 * Math.pow(2, m.getZoom()) / 360, px = Math.hypot((g.lo - c.lng) * ppd, (g.la - c.lat) * ppd / Math.cos(c.lat * Math.PI / 180)); return px < 1 && Math.abs(((m.getBearing() - G.fn('BK').hd + 540) % 360) - 180) < 1; }, null, { timeout: 30000, polling: 100 }); await p.waitForTimeout(500);
+  const r = await p.evaluate(() => { const G = window.__gp, m = G.MAP.m, g = G.GPS.last, c = m.getCenter(), ppd = 512 * Math.pow(2, m.getZoom()) / 360, dx = (g.lo - c.lng) * ppd, dy = (g.la - c.lat) * ppd / Math.cos(c.lat * Math.PI / 180), cs = window.__cs, st = new Set(cs.map(x => x[0].toFixed(7) + x[1].toFixed(7))).size, w = d => ((d + 540) % 360) - 180; return { px: Math.hypot(dx, dy), steps: st, br: m.getBearing(), hd: G.fn('BK').hd, d: Math.abs(w(m.getBearing() - G.fn('BK').hd)) }; });
+  ok(r.hd != null, `方向沒轉到感應器的方向 ${JSON.stringify(r)}`); ok(r.px < 2.5, `位置沒追上 ${JSON.stringify(r)}`); ok(r.steps >= 3, `位置不是平滑移動 ${r.steps}`); ok(r.d < 1.5, `方向沒追上 ${JSON.stringify(r)}`);
+  await p.evaluate(() => { window.__mv = 0; }); await p.waitForTimeout(700); ok((await p.evaluate(() => window.__mv)) === 0, '到位後相機還在動（耗電）');
+  await p.evaluate(() => { window.__gp.fn('folToggle')(false); }); ok(await p.evaluate(() => !window.__gp.fn('CAM').raf), '關掉跟隨後追蹤迴圈還在跑');
+});
+
+// ======== v107：Android 外殼（APK）音量鍵橋接（網頁這端） ========
+T('APK 橋接：黑屏才攔截音量鍵；＋短按念休息點／今日終點、＋長按念方位、＋－同按 3 秒開 SOS', async p => {
+  await loadGpx(p);
+  await p.evaluate(() => { window.__calls = []; window.AndroidBridge = { volCapture: v => window.__calls.push(['vol', v]), keepOn: v => window.__calls.push(['keep', v]) }; });
+  await openNav(p);
+  await p.evaluate(() => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} const P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 8, t: Date.now() }; G.fn('navBoard')();
+    window.__spoken = []; speechSynthesis.cancel = () => {}; speechSynthesis.speak = u => { window.__spoken.push(u.text); }; speechSynthesis.getVoices = () => []; });
+  ok(await p.evaluate(() => window.__calls.some(c => c[0] === 'keep' && c[1] === true)), '開導航沒要求螢幕常亮');
+  ok(await p.evaluate(() => !window.__calls.some(c => c[0] === 'vol' && c[1] === true)), '還沒黑屏就攔截音量鍵');
+  await navBtn(p, 'black'); await p.waitForTimeout(400); ok(await p.evaluate(() => window.__calls.filter(c => c[0] === 'vol').slice(-1)[0][1] === true), '黑屏沒要求攔截音量鍵');
+  await p.evaluate(() => { window.__gp.fn('navBoard')(); window.__vol('up', 'short'); }); let sp = await p.evaluate(() => window.__spoken.slice()); ok(sp.length === 1 && /^今日終點|^休息點/.test(sp[0]), '＋短按沒念休息點／今日終點：' + JSON.stringify(sp));
+  await p.evaluate(() => window.__vol('up', 'long')); sp = await p.evaluate(() => window.__spoken.slice()); ok(sp.length === 2 && /路線約第/.test(sp[1]), '＋長按沒念方位：' + JSON.stringify(sp));
+  await p.evaluate(() => window.__vol('down', 'short')); ok((await p.evaluate(() => window.__spoken.length)) === 2, '－鍵應該先空著');
+  await p.evaluate(() => window.__vol('both', 'sos')); ok(await p.evaluate(() => !!document.getElementById('sosFull')), '＋－同按沒開 SOS');
+  await p.evaluate(() => { const s = document.getElementById('sosFull'); if (s) s.remove(); });
+  const sz = await p.evaluate(() => { const r = document.getElementById('navBlack').getBoundingClientRect(); return [r.width, r.height]; });
+  await p.touchscreen.tap(12, sz[1] * 0.5); await p.waitForTimeout(120); await p.touchscreen.tap(12, sz[1] * 0.5); await p.waitForTimeout(700);
+  ok(await p.evaluate(() => window.__calls.filter(c => c[0] === 'vol').slice(-1)[0][1] === false), '離開黑屏沒放開音量鍵');
+  await navBtn(p, 'close'); await p.waitForTimeout(300); ok(await p.evaluate(() => window.__calls.filter(c => c[0] === 'keep').slice(-1)[0][1] === false), '關導航沒放開螢幕常亮');
+});
 
 // ---- 執行 ----
 (async () => {

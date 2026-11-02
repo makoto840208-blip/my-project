@@ -2391,6 +2391,19 @@ function mapNavMode(on){const m=MAP.m;if(!m)return;
   if(on){m.dragRotate.enable();m.touchZoomRotate.enableRotation();if(m.cooperativeGestures)m.cooperativeGestures.disable();}
   else{m.dragRotate.disable();m.touchZoomRotate.disableRotation();if(m.cooperativeGestures)m.cooperativeGestures.enable();headStop();}}
 // 跟著手機方向轉
+/* ---- 相機平滑追蹤：羅盤轉向／跟隨時，每一格畫面往目標靠近一點（跟手指轉一樣順），到位就停（不再重畫、省電）。有遲滯：離目標超過 2°（或 1.5 px）才起步、靠到 0.4°（0.5 px）才停，感應器小抖動不會讓地圖一直重畫 ---- */
+const CAM={raf:0,tb:null,tc:null,pad:null,run:false};
+function camGlide(tb,tc,pad){if(tb!=null)CAM.tb=tb;if(tc)CAM.tc=tc;if(pad)CAM.pad=pad;if(!CAM.raf)CAM.raf=requestAnimationFrame(camStep);}
+function camStop(){CAM.tb=CAM.tc=CAM.pad=null;CAM.run=false;if(CAM.raf){cancelAnimationFrame(CAM.raf);CAM.raf=0;}}
+function camStep(){CAM.raf=0;const m=MAP.m;
+  if(!m||!NAV.on||!(HEAD.on||FOL.on)||!document.getElementById('navBlack').hidden){CAM.run=false;return;}
+  if(m.isEasing()){CAM.raf=requestAnimationFrame(camStep);return;}/* 首次對準的動畫先跑完，不打斷 */
+  const o={};let go=false;const run=CAM.run;
+  if(CAM.tb!=null){const cur=m.getBearing(),d=((CAM.tb-cur+540)%360)-180;if(Math.abs(d)>(run?0.4:2)){o.bearing=cur+Math.max(-9,Math.min(9,d*0.22));go=true;}}
+  if(CAM.tc){const c=m.getCenter(),ppd=512*Math.pow(2,m.getZoom())/360,dx=(CAM.tc[0]-c.lng)*ppd,dy=(CAM.tc[1]-c.lat)*ppd/Math.cos(c.lat*Math.PI/180),px=Math.hypot(dx,dy);
+    if(px>(run?0.5:1.5)){const k=px<1.5?1:0.25;o.center=[c.lng+(CAM.tc[0]-c.lng)*k,c.lat+(CAM.tc[1]-c.lat)*k];go=true;}}
+  if(CAM.pad){const q=m.getPadding();if(Math.abs(q.top-CAM.pad.top)>0.5||Math.abs(q.bottom-CAM.pad.bottom)>0.5){o.padding=CAM.pad;go=true;}}
+  CAM.run=go;if(go){m.jumpTo(o);CAM.raf=requestAnimationFrame(camStep);}}
 const HEAD={on:false,h:null,raf:0,last:null};
 // 方向：手機平放用螢幕上緣方向；直立或大角度傾斜（胸掛）時改用手機背面朝向（＝身體前進方向）
 var devHeading=function(e){const b=e.beta,up=b!=null&&Math.abs(b)>50,so=(screen.orientation&&screen.orientation.angle)||window.orientation||0;
@@ -2403,12 +2416,11 @@ var devHeading=function(e){const b=e.beta,up=b!=null&&Math.abs(b)>50,so=(screen.
 const magDecl=()=>{const g=GPS.last,L=g?{lat:g.la,lon:g.lo}:S.route.loc;if(L&&isFinite(L.lat)&&L.lat>20.5&&L.lat<26.5&&L.lon>118&&L.lon<123)return -4.5;return 0;};
 const _devH=devHeading;devHeading=e=>{const h=_devH(e);return h==null?null:(h+magDecl()+360)%360;};
 const smoothH=(prev,h,k)=>{if(prev==null)return h;const df=((h-prev+540)%360)-180;return (prev+df*(k||0.35)+360)%360;};
-function headStop(){if(!HEAD.on)return;removeEventListener('deviceorientationabsolute',HEAD.h,true);removeEventListener('deviceorientation',HEAD.h,true);HEAD.on=false;const b=document.querySelector('[data-nav=head]');if(b)b.classList.remove('on');try{map3dPR();}catch(e){}}
+function headStop(){if(!HEAD.on)return;removeEventListener('deviceorientationabsolute',HEAD.h,true);removeEventListener('deviceorientation',HEAD.h,true);HEAD.on=false;if(!FOL.on)camStop();const b=document.querySelector('[data-nav=head]');if(b)b.classList.remove('on');try{map3dPR();}catch(e){}}
 async function headToggle(){if(HEAD.on){headStop();if(MAP.m)MAP.m.easeTo({bearing:0,duration:300});return;}
   try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){toast('沒有取得方向感測權限');return;}}}catch(e){toast('沒有取得方向感測權限');return;}
   HEAD.got=false;HEAD.h=e=>{let hd=devHeading(e);if(hd==null)return;HEAD.got=true;hd=smoothH(HEAD.last,hd);HEAD.last=hd;
-    const now=performance.now();if(now-(HEAD.ts||0)<130)return;if(MAP.m&&Math.abs(((HEAD.last-MAP.m.getBearing()+540)%360)-180)<3)return;HEAD.ts=now;
-    if(!HEAD.raf)HEAD.raf=requestAnimationFrame(()=>{HEAD.raf=0;if(MAP.m&&HEAD.on&&document.getElementById('navBlack').hidden)MAP.m.setBearing(HEAD.last);});};
+    if(MAP.m&&HEAD.on&&document.getElementById('navBlack').hidden)camGlide(hd,null,null);};
   addEventListener('deviceorientationabsolute',HEAD.h,true);addEventListener('deviceorientation',HEAD.h,true);HEAD.on=true;HEAD.last=null;
   const b=document.querySelector('[data-nav=head]');if(b)b.classList.add('on');try{map3dPR();}catch(e){}
   setTimeout(()=>{if(HEAD.on&&!HEAD.got){headStop();toast('這支手機（或瀏覽器）沒有提供電子羅盤方向');}},2500);}
@@ -2523,7 +2535,7 @@ async function navBoot(){const go=(location.search.match(/[?&]go=(\w+)/)||[])[1]
 function goNav(go){try{clearTimeout(saveT);if(dirty)savePlan();}catch(e){}const q=[];if(go)q.push('go='+go);if(/[?&]gptest/.test(location.search))q.push('gptest');location.href='nav.html'+(q.length?'?'+q.join('&'):'');}
 function goPlan(){try{clearTimeout(saveT);if(dirty)savePlan();}catch(e){}location.href='./'+(/[?&]gptest/.test(location.search)?'?gptest&split':'');}
 async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網路一次，或先下載離線地圖）');return;}setTimeout(()=>{try{qrPreload();}catch(e){}},3000);
-  NAV.on=true;try{mapNavMode(true);}catch(e){}try{altsMap();map3dApply();}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
+  NAV.on=true;andCall('keepOn',true);try{mapNavMode(true);}catch(e){}try{altsMap();map3dApply();}catch(e){}const ov=$('#navMode');ov.hidden=false;ov.querySelector('.navmap').appendChild($('#rmap'));document.body.style.overflow='hidden';
   try{navPinsApply();}catch(e){}NAV.profHome=$('#prof').parentNode;$('#navProfMain').append($('#prof'),$('#profRead'));try{document.querySelectorAll('#rmap .maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(e=>e.classList.remove('maplibregl-compact-show'));}catch(e){}try{if(localStorage.getItem('gearPlanner.navProfMin')==='1')$('#navProf').classList.add('min');}catch(e){}npSize();
   NAV.fsByMe=false; // 不再呼叫瀏覽器全螢幕：會跳出系統的「從頂端向下拖曳」通知，地圖本身已經鋪滿整個畫面
   try{if(navigator.wakeLock)GPS.wake=await navigator.wakeLock.request('screen');}catch(e){}
@@ -2531,7 +2543,7 @@ async function navOpen(){if(!MAP.m){toast('地圖還沒載入（需要先連網�
   try{OFF.ac=OFF.ac||new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
   if(GPS.watch==null&&S.route.trk)gpsStart(); // 只開定位、不自動移動地圖
   setTimeout(()=>{MAP.m.invalidateSize();npSize();renderProfile();},150);NAV.tick=setInterval(()=>{navHud();navBoard();},2000);navHud();navBoard();editUI();try{marksRender();teamLocRender();}catch(e){}}
-function navClose(){NAV.on=false;try{$('#navStrip').hidden=true;if(ED.on)edOn(false);}catch(e){}try{const pl=RM.pend;RM.pend=null;RM.skipTs=0;if(pl)applyRoomPlan(pl);}catch(e){}try{mapNavMode(false);}catch(e){}try{altsMap();}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
+function navClose(){NAV.on=false;andCall('keepOn',false);andCall('volCapture',false);try{$('#navStrip').hidden=true;if(ED.on)edOn(false);}catch(e){}try{const pl=RM.pend;RM.pend=null;RM.skipTs=0;if(pl)applyRoomPlan(pl);}catch(e){}try{mapNavMode(false);}catch(e){}try{altsMap();}catch(e){}$('#navMode').hidden=true;$('.mapbox').prepend($('#rmap'));document.body.style.overflow='';clearInterval(NAV.tick);
   if(DRAW.on)drawCancel();if(TRIM.on){TRIM.on=false;TRIM.a=TRIM.b=null;trimDraw();}if(MEAS.on)measToggle(false);$('#navCard').hidden=true;$('#navBlack').hidden=true;$('#navLock').hidden=true;if(FOL.on){FOL.on=false;folBtn();}try{MAP.m.setPadding({top:0,bottom:0,left:0,right:0});}catch(e){}try{map3dApply();}catch(e){}/* 3D 要在清 padding 之後，不然傾斜動畫會被打斷 */
   if(NAV.profHome){NAV.profHome.append($('#prof'),$('#profRead'));}
   try{if(NAV.fsByMe&&document.fullscreenElement)document.exitFullscreen();}catch(e){}NAV.fsByMe=false;try{if(GPS.wake){GPS.wake.release();GPS.wake=null;}}catch(e){}
@@ -2574,7 +2586,7 @@ $('#navMode').addEventListener('click',e=>{const b0=e.target.closest('[data-nav]
   else if(a==='mark'){markOpen();}
   else if(a==='meas'){measToggle(!MEAS.on);}
   else if(a==='sos'){sosOpen();}
-  else if(a==='black'){if(GPS.watch==null){gpsStart();}$('#navBlack').hidden=false;bkHeadOn();navBoard();try{map3dApply();}catch(e){}}
+  else if(a==='black'){if(GPS.watch==null){gpsStart();}$('#navBlack').hidden=false;andCall('volCapture',true);bkHeadOn();navBoard();try{map3dApply();}catch(e){}}
   else if(a==='rec'){const R=GPS.rec;
     if(R&&R.on){if(!confirm(`停止記錄？\n已走 ${R.dist.toFixed(2)} km、↑${Math.round(R.up)} m、移動 ${fmtDur(R.moving)}`))return;R.on=false;saveRec();navHud();
       if(confirm('要把這次記錄存成 GPX 檔嗎？'))recGpx();}
@@ -2715,6 +2727,9 @@ function bkText(kind){const s=NB.say;if(!s||!MAP.P||MAP.P.length<2)return '還�
     if(s.live&&left!=null){if(left<=0)t.push('已經天黑了');else if(tg.h&&tg.h*60>left)t.push(`注意，天黑前到不了，日落 ${m2hm(set)}`);else if(tg.h)t.push(`天黑前到得了，日落 ${m2hm(set)}`);
       if(s.end&&tg.n.indexOf('今日終點')!==0&&s.end.h&&s.end.h*60>left&&left>0)t.push(`今日終點${s.end.n}預計天黑後才到`);}}
   return t.join('，')+'。';}
+/* Android 外殼（APK）：黑屏時音量鍵——＋短按＝單點（念休息點／今日終點）、＋長按＝念方位與位置、＋－同按 3 秒＝SOS；－先空著。外殼只在黑屏時攔截音量鍵 */
+function andCall(f,a){try{const B=window.AndroidBridge;if(B&&B[f])B[f](a);}catch(e){}}
+window.__vol=(key,kind)=>{try{if(key==='up'&&kind==='short')bkSpeak('status');else if(key==='up'&&kind==='long')bkSpeak('where');else if(kind==='sos')sosOpen();}catch(e){}};
 function bkSpeak(kind){if(!BK.voice)return '';const txt=bkText(kind);NB.lastSay=txt;
   try{const ss=window.speechSynthesis;if(!ss||!window.SpeechSynthesisUtterance){try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}return txt;}
     ss.cancel();const u=new SpeechSynthesisUtterance(txt),vs=ss.getVoices()||[];u.lang='zh-TW';u.rate=0.95;const v=vs.find(x=>/zh[-_]TW/i.test(x.lang))||vs.find(x=>/^zh/i.test(x.lang));if(v)u.voice=v;ss.speak(u);}catch(e){}
@@ -2882,15 +2897,16 @@ function pkFixOpen(){const P=MAP.P;if(!PK.list.length){toast(navigator.onLine?(P
 
 // ===== 跟隨模式：以我為中心、前進方向朝上，我在可視範圍下方約 1/3 =====
 const FOL={on:false,t:0,reg:false};
-function folBtn(){const b=document.querySelector('#navMode [data-nav=follow]');if(b)b.classList.toggle('on',FOL.on);try{map3dPR();}catch(e){}}
+function folBtn(){const b=document.querySelector('#navMode [data-nav=follow]');if(b)b.classList.toggle('on',FOL.on);if(!FOL.on&&!HEAD.on)camStop();try{map3dPR();}catch(e){}}
 function folToggle(force){const on=force!=null?force:!FOL.on;if(on===FOL.on)return;FOL.on=on;folBtn();if(!MAP.m)return;
   if(!FOL.reg){FOL.reg=true;const off=e=>{if(FOL.on&&e&&e.originalEvent)folToggle(false);};MAP.m.on('dragstart',off);MAP.m.on('rotatestart',off);}
   if(on){if(HEAD.on)headStop();if(GPS.watch==null)gpsStart();bkHeadOn();folApply(true);}
   else{const npb=NAV.on?Math.round(parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0):0;MAP.m.easeTo({padding:{top:0,bottom:npb,left:0,right:0},duration:300});if($('#navBlack').hidden)bkHeadOff();}}
-function folApply(force){if(!FOL.on||!MAP.m||!NAV.on||!$('#navBlack').hidden)return;const g=GPS.last;if(!g)return;const now=Date.now();if(!force&&now-FOL.t<300)return;
-  if(!force&&FOL.k===g.t&&BK.hd!=null&&Math.abs(((BK.hd-MAP.m.getBearing()+540)%360)-180)<3)return;FOL.k=g.t;FOL.t=now;
-  const br=BK.hd!=null?BK.hd:(g.sp!=null&&g.sp>0.6&&g.hd!=null&&isFinite(g.hd)?g.hd:MAP.m.getBearing()),H=MAP.m.getContainer().clientHeight,npb=parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0,Hv=Math.max(100,H-npb);
-  MAP.m.easeTo({center:[g.lo,g.la],bearing:br,padding:{top:Math.round(Hv*0.34),bottom:Math.round(npb),left:0,right:0},duration:force?500:280,essential:true});}
+function folApply(force){if(!FOL.on||!MAP.m||!NAV.on||!$('#navBlack').hidden)return;const g=GPS.last;if(!g)return;const m=MAP.m,now=Date.now();
+  const br=BK.hd!=null?BK.hd:(g.sp!=null&&g.sp>0.6&&g.hd!=null&&isFinite(g.hd)?g.hd:m.getBearing());
+  if(force||!FOL.pad||now-(FOL.pt||0)>1500){const H=m.getContainer().clientHeight,npb=parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0,Hv=Math.max(100,H-npb);FOL.pad={top:Math.round(Hv*0.34),bottom:Math.round(npb),left:0,right:0};FOL.pt=now;}
+  if(force){camStop();m.easeTo({center:[g.lo,g.la],bearing:br,padding:FOL.pad,duration:500,essential:true});CAM.tb=br;CAM.tc=[g.lo,g.la];CAM.pad=FOL.pad;return;}
+  camGlide(br,[g.lo,g.la],FOL.pad);}
 // ===== 鎖定觸控 =====
 function lockOn(){const L=$('#navLock');L.hidden=false;}
 (()=>{const L=document.getElementById('navLock');if(!L)return;const b=L.querySelector('.lockb'),f=L.querySelector('.lockfill');let t=null,st=0,raf=0;
@@ -2905,7 +2921,7 @@ function bigTxt(v){document.getElementById('navMode').classList.toggle('bigtxt',
 try{if(localStorage.getItem('gearPlanner.bigTxt')==='1')setTimeout(()=>bigTxt(true),0);}catch(e){}
 function offSetting(){const v=prompt('偏航提醒距離（公尺）。填 0 關閉。\n離路線超過這個距離、連續兩次定位，就會震動＋嗶聲。\n（離路線 5 km 以上視為不在路線附近，不會提醒）',OFF.on?OFF.thr:0);if(v==null)return;const n=Math.round(num(v));if(n<=0)OFF.on=false;else{OFF.on=true;OFF.thr=Math.max(20,Math.min(500,n));}offSave();toast(OFF.on?`偏航提醒：離路線 ${OFF.thr} m`:'偏航提醒已關閉');navBoard();}
 // ===== 偏航提醒 =====
-(()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;bkHeadOff();try{map3dApply();folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bkvoice],[data-bksos]');
+(()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;andCall('volCapture',false);bkHeadOff();try{map3dApply();folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bkvoice],[data-bksos]');
   b.addEventListener('click',e=>{if(e.target.closest('[data-bksos]')){sosOpen();return;}if(e.target.closest('[data-bkvoice]')){BK.voice=!BK.voice;try{localStorage.setItem('gearPlanner.bkVoice',BK.voice?'1':'0');}catch(err){}try{speechSynthesis.cancel();}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(e.target.closest('[data-bkhl]')){BK.hl=!BK.hl;try{localStorage.setItem('gearPlanner.bkHl',BK.hl?'1':'0');}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(!inArr(e))return;if(e.target.closest('#bkHdg'))bkLAcycle();else bkRadCycle();});b.addEventListener('dblclick',e=>{if(!inArr(e))ex();});let vt=0,lp=0,lpd=false;const vcl=()=>{clearTimeout(vt);clearTimeout(lp);};
   b.addEventListener('touchstart',e=>{if(inArr(e))return;lpd=false;clearTimeout(lp);lp=setTimeout(()=>{lpd=true;clearTimeout(vt);bkSpeak('where');},650);},{passive:true});
   b.addEventListener('touchmove',()=>clearTimeout(lp),{passive:true});b.addEventListener('touchcancel',()=>clearTimeout(lp),{passive:true});

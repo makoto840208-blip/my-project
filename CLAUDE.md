@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v104 在 main（線上）；v106 在分支 `nav-split`（導航分家＋黑屏語音＋捷徑＋箭頭＋轉向順暢；v105 使用者已上傳實測過「聲音可以」，但還沒說要合併 main，下山前不要自己合併）**。repo 的 `public/` 停在 v77。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v104 在 main（線上）；v107 在分支 `nav-split`（導航分家＋黑屏語音＋捷徑＋箭頭＋轉向平滑追蹤＋Android 外殼原始碼；v105 使用者已上傳實測過「聲音可以」，但還沒說要合併 main，下山前不要自己合併）**。repo 的 `public/` 停在 v77。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -32,8 +32,15 @@
 ## v106 追加
 - **導航捷徑**：`manifest.json` 的 `shortcuts`（長按首頁 App 圖示出現「導航」→ `./nav.html`，可拖到桌面變獨立圖示）。原因：nav.html 在首頁 App 的 scope 內，Chrome 不會再裝第二個 App（使用者實測「安裝會變成用原本的開」）。WebAPK 更新捷徑可能要等一陣子，等不及就刪掉首頁 App 重裝（資料存瀏覽器，不會掉）。
 - **黑屏箭頭**（`#bkArr`）：細長等腰、頭長、底邊中間有缺角（使用者要的）；一般 `M0,-62 L6,-36 L0,-42 L-6,-36 Z`，高亮 `M0,-64 L8,-32 L0,-39 L-8,-32 Z`。
-- **轉向順暢**：省電模式下跟隨／羅盤轉向（`busy`）時 2D 解析度也降到最多 1.5（3D 仍是 1）；羅盤轉向死區 1.5°→3°、最快每 130 ms 一次；跟隨死區 2°→3°。使用者說手機轉向有點頓，原因是每次小抖動就整張重畫。
+- **轉向順暢（v106 做法被使用者驗收「還是卡」，v107 改掉）**：v106 只是少重畫（死區 3°、130 ms 節流），結果地圖更一跳一跳。使用者說手指轉都還好、只有「跟著方向轉」卡。v107：`CAM` 平滑追蹤迴圈（`camGlide(bearing,center,padding)`／`camStep`），感應器只更新目標，每格畫面（rAF）往目標靠 22%（單格最多 9°、位置 25%），`jumpTo` 一次；有遲滯（離目標 >2° 或 >1.5 px 才起步，<0.4°／0.5 px 才停），到位就停（不再重畫）；首次對準仍用 `easeTo`（`m.isEasing()` 時迴圈等著）。羅盤轉向（`HEAD.h`）和跟隨（`folApply`）都改用它；`headStop`／`folBtn` 關掉時 `camStop()`。省電模式下跟隨／轉向時 2D 解析度最多 1.5（v106 保留，3D 仍是 1）。
 - **導航頁精簡**：`rerenderAll` 在 `PAGE==='nav'` 不畫 `renderPresets／renderCats／renderFood`（規劃用的清單）；`compute()` 照跑，導航板數字不變。
+
+## Android 外殼（v107，`android/`）
+- 目的：音量鍵觸發語音（網頁收不到音量鍵）。**不是 TWA／PWA**：是自己的 WebView App（`tw.twgasmasker.gearplanner`），載入線上版 `https://square-mode-1f4a.makoto840208.workers.dev/`，所以網站更新 App 會跟著更新；兩個桌面圖示：「負重規劃」（`MainActivity`→index.html）、「導航」（`NavActivity`→nav.html，同一份資料）。
+- **資料不跟 Chrome 的 PWA 共用**（WebView 有自己的儲存空間）：第一次要用「同步碼」或「備份／還原」把規劃搬過來。GPX 匯出（blob 下載）WebView 目前**不支援**；要匯出請用 Chrome 版。定位、相機（掃 QR）、選檔（匯入 GPX）、tel: 撥號（SOS）都有處理。
+- 音量鍵：只有網頁呼叫 `AndroidBridge.volCapture(true)`（黑屏中）才攔截，其他時候照常調音量；＋短按→`window.__vol('up','short')`（念休息點／今日終點）、＋長按 650 ms→`('up','long')`（方位與位置）、＋－同按 3 秒→`('both','sos')`（`sosOpen`）、－鍵先空著（只攔下不調音量）。`keepOn(true/false)`：導航中螢幕常亮＋沉浸式。
+- 編譯：**雲端沙箱連不到 Google／Maven／Gradle（403 政策拒絕），所以不能在這裡編 APK**。改用 `.github/workflows/android-apk.yml`（GitHub Actions，JDK 17＋Gradle 8.7＋AGP 8.5.2，GitHub 的 ubuntu 機器內建 Android SDK）：Actions 頁面手動執行 `android-apk`（或推 `android/**` 自動跑），成功後 APK 在 Releases 的 `apk-latest`（公開，手機直接下載安裝）。簽章金鑰由 workflow 產生並用 `actions/cache` 快取（key `apk-keystore-v1`，**久沒編譯被快取清掉就會換金鑰，要先解除安裝再裝**；解除安裝前先用同步碼備份）。Java／workflow 在沙箱只做過語法檢查，**還沒實際編過**，第一次編失敗請看 Actions 的紀錄修。
+- 網頁端：`andCall()`、`window.__vol`（app.html，`bkSpeak` 附近）；測試只驗網頁這端（假的 `AndroidBridge`）。
 
 ## 設計原則（使用者明確要求過）
 - 全 App 低飽和、軍事風；圖示一律單色線條 SVG（`ic('name')`、`ICO2`），**不用彩色 emoji、不用白色**；SOS／偏航警告才用醒目紅。

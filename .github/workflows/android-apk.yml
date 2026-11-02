@@ -1,0 +1,61 @@
+name: android-apk
+
+# 手動執行（Actions → android-apk → Run workflow），或 android/ 有改動時自動建置。
+# 產出：GitHub「Releases」裡的 apk-latest（手機直接下載安裝）。
+on:
+  workflow_dispatch:
+  push:
+    branches: [nav-split]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      # 簽章金鑰：第一次產生並快取，之後的 APK 才能直接「更新」安裝（不用先解除安裝）
+      - name: 取簽章金鑰（快取）
+        id: ks
+        uses: actions/cache@v4
+        with:
+          path: android/release.jks
+          key: apk-keystore-v1
+
+      - name: 產生簽章金鑰
+        if: steps.ks.outputs.cache-hit != 'true'
+        run: >
+          keytool -genkeypair -keystore android/release.jks -storepass gearplanner -keypass gearplanner
+          -alias gp -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=GearPlanner"
+
+      - name: 編譯 APK
+        run: gradle -p android assembleRelease --no-daemon
+
+      - name: 發布到 Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk gearplanner.apk
+          gh release delete apk-latest --cleanup-tag --yes || true
+          gh release create apk-latest gearplanner.apk --prerelease --target "${{ github.sha }}" \
+            --title "Android APK（最新）" \
+            --notes "負重規劃師 Android 外殼（WebView）。裝好會有兩個圖示：負重規劃、導航。音量鍵只在黑屏時啟用。"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gearplanner-apk
+          path: gearplanner.apk

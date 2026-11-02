@@ -580,7 +580,6 @@ html.oled .card{border-color:#1c2118}
 <main class="wrap">
   <button id="routeBar" type="button" title="展開路線"><span class="rb-n"></span><span class="rb-s"></span><span class="rb-a">展開路線 ▾</span></button>
   <section id="params">
-    <div class="dashbar" style="justify-content:flex-start"><button class="btn sm" id="routeHide" type="button">◂ 收起路線（只看裝備）</button></div>
     <div class="card">
       <div class="ch">行程與生理參數</div>
       <div class="cb">
@@ -615,7 +614,7 @@ html.oled .card{border-color:#1c2118}
       </div>
     </div>
     <div class="card" id="routeCard">
-      <div class="ch">路線計畫（行前登山計畫）<span class="sum" id="rSum">–</span></div>
+      <div class="ch">路線計畫（行前登山計畫）<button class="btn sm" id="routeHide" type="button" style="margin-left:10px;font-size:12.5px;padding:3px 10px">◂ 收起路線（只看裝備）</button><span class="sum" id="rSum">–</span></div>
       <div class="cb">
         <div id="lockBar" class="rec" style="margin:0 0 10px;border-color:var(--coy)" hidden></div>
         <div class="fields">
@@ -4672,7 +4671,7 @@ document.addEventListener('visibilitychange',async()=>{if(!SY.code)return;
 (()=>{const w=document.querySelector('main.wrap');let ro=false;try{ro=localStorage.getItem('gearPlanner.routeOff')==='1';}catch(e){}
   const rb=$('#routeBar'),rbUpd=()=>{const nm=(document.querySelector('[data-r=name]')||{}).value||'';rb.querySelector('.rb-n').textContent=nm||'路線';rb.querySelector('.rb-s').textContent=($('#rSum').textContent||'').replace(/^[–-]$/,'');};
   const rset=v=>{w.classList.toggle('routeoff',v);try{localStorage.setItem('gearPlanner.routeOff',v?'1':'0');}catch(e){}rbUpd();if(!v)setTimeout(()=>{if(MAP.m){MAP.m.invalidateSize();MAP.m.resize();}try{renderProfile();}catch(e){}},80);};
-  rset(ro);$('#routeHide').addEventListener('click',()=>{rset(true);scrollTo(0,0);});rb.addEventListener('click',()=>{rset(false);scrollTo(0,0);});
+  rset(ro);$('#routeHide').addEventListener('click',e=>{e.stopPropagation();rset(true);scrollTo(0,0);});rb.addEventListener('click',()=>{rset(false);scrollTo(0,0);});
   try{new MutationObserver(rbUpd).observe($('#rSum'),{childList:true,characterData:true,subtree:true});document.querySelector('[data-r=name]').addEventListener('input',rbUpd);}catch(e){}
 })();
 (()=>{const w=document.querySelector('main.wrap');let off=false;try{off=localStorage.getItem('gearPlanner.dashOff')==='1';}catch(e){}

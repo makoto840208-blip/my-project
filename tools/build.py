@@ -8,6 +8,7 @@ s=open(os.path.join(R,'src/app.html'),encoding='utf-8').read()
 i=s.index('const icon="data:image/svg+xml,"');j=s.rfind('try{',0,i);k=s.index('}catch(e){}',i)+len('}catch(e){}')
 s=s[:j]+"if(location.protocol==='file:'){"+s[j:k]+"}\nelse if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}"+s[k:]
 s=s.replace('<meta name="apple-mobile-web-app-title" content="負重規劃師">','<meta name="apple-mobile-web-app-title" content="負重規劃師">\n<link rel="manifest" href="manifest.json">\n<link rel="icon" href="icon-192.png">\n<link rel="apple-touch-icon" href="icon-192.png">',1)
+s=s.replace("const APPVER='dev'",f"const APPVER='v{v}'",1)
 P=os.path.join(R,'public');os.makedirs(P,exist_ok=True)
 open(os.path.join(P,'index.html'),'w',encoding='utf-8').write(s)
 for f in ['manifest.json','icon-192.png','icon-512.png','jsqr.js']:shutil.copy(os.path.join(R,'src',f),os.path.join(P,f))

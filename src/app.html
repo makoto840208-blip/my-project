@@ -465,6 +465,11 @@ input:disabled,select:disabled{opacity:.6}
 .stack>button{border:0;padding:0;margin:0;height:100%;cursor:pointer;min-width:0}
 .legend>button{background:none;border:0;padding:2px 0;color:var(--mut);font:inherit;font-size:12px;cursor:pointer;text-align:left}.legend>button.on{color:var(--txt)}.legend>button small{opacity:.7}
 @media (max-width:600px){.rh-x{display:none}}
+/* 回報 */
+.fbb{float:right;margin-left:6px;width:28px;height:26px;padding:0;background:none;border:1px solid var(--line);border-radius:3px;color:var(--mut);cursor:pointer;font-size:13px}.potlist .p{position:relative;grid-template-columns:22px minmax(0,1fr) auto 28px!important}.potlist .p .fbb{float:none;align-self:start}
+.fbn{margin-top:4px;font-size:12.5px;color:var(--coy2)}.fbe{margin-top:6px}.fbe textarea{width:100%;font:inherit;font-size:13px}
+.fbbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--mut)}.fbbar span{margin-right:auto}
+.fbsk .fbr{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 0;font-size:12.5px}.fbsk .fbr small{color:var(--mut)}
 #compDet{margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;font-size:12.5px;display:flex;flex-direction:column;gap:2px}#compDet b{color:var(--coy2);font-weight:600}#compDet div{display:flex;justify-content:space-between;gap:10px;color:var(--mut)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .vol{height:14px;border-radius:3px;background:var(--deep);border:1px solid var(--line);overflow:hidden;margin-top:4px}
@@ -906,7 +911,7 @@ html.oled .card{border-color:#1c2118}
 <script>
 (function(){
 'use strict';
-const KEY='gearPlanner.v3',DBKEY='gearPlanner.db';
+const KEY='gearPlanner.v3',DBKEY='gearPlanner.db';const APPVER='dev';
 const FOOT=5,FOOT_LO=4.7,FOOT_HI=6.3,PACKING=1.25,FOOD_L_PER_KG=2.5;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -4152,9 +4157,11 @@ $('#expShare').addEventListener('click',async()=>{const t=$('#expTxt').value;try
 
 /* ---------- engine ---------- */
 let C={};
+/* 鞋墊、鞋帶、鞋套、綁腿這類配件常被歸在「鞋子」，不能拿來當換鞋建議 */
+const SHOEACC=/鞋墊|鞋帶|鞋套|綁腿|鞋釘|冰爪|insole|lace|gaiter|crampon|spike/i;
 function potOf(s){
   if(!s.filled||!(s.g>0)||s.gEst)return null;
-  let c=dbFor(s.type).filter(d=>d.g>0&&d.g<s.g&&!d.gEst);
+  let c=dbFor(s.type).filter(d=>d.g>0&&d.g<s.g&&!d.gEst&&!(s.type==='shoes'&&SHOEACC.test([d.brand,d.model,d.sys||''].join(' '))));
   if(s.type==='pack'&&C.vol)c=c.filter(d=>(d.cap||0)>=C.vol);
   if(!c.length)return null;
   const b=c.reduce((a,x)=>x.g<a.g?x:a),save=(s.g-b.g)*s.qty;
@@ -4272,11 +4279,36 @@ function compute(){
   if(typeof wxCheck==='function')wxCheck(false);
   if(typeof renderPresets==='function'&&(renderPresets._alt!==altGroup()||renderPresets._t!==S.tmin)){if(renderPresets._alt!==altGroup()&&!S.pgroupUser)S.pgroup=altGroup()||S.pgroup;renderPresets._alt=altGroup();renderPresets._t=S.tmin;renderPresets();}
 }
+/* ===== 回報：每條建議／診斷可標「不適用」或寫備註（存本機），下山後「匯出回報」一次複製給開發者 ===== */
+let FBK={};try{FBK=JSON.parse(localStorage.getItem('gearPlanner.fb')||'{}')||{};}catch(e){}
+const fbSave=()=>{try{localStorage.setItem('gearPlanner.fb',JSON.stringify(FBK));}catch(e){}};
+const fbKey=(kind,t)=>kind+':'+String(t).replace(/[\d.,]+/g,'#').slice(0,80);
+let FBED=null,FBT='';/* 正在編輯哪一條、它的標題 */
+const fbBtn=(k,t,kind)=>`<button type="button" class="fbb" data-fb="${esc(k)}" data-fbt="${esc(t)}" data-fbk="${kind}" title="不適用／寫備註">✎</button>`;
+function fbView(k){const f=FBK[k];let h='';if(f&&f.note)h+=`<div class="fbn">備註：${esc(f.note)}</div>`;
+  if(FBED===k)h+=`<div class="fbe"><textarea rows="2" data-fbtx placeholder="寫備註（例如：RAT 已實測沒問題、這條建議不合理因為…）">${esc((f&&f.note)||'')}</textarea><div class="btnrow"><button type="button" class="btn sm pri" data-fba="save">存備註</button><button type="button" class="btn sm" data-fba="skip">不適用（收起來）</button><button type="button" class="btn sm" data-fba="cancel">取消</button>${f?'<button type="button" class="btn sm warn" data-fba="del">清掉這條回報</button>':''}</div></div>`;return h;}
+function fbCount(){return Object.keys(FBK).length;}
+function fbText(){const nm=(document.querySelector('[data-r=name]')||{}).value||'',L=[`登山負重規劃師 回報 ${APPVER}　${new Date().toLocaleString('zh-TW',{hour12:false})}`,`路線：${nm||'（未命名）'}　${($('#rSum')||{}).textContent||''}`,`背負 ${C.pack!=null?kg(C.pack):'?'} kg・體重 ${S.body} kg・${S.days} 天`,''];
+  Object.entries(FBK).sort((a,b)=>(a[1].t||0)-(b[1].t||0)).forEach(([k,f])=>{L.push(`${f.skip?'［不適用］':'［備註］'}${k.startsWith('pot:')?'單項減重':'診斷'}：${f.title||k}`);if(f.note)L.push(`　→ ${f.note}`);});
+  L.push('','當時的裝備：');live().forEach(x=>L.push(`- ${CATN[x.cat]||''}／${x.label}：${dispName(x)} ${tot(x)} g${x.loc==='worn'?'（穿）':''}`));return L.join('\n');}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-fb]');if(b){const k=b.dataset.fb;FBED=FBED===k?null:k;FBT=b.dataset.fbt||k;compute();setTimeout(()=>{const t=document.querySelector('[data-fbtx]');if(t)t.focus();},30);return;}
+  const a=e.target.closest('[data-fba]');if(a&&FBED){const k=FBED,tx=document.querySelector('[data-fbtx]'),title=FBT||(FBK[k]||{}).title||k;const act=a.dataset.fba;
+    if(act==='save'){const note=(tx&&tx.value||'').trim();if(note)FBK[k]=Object.assign(FBK[k]||{t:Date.now()},{title,note});else if(FBK[k]&&!FBK[k].skip)delete FBK[k];}
+    else if(act==='skip'){FBK[k]=Object.assign(FBK[k]||{t:Date.now()},{title,skip:true,note:(tx&&tx.value||'').trim()||(FBK[k]&&FBK[k].note)||''});}
+    else if(act==='del')delete FBK[k];
+    FBED=null;fbSave();compute();return;}
+  const u=e.target.closest('[data-fbun]');if(u){const f=FBK[u.dataset.fbun];if(f){delete f.skip;if(!f.note)delete FBK[u.dataset.fbun];fbSave();compute();}return;}
+  const x=e.target.closest('[data-fbx]');if(x){const a2=x.dataset.fbx;if(a2==='copy'){if(!fbCount()){toast('還沒有任何回報');return;}toast(await copyText(fbText())?`已複製 ${fbCount()} 條回報，貼給 Claude 就好`:'複製失敗');}
+    else if(a2==='clear'){const old=FBK;FBK={};fbSave();compute();toastAct('回報已清除','復原',()=>{FBK=old;fbSave();compute();});}}});
+const fbBar=()=>`<div class="fbbar"><span>回報 ${fbCount()} 條（存在這支手機）</span><button type="button" class="btn sm" data-fbx="copy">匯出回報</button>${fbCount()?'<button type="button" class="btn sm warn" data-fbx="clear">清除回報</button>':''}</div>`;
+const fbSkipped=kind=>Object.entries(FBK).filter(([k,f])=>f.skip&&k.startsWith(kind+':'));
+const fbSkipHTML=kind=>{const L=fbSkipped(kind);return L.length?`<details class="dmore fbsk"><summary>已標不適用 ${L.length} 項</summary>${L.map(([k,f])=>`<div class="fbr"><span>${esc(f.title||k)}${f.note?`<small>　備註：${esc(f.note)}</small>`:''}</span><button type="button" class="btn sm" data-fbun="${esc(k)}">恢復</button></div>`).join('')}</details>`:'';};
 function renderPot(){
-  const L=live().map(s=>({s,p:potOf(s)})).filter(x=>x.p).sort((a,b)=>b.p.eqv-a.p.eqv);
+  const pk=x=>'pot:'+x.s.type+':'+dispName(x.p.b)+'←'+dispName(x.s);
+  const L=live().map(s=>({s,p:potOf(s)})).filter(x=>x.p).filter(x=>!(FBK[pk(x)]&&FBK[pk(x)].skip)).sort((a,b)=>b.p.eqv-a.p.eqv);
   $('#potSum').textContent=L.length?'最多可省 '+kg(sum(L,x=>x.p.save))+' kg':'–';
-  $('#potList').innerHTML=L.length?L.slice(0,8).map((x,i)=>`<div class="p"><span class="n">${i+1}</span><div>${esc(x.s.label)}：換「${esc(x.p.b.brand+' '+x.p.b.model)}」<br><small>目前 ${esc(dispName(x.s))}</small></div><span class="s">−${x.p.save}g${x.s.type==='shoes'?`<br><small>等效 −${kg(x.p.save*FOOT)}kg</small>`:''}</span></div>`).join('')
-    :`<div style="color:var(--mut);font-size:13px">${DB.length?'目前選的裝備已是資料庫中同類別最輕的，或還沒選裝備。':'匯入裝備資料庫後，這裡會列出每一項換成同類別最輕款可以省多少。'}</div>`;
+  $('#potList').innerHTML=(L.length?L.slice(0,8).map((x,i)=>{const k=pk(x),t=`${x.s.label}：換「${dispName(x.p.b)}」（目前 ${dispName(x.s)}）`;return `<div class="p"><span class="n">${i+1}</span><div>${esc(x.s.label)}：換「${esc(x.p.b.brand+' '+x.p.b.model)}」<br><small>目前 ${esc(dispName(x.s))}</small>${fbView(k)}</div><span class="s">−${x.p.save}g${x.s.type==='shoes'?`<br><small>等效 −${kg(x.p.save*FOOT)}kg</small>`:''}</span>${fbBtn(k,t,'pot')}</div>`;}).join('')
+    :`<div style="color:var(--mut);font-size:13px">${DB.length?'目前選的裝備已是資料庫中同類別最輕的，或還沒選裝備。':'匯入裝備資料庫後，這裡會列出每一項換成同類別最輕款可以省多少。'}</div>`)+fbSkipHTML('pot')+fbBar();
 }
 
 function routeDiag(D,W,c){
@@ -4492,13 +4524,13 @@ function diagnose(){
   wxDiag(D,W);
   routeDiag(D,W,c);
   const order={r:0,y:1,i:2,g:3};D.sort((a,b)=>order[a[0]]-order[b[0]]);C.diag=D;
-  const dh=([l,t,d,src])=>`<div class="d ${l}"><h4>${esc(t)}</h4>${d?`<div class="dd">${d}</div>`:''}${src?`<span class="src">依據：${esc(src)}</span>`:''}</div>`;
-  const imp=D.filter(x=>x[0]==='r'||x[0]==='y'),rest=D.filter(x=>x[0]!=='r'&&x[0]!=='y');
+  const dh=([l,t,d,src])=>{const k=fbKey('dg',t);return `<div class="d ${l}">${fbBtn(k,t,'dg')}<h4>${esc(t)}</h4>${d?`<div class="dd">${d}</div>`:''}${src?`<span class="src">依據：${esc(src)}</span>`:''}${fbView(k)}</div>`;};
+  const DV=D.filter(x=>!(FBK[fbKey('dg',x[1])]&&FBK[fbKey('dg',x[1])].skip)),imp=DV.filter(x=>x[0]==='r'||x[0]==='y'),rest=DV.filter(x=>x[0]!=='r'&&x[0]!=='y');
   const cnt=k=>D.filter(x=>x[0]===k).length;
   $('#dSum').innerHTML=[['r','var(--r)'],['y','var(--y)'],['i','var(--b)'],['g','var(--g)']].map(([k,c])=>cnt(k)?`<span><i style="background:${c}"></i>${cnt(k)}</span>`:'').join('');
   const wasOpen=!!document.querySelector('#diag .dmore[open]');
   $('#diag').innerHTML=(imp.length?imp.map(dh).join(''):'<div class="d g"><h4>沒有需要特別注意的項目</h4></div>')
-    +(rest.length?`<details class="dmore"${wasOpen?' open':''}><summary>其他 ${rest.length} 項建議與正常項目</summary><div class="diag" style="margin-top:8px">${rest.map(dh).join('')}</div></details>`:'');
+    +(rest.length?`<details class="dmore"${wasOpen?' open':''}><summary>其他 ${rest.length} 項建議與正常項目</summary><div class="diag" style="margin-top:8px">${rest.map(dh).join('')}</div></details>`:'')+fbSkipHTML('dg')+fbBar();
 }
 
 /* ---------- save / reset / csv / print ---------- */

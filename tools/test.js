@@ -673,6 +673,34 @@ T('背負組成：照分類拆、由重到輕、小的併其他、點了看明�
   const det = await p.textContent('#compDet'); ok(/tent/.test(det) && /1.40 kg/.test(det), '明細不對：' + det);
   await p.click('#legend [data-comp="sleep"]'); ok(await p.evaluate(() => document.getElementById('compDet').hidden), '再點一次沒收起');
 });
+T('減重建議：鞋墊不能拿來換鞋子', async p => {
+  const r = await p.evaluate(() => { const G = window.__gp, DB = G.fn('DB'), S = G.S;
+    DB.push({ id: 'dIns', type: 'shoes', brand: '母子鱷魚', model: '免修剪專業乳膠鞋墊', g: 85 }, { id: 'dSh', type: 'shoes', brand: 'Light', model: 'Runner', g: 600 });
+    const s = S.slots.find(x => x.type === 'shoes'); Object.assign(s, { filled: true, on: true, brand: 'USMC', model: 'RAT Boot', g: 1800, qty: 1 });
+    const p0 = G.fn('potOf')(s); return p0 ? p0.b.model : null; });
+  ok(r && !/鞋墊/.test(r), '換鞋建議不對：' + r);
+});
+T('回報：建議可寫備註、標不適用、恢復、一次匯出', async p => {
+  await p.evaluate(() => { const G = window.__gp, DB = G.fn('DB'), S = G.S; DB.push({ id: 'dSh2', type: 'shoes', brand: 'Light', model: 'Runner', g: 600 });
+    const s = S.slots.find(x => x.type === 'shoes'); Object.assign(s, { filled: true, on: true, brand: 'USMC', model: 'RAT Boot', g: 1800, qty: 1 }); G.fn('renderCats')(); G.fn('compute')();
+    document.querySelectorAll('#dash .card').forEach(c => c.classList.remove('fold')); document.querySelectorAll('#diag details').forEach(d => d.open = true); });
+  const dg = '#diag .d .fbb'; await p.waitForSelector(dg);
+  const title = await p.evaluate(sel => document.querySelector(sel).dataset.fbt, dg);
+  await p.click(dg); await p.fill('[data-fbtx]', '這條我已經知道了'); await p.click('[data-fba=save]'); await p.waitForTimeout(100);
+  ok(/這條我已經知道了/.test(await p.textContent('#diag')), '備註沒顯示');
+  await p.evaluate(() => document.querySelector('#potList').scrollIntoView()); await shot(p, 'fb');
+  // 單項減重標不適用
+  const potT = await p.evaluate(() => document.querySelector('#potList .p .fbb').dataset.fbt), rows = () => p.evaluate(() => [...document.querySelectorAll('#potList > .p .fbb')].map(e => e.dataset.fbt));
+  await p.click('#potList .p .fbb'); await p.click('[data-fba=skip]'); await p.waitForTimeout(100);
+  ok(!(await rows()).includes(potT), '不適用沒收起來');
+  ok(/已標不適用 1 項/.test(await p.textContent('#potList')), '沒列出已標不適用');
+  const txt = await p.evaluate(() => window.__gp.fn('fbText')());
+  ok(txt.includes('這條我已經知道了') && txt.includes(title) && /［不適用］單項減重/.test(txt) && /RAT Boot/.test(txt) && /回報 v/.test(txt), '匯出文字不對：' + txt.slice(0, 300));
+  await p.click('#potList details summary'); await p.click('#potList [data-fbun]'); await p.waitForTimeout(100);
+  ok((await rows()).includes(potT), '恢復沒作用');
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(await p.evaluate(() => window.__gp.fn('fbCount')() === 1), '重開後回報不見');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

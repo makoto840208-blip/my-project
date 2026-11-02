@@ -2654,6 +2654,7 @@ function navBoard(){const el=$('#navCard');if(!el||!NAV.on)return;const P=MAP.P,
   let pkL='';try{const ah=pkAhead(pkRef(),BK.hd);if(ah)pkL+=`<div class="nbsub" style="color:#c9c2a8">▲ 正前方：${esc(ah.p.n)}${ah.p.e?' '+ah.p.e+' m':''}　${ah.d<10?ah.d.toFixed(1):Math.round(ah.d)} km（${Math.round(ah.b)}°）</div>`;
     if(NB.fix&&Date.now()-NB.fix.ts<3*3600e3&&!(g&&fresh&&(g.ac||99)<NB.fix.err))pkL+=`<div class="nbsub" style="color:#ffb347">◎ ${pkFixTxt(NB.fix)}</div>`;}catch(e){}
   const html=`${(()=>{try{return pendHTML()+excHTML();}catch(e){return '';}})()}${head}${weak}${stale}${pkL}${slopeL}${rrS?`<div class="nbsub" style="color:#ffe14d">${rrS}</div>`:''}${restL}${selL}${sunWarn}${main}${list}${pinL}`;
+  NB.say={ts:Date.now(),g:g?{la:g.la,lo:g.lo,al:g.al,ac:g.ac}:null,live,isOff,far,off,km0:P[i0][3],ele0:P[i0][2],nx:nx?{n:nx.o.n,km:nx.km,h:nx.h,up:nx.up,dn:nx.dn}:null,last:last&&last!==nx?{n:last.o.n,km:last.km,h:last.h}:null};
   if(el._h!==html){el._h=html;el.innerHTML=html;}
   if(inf){const t=(tst||isOff?`⚠︎ 偏離 ${tst?'（測試）':offTxt}　`:'')+(rr?`◆ ${fmtK(rr.km)}${rr.h&&live?' → '+clk(rr.h):''}　`:'')+(nx?`${nx.o.n} ${fmtK(nx.km)} ↑${Math.round(nx.up)} ↓${Math.round(nx.dn)}${nx.h&&live?' → '+clk(nx.h):''}`:'');inf.textContent=t;inf.classList.toggle('warn',!!(tst||isOff));}
   const bk=$('#nbkTxt');if(bk&&!$('#navBlack').hidden){NB.tgt=null;let farTxt='';if(g&&!far){const la=bkLA(g)/1000;let k=i0;while(k<P.length-1&&P[k][3]-P[i0][3]<la)k++;NB.tgt=isOff?P[i0]:P[k];}
@@ -2687,6 +2688,35 @@ function bkArrow(){const ro=document.getElementById('bkRose');if(ro){ro.setAttri
 async function bkHeadOn(){if(BK.on)return;try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted')return;}}catch(e){return;}
   BK.h=e=>{const h=devHeading(e);if(h==null)return;BK.hd=smoothH(BK.hd,h,0.3);bkArrow();folApply(false);};
   addEventListener('deviceorientationabsolute',BK.h,true);addEventListener('deviceorientation',BK.h,true);BK.on=true;}
+/* ---- 黑屏語音播報：單點念進度（下一點、距離、時間、天黑前到不到），長按念方位與推算位置；連點兩下仍是回到地圖 ---- */
+function bkText(kind){const s=NB.say;if(!s||!MAP.P||MAP.P.length<2)return '還沒有路線';
+  const dist=k=>k<1?`${Math.round(k*1000)} 公尺`:`${Math.round(k*10)/10} 公里`;
+  const hh=h=>{const m=Math.round(h*60),H=Math.floor(m/60),M=m%60;return H?`${H} 小時${M?M+' 分鐘':''}`:`${M} 分鐘`;};
+  const D8=['北','東北','東','東南','南','西南','西','西北'],dn=b=>D8[Math.round((((b%360)+360)%360)/45)%8];
+  const pos=s.g?{lat:s.g.la,lon:s.g.lo}:(S.route.loc&&isFinite(S.route.loc.lat)?S.route.loc:null);
+  let left=null,set=null;if(pos){try{const sn=sunCalc(new Date(),pos.lat,pos.lon);if(sn){const n=new Date();left=sn.set-(n.getHours()*60+n.getMinutes());set=sn.set;}}catch(e){}}
+  const t=[];
+  if(kind==='where'){
+    if(!s.g)t.push('還沒有定位');
+    else{if(s.far)t.push(`你離路線 ${dist(s.off/1000)}，不在路線附近`);else{t.push(`你在路線約第 ${Math.round(s.km0*10)/10} 公里處`);}
+      const al=s.g.al!=null?s.g.al:s.ele0;if(al!=null)t.push(`海拔約 ${Math.round(al)} 公尺`);
+      if(BK.hd!=null)t.push(`面向${dn(BK.hd)}，${Math.round(BK.hd)} 度`);
+      if(NB.tgt&&!s.far){const b=brg([s.g.la,s.g.lo],NB.tgt);t.push(`路線往${dn(b)}`+(BK.hd!=null?(()=>{const r=(b-BK.hd+360)%360;return r<30||r>330?'，在你正前方':r<150?'，在你右邊':r>210?'，在你左邊':'，在你後面';})():''));}
+      else if(NB.tgt)t.push(`最近的路線點在${dn(brg([s.g.la,s.g.lo],NB.tgt))}方`);}
+    try{if(NB.fix&&Date.now()-NB.fix.ts<3*3600e3&&!(s.g&&(s.g.ac||99)<NB.fix.err))t.push(pkFixTxt(NB.fix).replace(/[◎▲]/g,''));}catch(e){}
+    return t.join('，')+'。';}
+  if(s.isOff)t.push(`你偏離路線 ${s.off<1000?Math.round(s.off)+' 公尺':dist(s.off/1000)}`);
+  if(!s.g)t.push('還沒定位，先從起點算');else if(s.far)t.push(`你離路線 ${dist(s.off/1000)}，不在路線附近，先從起點算`);
+  if(!s.nx)t.push('已到終點附近');
+  else{t.push(`${s.nx.n}，還有 ${dist(s.nx.km)}`);if(s.nx.up>=10)t.push(`往上爬 ${Math.round(s.nx.up)} 公尺`);
+    if(s.nx.h){t.push(`約 ${hh(s.nx.h)}`);if(s.live)t.push(`預計 ${clk(s.nx.h)} 到`);}
+    if(s.live&&left!=null){if(left<=0)t.push('已經天黑了');else if(s.nx.h&&s.nx.h*60>left)t.push(`注意，天黑前到不了，日落 ${m2hm(set)}`);else if(s.nx.h)t.push(`天黑前到得了，日落 ${m2hm(set)}`);
+      if(s.last&&s.last.h&&s.last.h*60>left&&left>0)t.push(`今天終點${s.last.n}預計天黑後才到`);}}
+  return t.join('，')+'。';}
+function bkSpeak(kind){const txt=bkText(kind);NB.lastSay=txt;
+  try{const ss=window.speechSynthesis;if(!ss||!window.SpeechSynthesisUtterance){try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}return txt;}
+    ss.cancel();const u=new SpeechSynthesisUtterance(txt),vs=ss.getVoices()||[];u.lang='zh-TW';u.rate=0.95;const v=vs.find(x=>/zh[-_]TW/i.test(x.lang))||vs.find(x=>/^zh/i.test(x.lang));if(v)u.voice=v;ss.speak(u);}catch(e){}
+  return txt;}
 function bkHeadOff(){if(!BK.on||FOL.on)return;removeEventListener('deviceorientationabsolute',BK.h,true);removeEventListener('deviceorientation',BK.h,true);BK.on=false;BK.hd=null;}
 // 輸入座標設目標點。TWD97 和 TWD67 的數字範圍幾乎一樣，猜不出來，所以讓人自己選（記住上次選的）
 // TWD67 → TWD97 用 tm2 裡同一組近似參數反解（誤差約幾公尺）
@@ -2874,7 +2904,10 @@ try{if(localStorage.getItem('gearPlanner.bigTxt')==='1')setTimeout(()=>bigTxt(tr
 function offSetting(){const v=prompt('偏航提醒距離（公尺）。填 0 關閉。\n離路線超過這個距離、連續兩次定位，就會震動＋嗶聲。\n（離路線 5 km 以上視為不在路線附近，不會提醒）',OFF.on?OFF.thr:0);if(v==null)return;const n=Math.round(num(v));if(n<=0)OFF.on=false;else{OFF.on=true;OFF.thr=Math.max(20,Math.min(500,n));}offSave();toast(OFF.on?`偏航提醒：離路線 ${OFF.thr} m`:'偏航提醒已關閉');navBoard();}
 // ===== 偏航提醒 =====
 (()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;bkHeadOff();try{map3dApply();folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bksos]');
-  b.addEventListener('click',e=>{if(e.target.closest('[data-bksos]')){sosOpen();return;}if(e.target.closest('[data-bkhl]')){BK.hl=!BK.hl;try{localStorage.setItem('gearPlanner.bkHl',BK.hl?'1':'0');}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(!inArr(e))return;if(e.target.closest('#bkHdg'))bkLAcycle();else bkRadCycle();});b.addEventListener('dblclick',e=>{if(!inArr(e))ex();});b.addEventListener('touchend',e=>{if(inArr(e)){lt=0;return;}const n=Date.now();if(n-lt<400){e.preventDefault();ex();}lt=n;});})();
+  b.addEventListener('click',e=>{if(e.target.closest('[data-bksos]')){sosOpen();return;}if(e.target.closest('[data-bkhl]')){BK.hl=!BK.hl;try{localStorage.setItem('gearPlanner.bkHl',BK.hl?'1':'0');}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(!inArr(e))return;if(e.target.closest('#bkHdg'))bkLAcycle();else bkRadCycle();});b.addEventListener('dblclick',e=>{if(!inArr(e))ex();});let vt=0,lp=0,lpd=false;const vcl=()=>{clearTimeout(vt);clearTimeout(lp);};
+  b.addEventListener('touchstart',e=>{if(inArr(e))return;lpd=false;clearTimeout(lp);lp=setTimeout(()=>{lpd=true;clearTimeout(vt);bkSpeak('where');},650);},{passive:true});
+  b.addEventListener('touchmove',()=>clearTimeout(lp),{passive:true});b.addEventListener('touchcancel',()=>clearTimeout(lp),{passive:true});
+  b.addEventListener('touchend',e=>{clearTimeout(lp);if(inArr(e)){lt=0;return;}if(lpd){lpd=false;lt=0;return;}const n=Date.now();if(n-lt<400){e.preventDefault();clearTimeout(vt);try{speechSynthesis.cancel();}catch(x){}ex();}else{clearTimeout(vt);vt=setTimeout(()=>bkSpeak('status'),420);}lt=n;});})();
 const OFF={on:true,thr:50,cnt:0,alerted:false,last:0,ac:null};
 try{const o=JSON.parse(localStorage.getItem('gearPlanner.offRoute')||'null');if(o){OFF.on=o.on!==false;OFF.thr=o.thr||50;}}catch(e){}
 const offSave=()=>{try{localStorage.setItem('gearPlanner.offRoute',JSON.stringify({on:OFF.on,thr:OFF.thr}));}catch(e){}};
@@ -3842,7 +3875,7 @@ function rerenderAll(){try{if(!S.route.trk&&!virtualTrk()){MAP.P=null;MAP.idx=nu
   $('#wxOut').innerHTML='';$('#wxLoc').textContent='輸入路線名稱或貼上計畫書文字，就會自動定位並抓天氣。';$('#presetNote').innerHTML='';$('#gpxPanel').hidden=true;$('#txtPanel').hidden=true;
   renderPresets._alt=null;fillParams();fillRoute();renderSegs();renderProfile();renderPresets();renderCats();renderFood();renderLoc();renderWx();compute();
   roomStart();
-  if(S.route.name&&!S.route.loc)scheduleGeo();
+  if(S.route.name&&!S.route.loc&&PAGE!=='nav')scheduleGeo(); /* 導航頁（山上）不自動連網查地名，省電；到規劃頁才查 */
 }
 function switchPlan(id){if(id===PL.cur)return;clearTimeout(saveT);savePlan();PL.cur=id;S=readPlan(id);savePlan();renderTabs();rerenderAll();$('#state').textContent='已切換';}
 $('#planTabs').addEventListener('click',e=>{

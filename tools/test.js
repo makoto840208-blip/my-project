@@ -966,6 +966,34 @@ T('分家：另一頁存過資料，切回這一頁會重新載入；有沒存�
   await vis(); await p.waitForTimeout(500); ok(await p.evaluate(() => window.__gp.S.route.name === 'A頁改的'), '多餘的重載');
 }, { vp: '直式' });
 
+// ======== 黑屏語音播報（v105） ========
+T('黑屏語音：單點念進度（下一點、距離、時間、天黑前到不到），長按念方位與位置，連點兩下仍是離開', async p => {
+  await loadGpx(p); await openNav(p);
+  await p.evaluate(() => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} const P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 8, t: Date.now() }; G.fn('navBoard')();
+    window.__spoken = []; speechSynthesis.cancel = () => {}; speechSynthesis.speak = u => { window.__spoken.push(u.text); }; speechSynthesis.getVoices = () => []; });
+  await navBtn(p, 'black'); await p.waitForTimeout(400);
+  await p.evaluate(() => { window.__gp.fn('navBoard')(); });
+  const st = await p.evaluate(() => window.__gp.fn('bkText')('status'));
+  ok(/還有 [\d.]+ (公里|公尺)/.test(st) && /約/.test(st) && /預計 \d\d:\d\d 到/.test(st) && /天黑|日落/.test(st), '進度文字不對：' + st);
+  const wh = await p.evaluate(() => window.__gp.fn('bkText')('where')); ok(/路線約第 [\d.]+ 公里處/.test(wh) && /海拔約 \d+ 公尺/.test(wh) && /路線往/.test(wh), '方位文字不對：' + wh);
+  const sz = await p.evaluate(() => { const r = document.getElementById('navBlack').getBoundingClientRect(); return [r.width, r.height]; }), X = 12, Y = sz[1] * 0.5;
+  await p.touchscreen.tap(X, Y); await p.waitForTimeout(250); ok((await p.evaluate(() => window.__spoken.length)) === 0, '單點不到 420ms 就念了'); await p.waitForTimeout(450);
+  let sp = await p.evaluate(() => window.__spoken.slice()); ok(sp.length === 1 && /還有/.test(sp[0]), '單點沒念進度 ' + JSON.stringify(sp));
+  const c = await p.context().newCDPSession(p); await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: X, y: Y }] }); await p.waitForTimeout(900); await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await p.waitForTimeout(700);
+  sp = await p.evaluate(() => window.__spoken.slice()); ok(sp.length === 2 && /路線約第/.test(sp[1]), '長按沒念方位 ' + JSON.stringify(sp)); ok(await p.evaluate(() => !document.getElementById('navBlack').hidden), '長按不該離開黑屏');
+  await p.touchscreen.tap(X, Y); await p.waitForTimeout(120); await p.touchscreen.tap(X, Y); await p.waitForTimeout(900);
+  ok(await p.evaluate(() => document.getElementById('navBlack').hidden), '連點兩下沒離開黑屏'); ok((await p.evaluate(() => window.__spoken.length)) === 2, '連點兩下還念了進度');
+});
+T('黑屏語音：偏離路線、沒定位、天黑前到不了會念出來', async p => {
+  await loadGpx(p); await openNav(p);
+  await p.evaluate(() => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} G.GPS.last = null; G.fn('navBoard')(); });
+  ok(/還沒定位/.test(await p.evaluate(() => window.__gp.fn('bkText')('status'))), '沒定位沒說');
+  const t = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0] + 0.002, lo: q[1], al: q[2], ac: 5, t: Date.now() }; G.fn('navBoard')(); return G.fn('bkText')('status'); });
+  ok(/偏離路線 \d+ 公尺/.test(t), '偏離沒說：' + t);
+  const d = await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 5, t: Date.now() }; G.fn('navBoard')(); G.fn('NB').say.nx.h = 40; return G.fn('bkText')('status'); });
+  ok(/注意，天黑前到不了|已經天黑了/.test(d), '天黑前到不了沒警告：' + d);
+});
+
 // ---- 執行 ----
 (async () => {
   if (!fs.existsSync(path.join(PUB, 'index.html'))) { console.log('沒有 public/index.html，先跑 python3 tools/build.py t'); process.exit(2); }

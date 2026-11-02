@@ -5,7 +5,7 @@
 ## 檔案
 - `src/app.html`：**唯一的原始碼**（HTML+CSS+JS 全在一個檔，含內建裝備資料庫 JSON）。改這個。
 - `src/sw.js`、`src/manifest.json`、圖示、`src/jsqr.js`（jsQR 1.4.0 壓縮版，cdnjs 沒有，所以跟網站放一起、sw 預先快取）：線上版附檔。
-- `tools/build.py <版本>`：產生 `public/`（Cloudflare 網站）和 `dist/cloudflare_上傳用_v<版本>.zip`。
+- `tools/build.py <版本>`：產生 `public/`（Cloudflare 網站，v105 起有 `index.html`＋`nav.html` 兩頁）和 `dist/cloudflare_上傳用_v<版本>.zip`。`tools/power.js <舊 public> <新 public>`：量導航畫面 15 秒的 CPU／繪製（舊版用 `git worktree add /tmp/base origin/main` 建）。`tools/gen_nav_icon.py`：產導航圖示。
 - `public/`：建置結果，**不要手改**。`wrangler.jsonc` 指向它（Worker 名稱 `square-mode-1f4a`）。
 - 線上網址：https://square-mode-1f4a.makoto840208.workers.dev
 
@@ -14,11 +14,20 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v104**（線上是使用者手動上傳的版本；repo 的 `public/` 停在 v77）。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v104 在 main（線上）；v105 在分支 `nav-split`（導航分家＋黑屏語音，使用者還沒實測、下山前不要合併到 main）**。repo 的 `public/` 停在 v77。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
 - 改完先跑 `node tools/test.js --build`，全過才交 zip。
+
+## 分家（v105，分支 nav-split）
+- 同一份 `src/app.html` build 出兩頁：`index.html`（規劃，`PAGE='plan'`）、`nav.html`（導航，`PAGE='nav'`，build.py 把字串換掉）。各有 manifest（`manifest.json` id `./`、`manifest-nav.json` id `./nav.html`）和圖示（導航圖示 `icon-nav-*.png`），所以手機可以加成兩個 App。sw.js 預先快取兩頁，fetch 失敗時 `ignoreSearch:true`（`nav.html?go=draw` 離線也開得起來）。
+- 規劃頁：`NAVSEP`（線上＝true；`file://` 與 `?gptest` 維持同頁導航＝舊測試照跑；`?gptest&split` 才走分家流程）時，`#mapBig`／`#bDraw`／`#editOpen` 改成 `goNav('' | 'draw' | 'edit')` → `nav.html?go=…`（先 `savePlan`）。導航頁：`html.navpage` 用 CSS 藏起 header／main.wrap／#reditMode／#print；開機前先把 `#rmap` 搬進 `#navMode .navmap`（地圖才有尺寸），`navBoot()` 建地圖後 `navOpen()` 或依 `?go=` 進畫路線／編輯器；關閉導航（`navClose` 尾端）→ `goPlan()` 回規劃頁。`?gptest` 會帶到另一頁。
+- 共用資料：兩頁同網址，共用 localStorage／IndexedDB。`PSIG`＝上次讀／存的規劃原始字串；頁面切回前景（visibilitychange／pageshow）時若 `planSig()` 變了且沒有未存修改（`dirty`）就 `location.reload()`。導航頁不自動連網查地名（`rerenderAll` 的 `scheduleGeo` 在 `PAGE==='nav'` 跳過），山上省一次連線。
+- 省電實測（tools/power.js，直式手機、同路線）：導航 15 秒腳本約 5 ms、黑屏 0 次地圖繪製，v104 與 nav.html 幾乎一樣（沒有更省、也沒有變差）；nav.html 的 JS 記憶體多約 3～5 MB（規劃介面仍在背景 DOM 渲染一次，沒有省略以免漏掉導航要用的計算）。之後要再省可考慮導航頁略過規劃 UI 的 render。
+
+## 黑屏語音播報（v105）
+- `navBoard()` 每次存 `NB.say` 快照；`bkText(kind)` 產文字、`bkSpeak(kind)` 用 `speechSynthesis`（zh-TW）念。**單點**（等 420 ms 沒第二下）念「下一點、還有幾 km、爬升、約幾小時、預計幾點到、天黑前到不到得了、偏離」；**長按 650 ms** 念方位與推算位置（路線第幾 km、海拔、面向、路線在你哪邊、山頭交會定位）；**連點兩下仍是回到地圖**（沒改，使用者原本說「按兩下念位置」，但黑屏連點兩下離開是既有設計，用長按取代）。沒有語音引擎就震動。還沒做：開關（目前一律開）、音量鍵觸發。
 
 ## 設計原則（使用者明確要求過）
 - 全 App 低飽和、軍事風；圖示一律單色線條 SVG（`ic('name')`、`ICO2`），**不用彩色 emoji、不用白色**；SOS／偏航警告才用醒目紅。
@@ -82,9 +91,9 @@
 - 網址加 `?gptest` 會暴露 `window.__gp`（MAP、S、PROF、NAV、GPS、FOL、MEAS、RED、NB，`fn('名稱')` 可取內部函式）。
 
 ## 之前提過、還沒做
-- **黑屏語音播報**（使用者喜歡，還沒排）：按一下（之後用音量鍵）念「到○○還有幾 km、約幾小時、天黑前到不到得了」，按兩下念方位與推算位置。
+- **黑屏語音播報**：v105 已做單點／長按（見上）；之後用音量鍵、加開關。
 - **包成 App／上架**（使用者在考慮上架，先暫緩）：音量鍵控制導航（Android 外殼攔截音量鍵；iPhone 不行）。操作構想：短按移動、長按確定、兩鍵同按返回、連按三下喚醒防誤觸、SOS 長按 3 秒。
-- **導航分家**（下一輪，使用者同意）：導航獨立成第二個頁面／圖示，同網址共用 localStorage／IndexedDB（資料即時同步、離線可用），地圖／高度圖／畫線拆成共用程式由 build 組進兩頁；導航只有地圖但可編輯。山頭定位模組整塊搬過去。現在導航是「借」首頁的 #rmap、#prof、#profRead 搬來搬去，容易漏搬（v75 的控制列消失就是這樣）。
+- **導航分家**：v105 已做（見「分家」）；之後可再把導航頁的規劃 UI render 省掉、山頭定位模組整塊搬過去（目前兩頁共用同一份程式，山頭模組沒動）。
 - 騎車模式（路線規劃／偏航／時間改騎車設定）
 - 走路時用 GPS 行進方向自動校正羅盤偏差
 - 每天用當天背負重量算時間（使用者說先不用）

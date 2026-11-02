@@ -625,6 +625,42 @@ T('收起路線（網頁）', async p => {
   await p.click('#routeBar'); await p.waitForTimeout(600);
   ok(await vis('#params'), '展開後路線欄沒回來'); ok(await p.evaluate(() => { const c = document.querySelector('#rmap canvas'); return !c || c.getBoundingClientRect().width > 50; }), '展開後地圖大小不對');
 }, { vp: '網頁' });
+T('我的裝備庫：新增、改重量、汰換（不出現在選單）、恢復、刪除可復原', async p => {
+  await p.evaluate(() => document.getElementById('bMineMgr').click()); await p.waitForSelector('.gmine .gm-add');
+  await p.selectOption('.gmine [data-ga=type]', 'hat'); await p.fill('.gmine [data-ga=brand]', 'TestBrand'); await p.fill('.gmine [data-ga=model]', 'Cap1'); await p.fill('.gmine [data-ga=g]', '85');
+  await p.click('.gmine [data-gm=add]'); await p.waitForTimeout(200); await shot(p, 'mine');
+  const G = () => p.evaluate(() => { const d = window.__gp.fn('DB').find(x => x.model === 'Cap1'); return d ? { g: d.g, ret: !!d.retired, owned: !!d.owned, inPick: window.__gp.fn('dbFor')('hat').some(x => x.model === 'Cap1') } : null; });
+  let d = await G(); ok(d && d.owned && d.g === 85 && d.inPick, '新增不對 ' + JSON.stringify(d));
+  const row = '.gmine .gm-r:has-text("Cap1")';
+  await p.fill(row + ' [data-gf=g]', '90'); await p.dispatchEvent(row + ' [data-gf=g]', 'change'); d = await G(); ok(d.g === 90, '改重量沒存');
+  await p.click(row + ' [data-gm=ret]'); d = await G(); ok(d.ret && !d.inPick, '汰換後還出現在選單');
+  ok(/汰換 1/.test(await p.textContent('#mineN')), '件數沒顯示汰換');
+  await p.click('.gmine [data-gmf=ret]'); await p.click(row + ' [data-gm=unret]'); d = await G(); ok(!d.ret && d.inPick, '恢復不對');
+  await p.click('.gmine [data-gmf=use]'); await p.click(row + ' [data-gm=del]'); ok(!(await G()), '刪除不對');
+  await p.click('#toast button'); await p.waitForTimeout(200); ok(!!(await G()), '刪除後復原沒救回來');
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
+  ok(!!(await G()), '重開後裝備不見');
+}, { vp: '直式' });
+T('打包清單：由重到輕、佔背負橫條、數量、不帶／加回、打勾、複製文字', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; const pick = ['tent', 'sleepbag', 'stove', 'headlamp'].map(t => S.slots.find(s => s.type === t)).filter(Boolean);
+    const L = pick.length >= 3 ? pick : S.slots.filter(s => !s.filled && s.type !== 'pack').slice(0, 4);
+    L.forEach((s, i) => Object.assign(s, { filled: true, on: true, brand: 'B' + i, model: 'M' + i, g: [1500, 300, 800, 120][i], qty: 1, loc: 'pack' })); G.fn('renderCats')(); G.fn('compute')(); });
+  await p.click('[data-gv=list]'); await p.waitForTimeout(200); await shot(p, 'pack');
+  ok(await p.evaluate(() => document.getElementById('cats').hidden && !document.getElementById('packList').hidden), '沒切到清單');
+  const ws = await p.evaluate(() => [...document.querySelectorAll('#packList > .cb > .pr .pw')].map(e => parseFloat(e.textContent) * (/kg/.test(e.textContent) ? 1000 : 1)));
+  ok(ws.length >= 4 && ws.every((w, i) => !i || ws[i - 1] >= w), '沒有由重到輕：' + ws.join(','));
+  ok(await p.evaluate(() => [...document.querySelectorAll('#packList .pbar i')].some(i => parseFloat(i.style.width) > 10)), '沒有佔比橫條');
+  const first = '#packList > .cb > .pr[data-sid]';
+  const sid = await p.getAttribute(first, 'data-sid');
+  await p.click(`${first} [data-pk=plus]`); ok(await p.evaluate(id => window.__gp.S.slots.find(s => s.id === id).qty === 2, sid), '＋沒加數量');
+  await p.click(`#packList .pr[data-sid="${sid}"] [data-pk=packed]`); ok(await p.evaluate(id => !!window.__gp.S.slots.find(s => s.id === id).packed, sid), '打勾沒存');
+  const txt = await p.evaluate(() => window.__gp.fn('packText')()); ok(/☑/.test(txt) && /背負/.test(txt) && !/LINE/i.test(txt), '複製文字不對');
+  await p.click(`#packList .pr[data-sid="${sid}"] [data-pk=off]`); ok(await p.evaluate(id => !window.__gp.S.slots.find(s => s.id === id).on, sid), '不帶沒作用');
+  ok(/不帶的 1 件/.test(await p.textContent('#packList details summary')), '沒有列出不帶的');
+  await p.click('#packList details summary'); await p.click(`#packList details [data-sid="${sid}"] [data-pk=on]`);
+  ok(await p.evaluate(id => window.__gp.S.slots.find(s => s.id === id).on, sid), '加回沒作用');
+  await p.click('[data-gv=cat]'); ok(await p.evaluate(() => !document.getElementById('cats').hidden), '切不回分類');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

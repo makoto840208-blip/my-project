@@ -872,6 +872,28 @@ T('輕裝：診斷跟著全裝｜輕裝切換、留營地必帶會提醒、最�
   d = await p.textContent('#diag'); ok(!/頭燈留在營地/.test(d), '加回後還在提醒');
   await p.click('#dayRow [data-cmode="full"]'); await p.waitForTimeout(150); d = await p.textContent('#diag'); ok(/全裝的診斷/.test(d), '切回全裝沒換診斷');
 });
+T('水：水袋那列「這次裝水」跟路段同步（全裝、輕裝各自），生理參數那格唯讀', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; const b = S.slots.find(x => x.type === 'bottle'); Object.assign(b, { filled: true, on: true, brand: 'B', model: 'bag', g: 100, qty: 1, loc: 'pack' }); S.lt = { off: {} }; G.fn('renderCats')(); G.fn('compute')(); });
+  for (let i = 0; i < 3; i++) await p.click('#addSeg');
+  await p.selectOption('#segList .seg >> nth=2 >> [data-s=lt]', 'light');
+  ok(await p.evaluate(() => document.querySelector('[data-p=water]').readOnly), '生理參數背水量還能填');
+  await p.fill('#cats [data-wf=full]', '2.5'); await p.waitForTimeout(700);
+  let w = await p.evaluate(() => window.__gp.S.route.segs.filter(g => !g.ret).map(g => g.wL)); ok(w[0] === 2.5 && w[1] === 2.5 && w[2] !== 2.5, '全裝沒同步到路段 ' + JSON.stringify(w));
+  await p.fill('#segList .seg >> nth=0 >> [data-s=wL]', '3'); await p.locator('#segList .seg >> nth=1').click({ position: { x: 5, y: 5 } }); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => +document.querySelector('#cats [data-wf=full]').value === 3), '路段改了水袋那格沒跟著');
+  await p.click('[data-gv=light]'); await p.waitForTimeout(150); await p.fill('#packList [data-wf=light]', '1'); await p.waitForTimeout(700);
+  w = await p.evaluate(() => window.__gp.S.route.segs.filter(g => !g.ret).map(g => g.wL)); ok(w[2] === 1 && w[0] === 3, '輕裝沒同步 ' + JSON.stringify(w));
+});
+T('列印檢查表：東西少用 A6、多了改 B6，有日期人數溫度', async p => {
+  await p.evaluate(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; const G = window.__gp, S = G.S; S.route.date = '2026-11-09'; S.route.team = 4;
+    S.slots.filter(x => x.type !== 'pack').slice(0, 6).forEach((s, i) => Object.assign(s, { filled: true, on: true, brand: 'B', model: 'item' + i, g: 100 + i, qty: 1 })); G.fn('renderCats')(); G.fn('compute')(); });
+  await p.click('[data-gv=list]'); await p.click('#packList [data-pk=print]'); await p.waitForTimeout(500);
+  let r = await p.evaluate(() => ({ size: document.getElementById('ckPrint').dataset.size, t: document.getElementById('ckPrint').textContent, pr: window.__printed }));
+  ok(r.pr === 1 && r.size === 'A6', '少量沒用 A6 ' + JSON.stringify({ s: r.size, p: r.pr })); ok(/11\/09/.test(r.t) && /4 人/.test(r.t) && /°C/.test(r.t) && /☐/.test(r.t), '表頭不對 ' + r.t.slice(0, 120));
+  await p.evaluate(() => { const G = window.__gp, S = G.S; for (let k = 0; k < 3; k++) S.slots.filter(x => x.type !== 'pack').forEach((s0, i) => { const s = Object.assign({}, s0, { id: 'x' + k + '_' + i, filled: true, on: true, brand: 'Brand', model: 'Long model name ' + i, g: 50 + i, qty: 1 }); S.slots.push(s); }); G.fn('compute')(); });
+  await p.click('#packList [data-pk=print]'); await p.waitForTimeout(500);
+  r = await p.evaluate(() => ({ size: document.getElementById('ckPrint').dataset.size, pages: document.getElementById('ckPrint').dataset.pages })); ok(r.size === 'B6', '多了沒改 B6 ' + JSON.stringify(r));
+}, { vp: '網頁' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

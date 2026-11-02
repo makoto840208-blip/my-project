@@ -474,6 +474,7 @@ input:disabled,select:disabled{opacity:.6}
 #packList .pr.lnot .pn b{color:var(--mut)}
 #packList .ltadd{margin:0 0 8px}#packList .ltadd>summary{list-style:none;display:inline-block;cursor:pointer}#packList .ltadd>summary::-webkit-details-marker{display:none}#packList .ltadd[open]{border:1px dashed var(--line);border-radius:6px;padding:6px 8px}
 .dmode{font-size:12.5px;color:var(--coy2);margin-bottom:8px}
+.wfrow{font-size:12.5px;color:var(--mut);display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:28px}.wfrow input{width:62px;padding:3px 6px}.wfrow small{font-size:11px}
 #packList .lseg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}#packList .lseg button{width:30px;height:28px;padding:0;background:var(--panel);border:0;border-left:1px solid var(--line);color:var(--mut);font:inherit;font-size:13px;cursor:pointer}#packList .lseg button:first-child{border-left:0}#packList .lseg button.on{background:var(--olive);color:#f0ead8;font-weight:700}
 /* 路段時間軸 */
 .segt .ngt{display:flex;align-items:center;gap:6px;align-self:end;padding-bottom:6px}.segt .ngt input{width:18px;height:18px}.segst b{color:var(--coy2)}
@@ -548,7 +549,13 @@ html.oled .card{border-color:#1c2118}
 .mapdark .tl-inv{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(1.05) saturate(.8)}
 .mapdark .tl-sat{filter:brightness(.55)}
 
+#ckPrint{display:none}
+#ckPrint .ck{font-family:"Noto Sans TC",system-ui,sans-serif;color:#000;line-height:1.25}#ckPrint h1{font-size:1.45em;margin:0 0 1mm}#ckPrint .mt{display:flex;flex-wrap:wrap;gap:.5mm 3mm;margin-bottom:1.5mm;font-size:.95em}
+#ckPrint .cl{columns:2;column-gap:3mm}#ckPrint .sc{break-inside:avoid;margin-bottom:1.2mm}#ckPrint .sc b{display:block;border-bottom:.5pt solid #000;margin-bottom:.4mm;font-size:.95em}
+#ckPrint .it{display:flex;gap:1mm;align-items:baseline}#ckPrint .it span:first-child{flex:none}#ckPrint .it .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#ckPrint .it .g{flex:none;font-variant-numeric:tabular-nums}
+#ckPrint .lt{margin-top:1mm;border:.5pt dashed #000;padding:1mm}#ckPrint .ft{margin-top:1mm;font-size:.85em;color:#444;text-align:right}
 @media print{
+  body.ckp>#ckPrint{display:block!important}body.ckp>#print{display:none!important}
   body{background:#fff!important;color:#000;padding:0;font-size:9pt}
   body>*:not(#print){display:none!important}
   #print{display:block;color:#000}
@@ -620,14 +627,14 @@ html.oled .card{border-color:#1c2118}
         </div>
         <div class="sublbl">水 · 背水量（公升）</div>
         <div class="water">
-          <label class="f">背水量 (L)<small style="color:var(--mut);font-weight:400">　預設值，各路段可另外設定</small><input type="number" data-p="water" min="0" step="0.1" inputmode="decimal"></label>
+          <label class="f">背水量 (L)<small style="color:var(--mut);font-weight:400">　參考用；實際看路段「這段帶水」或水袋那格</small><input type="number" data-p="water" readonly tabindex="-1" style="opacity:.6" min="0" step="0.1" inputmode="decimal"></label>
           <label class="f">水源情境<select data-p="wscene">
             <option value="plenty">沿途水源充沛</option>
             <option value="camp">營地有水</option>
             <option value="dry">無水營地（背過夜＋隔天）</option>
           </select></label>
         </div>
-        <div class="chips" id="wchips" style="margin-top:8px"></div>
+        <div class="chips" id="wchips" style="margin-top:8px" hidden></div>
         <div class="rec" id="wrec">–</div>
         <div class="eq">
           <div><div class="k">體感等效距離 = 距離 + 爬升 / 100</div><div class="v" id="eqv">–</div></div>
@@ -919,7 +926,7 @@ html.oled .card{border-color:#1c2118}
     </div>
   </div>
 </div>
-<div id="print"></div>
+<div id="print"></div><div id="ckPrint"></div>
 <div id="toast"></div>
 
 <script>
@@ -1303,7 +1310,7 @@ function rowEl(s){
     ${s.type==='pack'?`<label class="q capq"><input type="number" min="0" step="1" inputmode="numeric" data-at="cap" value="${s.attrs.cap!=null?s.attrs.cap:''}" placeholder="?"><span>L</span></label>`:`<label class="q">×<input type="number" min="1" step="1" inputmode="numeric" data-a="qty" value="${s.qty}"></label>`}
     <div class="gw"><input type="number" min="0" step="5" inputmode="numeric" data-a="g" value="${s.g}"><span>g</span></div>
     ${s.type==='pack'?'<span class="loc" style="border:0;background:none"></span>':`<button class="loc ${s.loc}" data-a="loc"${T(s)[3].fix?' disabled':''} title="${LOCN[s.loc]}（點擊切換）">${LOC[s.loc]}</button>`}
-    <button class="info" data-a="info" aria-label="說明">ⓘ</button><button class="rm" data-a="delslot" aria-label="移除這一欄" title="移除這一欄">✕</button>${s.type==='tent'?tentOpt(s):''}${det}`;
+    <button class="info" data-a="info" aria-label="說明">ⓘ</button><button class="rm" data-a="delslot" aria-label="移除這一欄" title="移除這一欄">✕</button>${s.type==='tent'?tentOpt(s):''}${s.type==='bottle'&&S.slots.find(x=>x.type==='bottle'&&x.filled)===s?`<div class="topt wfrow">這次裝水 <input type="number" min="0" step="0.5" inputmode="decimal" data-wf="full" value="${waterMax(false)}"> L <small>（全部水袋合計，跟全裝路段「這段帶水」同步）</small></div>`:''}${det}`;
   return r;
 }
 function tentOpt(s){const k=s.attrs.tk||'';
@@ -3877,25 +3884,25 @@ function packText(){const c=PACK.c||{},W=live(),nm=(document.querySelector('[dat
   const L=[`${nm?nm+' ':''}裝備清單`,`背負 ${(c.pack/1000).toFixed(1)} kg・身穿 ${(c.worn/1000).toFixed(1)} kg・全身 ${(c.skin/1000).toFixed(1)} kg`];
   CATS.forEach(([k,cn])=>{const R=W.filter(x=>x.cat===k);if(!R.length)return;L.push('',`[${cn}]`);R.forEach(x=>L.push(`${x.packed?'☑':'☐'} ${dispName(x)||x.label}${x.qty>1?' ×'+x.qty:''}  ${tot(x)} g${x.loc==='worn'?'（穿）':x.loc==='out'?'（掛）':''}`));});
   if(c.waterG)L.push('',`水 ${(c.waterG/1000).toFixed(1)} kg`);if(c.foodG)L.push(`食物 ${(c.foodG/1000).toFixed(2)} kg`);return L.join('\n');}
-function renderPack(){const box=document.querySelector('#packList .cb');if(!box||PACK.view==='cat')return;const c=PACK.c;if(!c)return;
+function renderPack(){const box=document.querySelector('#packList .cb');if(!box||PACK.view==='cat')return;if(box.contains(document.activeElement)&&document.activeElement.matches('[data-wf]'))return;const c=PACK.c;if(!c)return;
   if(PACK.view==='light'){if(!S.lt)S.lt={off:{}};const LT=ltCalc()||{its:[],wornIts:[],pack:0,worn:0,waterG:0,foodG:0},L=LT.its.concat(LT.wornIts).sort((a,b)=>tot(b)-tot(a)||String(a.id).localeCompare(String(b.id))),off=live().filter(x=>!lightTake(x)),pk=Math.max(1,LT.pack),hasLS=S.route.segs.some(g=>!g.ret&&g.lt==='light');
     box.innerHTML=`<div class="pk-sum">輕裝背負 <b>${kg(LT.pack)} kg</b>（${LT.its.length} 件 ${kg(sum(LT.its,tot))} kg＋水 ${kg(LT.waterG)} kg＋一天行動糧 ${kg(LT.foodG)} kg）・身穿 <b>${kg(LT.worn)} kg</b>　已裝 ${L.filter(x=>x.packedL).length}／${L.length}</div>
-      <div class="pk-tools"><span style="font-size:12.5px;color:var(--mut);align-self:center">水：${hasLS?'看輕裝路段「這段帶水」（取最多的那段）':`還沒有路段標輕裝，先用 ${ltWDef()}L`}</span><button class="btn sm" data-pk="ltreset">重新從目前配置複製</button><button class="btn sm warn" data-pk="ltoff">不用輕裝</button></div>
+      <div class="pk-tools"><span style="font-size:12.5px;color:var(--mut);align-self:center">水：在下面「水」那列直接改，跟輕裝路段同步</span><button class="btn sm" data-pk="ltreset">重新從目前配置複製</button><button class="btn sm warn" data-pk="ltoff">不用輕裝</button></div>
       ${off.length?`<details class="ltadd"><summary class="btn sm">＋ 加回留營地的（${off.length} 件）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}
       <div style="font-size:12.5px;color:var(--mut);margin-bottom:6px">攻頂、往返營地時的配置。不帶的按 ✕ 留營地；在營地換衣服的，點「穿／內／掛」切換；左邊勾＝已裝。</div>
       ${L.map(x=>{const lc=ltLoc(x),pc=lc==='worn'?0:tot(x)/pk*100;return `<div class="pr${lc==='worn'?' worn':''}${x.packedL?' done':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packedL"${x.packedL?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}${lc!==x.loc?`・全裝時${LOC[x.loc]}`:''}</small>${lc==='worn'?'':`<div class="pbar"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></div>`}</div><div class="pq">${x.type==='pack'?'':`<span class="lseg" role="group" aria-label="輕裝時放哪">${['worn','pack','out'].map(k=>`<button type="button" data-pk="ltl" data-v="${k}" class="${lc===k?'on':''}" title="${LOCN[k]}">${LOC[k]}</button>`).join('')}</span>`}</div><div class="pw">${tot(x)} g<small>${lc==='worn'?'身穿':pc.toFixed(0)+'%'}</small></div><button type="button" class="px" data-pk="ltx" aria-label="留營地" title="留營地">✕</button></div>`;}).join('')||'<div style="color:var(--mut);padding:10px 0">全部都留營地了。</div>'}
-      <div class="pr pfix"><span></span><div class="pn"><b>水</b><small>輕裝路段帶水</small></div><div class="pq"></div><div class="pw">${kg(LT.waterG)} kg</div><span class="px"></span></div>
+      <div class="pr pfix"><span></span><div class="pn"><b>水</b><small>裝水 <input type="number" min="0" step="0.5" inputmode="decimal" data-wf="light" value="${waterMax(true)}" style="width:58px;padding:2px 4px"> L（跟輕裝路段同步）</small></div><div class="pq"></div><div class="pw">${kg(LT.waterG)} kg</div><span class="px"></span></div>
       ${off.length?`<details open><summary>留營地 ${off.length} 件（可加回）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;return;}
   const W=live(),off=S.slots.filter(s=>s.filled&&!s.on),pk=Math.max(1,c.pack),wn=Math.max(1,c.worn);
   const rows=W.map(x=>({x,g:tot(x),pc:x.loc==='worn'?tot(x)/wn*100:tot(x)/pk*100}));
-  if(c.waterG)rows.push({fix:'水',g:c.waterG,pc:c.waterG/pk*100});if(c.foodG)rows.push({fix:'食物',g:c.foodG,pc:c.foodG/pk*100});
+  rows.push({fix:'水',g:c.waterG,pc:c.waterG/pk*100,wf:'full'});if(c.foodG)rows.push({fix:'食物',g:c.foodG,pc:c.foodG/pk*100});
   const ci=k=>CATS.findIndex(q=>q[0]===k);rows.sort(PACK.sort==='c'?(a,b)=>(a.x?ci(a.x.cat):99)-(b.x?ci(b.x.cat):99)||b.g-a.g:(a,b)=>b.g-a.g);
   const car=rows.filter(r=>!r.x||r.x.loc!=='worn').sort((a,b)=>b.g-a.g),top5=car.slice(0,5).reduce((a,r)=>a+r.g,0)/pk*100,nP=W.filter(x=>x.packed).length;
-  const row=r=>{if(!r.x)return `<div class="pr pfix"><span></span><div class="pn"><b>${r.fix}</b><small>背包內・依行程自動算</small><div class="pbar"><i style="width:${Math.min(100,r.pc).toFixed(1)}%"></i></div></div><div class="pq"></div><div class="pw">${r.g>=1000?(r.g/1000).toFixed(2)+' kg':Math.round(r.g)+' g'}<small>${r.pc.toFixed(0)}%</small></div><span class="px"></span></div>`;
+  const row=r=>{if(!r.x)return `<div class="pr pfix"><span></span><div class="pn"><b>${r.fix}</b><small>${r.wf?`裝水 <input type="number" min="0" step="0.5" inputmode="decimal" data-wf="full" value="${waterMax(false)}" style="width:58px;padding:2px 4px"> L（跟全裝路段同步）`:'背包內・依行程自動算'}</small><div class="pbar"><i style="width:${Math.min(100,r.pc).toFixed(1)}%"></i></div></div><div class="pq"></div><div class="pw">${r.g>=1000?(r.g/1000).toFixed(2)+' kg':Math.round(r.g)+' g'}<small>${r.pc.toFixed(0)}%</small></div><span class="px"></span></div>`;
     const x=r.x;return `<div class="pr${x.loc==='worn'?' worn':''}${x.packed?' done':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packed"${x.packed?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}・${LOCN[x.loc]}</small><div class="pbar"><i style="width:${Math.min(100,r.pc).toFixed(1)}%"></i></div></div>
       <div class="pq">${x.type==='pack'?'':`<button type="button" data-pk="minus" aria-label="少一個">−</button><span>×${x.qty}</span><button type="button" data-pk="plus" aria-label="多一個">＋</button>`}</div><div class="pw">${r.g} g<small>${r.pc.toFixed(0)}%${x.loc==='worn'?' 身穿':''}</small></div><button type="button" class="px" data-pk="off" aria-label="這趟不帶" title="這趟不帶">✕</button></div>`;};
   box.innerHTML=`<div class="pk-sum">背負 <b>${(c.pack/1000).toFixed(2)} kg</b>・身穿 <b>${(c.worn/1000).toFixed(2)} kg</b>・全身 <b>${(c.skin/1000).toFixed(2)} kg</b>${car.length>5?`｜最重 5 件佔背負 <b>${top5.toFixed(0)}%</b>`:''}　已裝 ${nP}／${W.length}</div>
-    <div class="pk-tools"><span class="seg2"><button type="button" data-pk="sw" class="${PACK.sort==='w'?'on':''}">由重到輕</button><button type="button" data-pk="sc" class="${PACK.sort==='c'?'on':''}">依分類</button></span><button class="btn sm" data-pk="unpack">清除打勾</button><button class="btn sm" data-pk="copy">複製文字</button>${navigator.share?'<button class="btn sm" data-pk="share">分享</button>':''}</div>
+    <div class="pk-tools"><span class="seg2"><button type="button" data-pk="sw" class="${PACK.sort==='w'?'on':''}">由重到輕</button><button type="button" data-pk="sc" class="${PACK.sort==='c'?'on':''}">依分類</button></span><button class="btn sm pri" data-pk="print">列印檢查表</button><button class="btn sm" data-pk="unpack">清除打勾</button><button class="btn sm" data-pk="copy">複製文字</button>${navigator.share?'<button class="btn sm" data-pk="share">分享</button>':''}</div>
     ${rows.length?rows.map(row).join(''):'<div style="color:var(--mut);padding:10px 0">還沒有選任何裝備。切回「分類」挑裝備。</div>'}
     ${off.length?`<details><summary>這趟不帶的 ${off.length} 件</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="on" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;}
 document.addEventListener('click',e=>{const v=e.target.closest('[data-gv]');if(v){packView(v.dataset.gv);return;}});
@@ -3905,6 +3912,7 @@ $('#packList').addEventListener('click',async e=>{const b=e.target.closest('[dat
   if(a==='sw'||a==='sc'){PACK.sort=a==='sc'?'c':'w';try{localStorage.setItem('gearPlanner.psort',PACK.sort);}catch(err){}renderPack();return;}
   if(a==='unpack'){const L=live().filter(x=>x.packed);if(!L.length)return;L.forEach(x=>delete x.packed);setDirty(true);renderPack();toastAct('已清除打勾','復原',()=>{L.forEach(x=>x.packed=true);setDirty(true);renderPack();});return;}
   if(a==='copy'){toast(await copyText(packText())?'清單已複製':'複製失敗');return;}
+  if(a==='print'){ckPrint();return;}
   if(a==='share'){try{await navigator.share({title:'裝備清單',text:packText()});}catch(err){}return;}
   const r=b.closest('[data-sid]'),s=r&&S.slots.find(x=>x.id===r.dataset.sid);if(!s)return;
   if(a==='packed'){s.packed=b.checked;setDirty(true);renderPack();return;}
@@ -4262,6 +4270,9 @@ const COMP={sel:null,parts:[],waterG:0,mode:'full'};
    不綁天數：攻頂、往返營地都用這份；路段可以標「輕裝」，時間照輕裝重量算。 */
 const ltOn=()=>!!S.lt;
 /* 每段出發帶多少水：路段自己填 g.wL；沒填＝全裝用生理參數的背水量、輕裝用 1.5L（或背水量較少時用背水量） */
+/* 改某個配置（全裝／輕裝）的水＝那個配置的路段全部同步成這個量；沒有路段就改預設 */
+function setModeWater(light,L){L=Math.max(0,+L||0);const F=S.route.segs.filter(g=>!g.ret&&(g.lt==='light')===light);F.forEach(g=>g.wL=L);
+  if(light){S.lt=S.lt||{off:{}};S.lt.w=L;}else S.water=L;setDirty(true);try{renderSegs();}catch(e){}compute();}
 const ltWDef=()=>S.lt&&S.lt.w!=null?S.lt.w:Math.min(S.water,1.5);
 const segWater=g=>g.wL!=null?g.wL:(g.lt==='light'?ltWDef():S.water);
 function waterMax(light){const F=S.route.segs.filter(g=>!g.ret&&(g.lt==='light')===light);return F.length?Math.max(...F.map(segWater)):(light?ltWDef():S.water);}
@@ -4273,6 +4284,8 @@ function ltCalc(){if(!S.lt)return null;const W=live().filter(lightTake),its=W.fi
   return {its,worn:sum(wn,tot),wornIts:wn,waterG:wG,foodG:FDay,pack:sum(its,tot)+wG+FDay};}
 document.addEventListener('click',e=>{const c=e.target.closest('[data-cmode]');if(c){COMP.mode=c.dataset.cmode;COMP.sel=null;compute();}});
 /* 水量邊打邊存（用 change 的話，點別的按鈕時會先重畫、吃掉第一下） */
+let WFT=0;document.addEventListener('input',e=>{const i=e.target.closest('[data-wf]');if(!i)return;clearTimeout(WFT);WFT=setTimeout(()=>{if(i.value.trim()!=='')setModeWater(i.dataset.wf==='light',num(i.value,0));},400);});
+document.addEventListener('focusout',e=>{if(e.target.matches&&e.target.matches('[data-wf]'))setTimeout(compute,0);});
 let LWT=0;document.addEventListener('input',e=>{const i=e.target.closest('[data-ltw]');if(!i||!S.lt)return;const v=i.value.trim(),nw=v===''?undefined:Math.max(0,num(v,0));if(nw===S.lt.w)return;if(nw==null)delete S.lt.w;else S.lt.w=nw;setDirty(true);clearTimeout(LWT);LWT=setTimeout(compute,350);});
 function compDet(){const el=$('#compDet');if(!el)return;const q=COMP.sel&&COMP.parts.find(x=>x.k===COMP.sel);if(!q){el.hidden=true;el.innerHTML='';return;}
   let L=q.L.map(x=>[dispName(x)||x.label,tot(x),x.qty]);if(q.k==='water'&&COMP.waterG)L.push(['水（依行程）',COMP.waterG,1]);if(q.k==='other')q.sub.forEach(r=>{if(r.k==='water'&&COMP.waterG)L.push(['水（依行程）',COMP.waterG,1]);if(r.k==='food')L.push(['食物（依行程）',r.g,1]);});if(q.k==='food')L=[['食物（依行程，到食物卡改）',q.g,1]];
@@ -4287,6 +4300,7 @@ function compute(){
   const W=live(),worn=sum(W.filter(x=>x.loc==='worn'),tot),carried=W.filter(x=>x.loc!=='worn');
   const gas=sum(carried.filter(x=>T(x)[3].cons),tot),base=sum(carried.filter(x=>!T(x)[3].cons),tot);
   const waterG=waterMax(false)*1000,WL=waterG/1000,days=Math.max(1,S.days);
+  try{const wi=document.querySelector('[data-p=water]');if(wi&&document.activeElement!==wi)wi.value=WL;document.querySelectorAll('[data-wf]').forEach(i=>{if(document.activeElement!==i)i.value=i.dataset.wf==='light'?waterMax(true):WL;});}catch(e){}
   const FI=S.food.filter(f=>f.on&&f.g>0),mult=f=>f.per==='day'?days:1;
   const foodG=sum(FI,f=>f.g*mult(f)),foodDayG=sum(FI.filter(f=>f.per==='day'),f=>f.g),foodDayK=sum(FI.filter(f=>f.per==='day'),f=>f.g*f.kcal/100);
   const pack=base+gas+waterG+foodG,skin=pack+worn,ratio=pack/(Math.max(1,S.body)*1000)*100;
@@ -4412,6 +4426,24 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-fb]'
 const fbBar=()=>`<div class="fbbar"><span>回報 ${fbCount()} 條（存在這支手機）</span><button type="button" class="btn sm" data-fbx="copy">匯出回報</button>${fbCount()?'<button type="button" class="btn sm warn" data-fbx="clear">清除回報</button>':''}</div>`;
 const fbSkipped=kind=>Object.entries(FBK).filter(([k,f])=>f.skip&&k.startsWith(kind+':'));
 const fbSkipHTML=kind=>{const L=fbSkipped(kind);return L.length?`<details class="dmore fbsk"><summary>已標不適用 ${L.length} 項</summary>${L.map(([k,f])=>`<div class="fbr"><span>${esc(f.title||k)}${f.note?`<small>　備註：${esc(f.note)}</small>`:''}</span><button type="button" class="btn sm" data-fbun="${esc(k)}">恢復</button></div>`).join('')}</details>`:'';};
+/* 列印裝備檢查表（打勾用）：先在螢幕外排版量高度，A6 放得下就 A6，不然 B6；字最小 7.5pt，再不夠就印兩張 B6 */
+function ckHTML(){const c=PACK.c||{},W=live(),nm=(document.querySelector('[data-r=name]')||{}).value||'裝備檢查表',d0=S.route.date,days=Math.max(1,S.days||1);
+  const dt=d0?(days>1?`${d0.slice(5).replace('-','/')}～${addDays(d0,days-1).slice(5).replace('-','/')}`:d0.slice(5).replace('-','/')):'日期未填';
+  const it=(n,g,extra)=>`<div class="it"><span>☐</span><span class="n">${esc(n)}${extra||''}</span><span class="g">${g}</span></div>`;
+  const secs=CATS.map(([k,cn])=>{const L=W.filter(x=>x.cat===k);if(!L.length)return '';return `<div class="sc"><b>${esc(cn)}</b>${L.map(x=>it(dispName(x)||x.label,tot(x)+'g',(x.qty>1?' ×'+x.qty:'')+(x.loc==='worn'?'（穿）':x.loc==='out'?'（掛）':''))).join('')}</div>`;}).join('');
+  const fw=`<div class="sc"><b>水・食物</b>${it('水',kg(c.waterG||0)+'kg',' '+waterMax(false)+'L')}${it('食物',kg(c.foodG||0)+'kg')}</div>`;
+  const LT=C.lt,lt=LT?`<div class="lt"><b>輕裝帶上去（${kg(LT.pack)} kg）</b><div class="cl">${LT.its.map(x=>it(dispName(x)||x.label,'')).join('')}${it('水',waterMax(true)+'L')}</div></div>`:'';
+  return `<div class="ck"><h1>${esc(nm)}</h1><div class="mt"><span>${dt}</span><span>${days} 天</span><span>${S.route.team||1} 人</span><span>${S.tmin}～${S.tmax}°C</span><span>背負 ${kg(c.pack||0)} kg</span><span>身穿 ${kg(c.worn||0)} kg</span></div><div class="cl">${secs}${fw}</div>${lt}<div class="ft">登山負重規劃師</div></div>`;}
+function ckFit(){const el=$('#ckPrint'),mm=(()=>{const t=document.createElement('div');t.style.cssText='position:absolute;width:100mm;height:0;visibility:hidden';document.body.appendChild(t);const v=t.offsetWidth/100;t.remove();return v;})();
+  el.innerHTML=ckHTML();el.style.cssText='display:block;position:absolute;left:-9999px;top:0;visibility:hidden';const ck=el.firstChild;
+  const tryF=(w,h,pt)=>{ck.style.width=w+'mm';ck.style.fontSize=pt+'pt';return ck.offsetHeight<=h*mm;};
+  let r=null;for(const [nm,W,H] of [['A6',105,148],['B6',128,182]]){for(const pt of [8.5,8,7.5]){if(tryF(W-8,H-8,pt)){r={nm,W,H,pt,pages:1};break;}}if(r)break;}
+  if(!r){tryF(120,174,7.5);r={nm:'B6',W:128,H:182,pt:7.5,pages:Math.ceil(ck.offsetHeight/(174*mm))};}
+  el.style.cssText='';ck.style.width='';ck.style.fontSize=r.pt+'pt';el.dataset.size=r.nm;el.dataset.pages=r.pages;return r;}
+function ckPrint(){const r=ckFit();let st=document.getElementById('ckPage');if(!st){st=document.createElement('style');st.id='ckPage';document.head.appendChild(st);}
+  st.textContent=`@page{size:${r.W}mm ${r.H}mm;margin:4mm}`;document.body.classList.add('ckp');
+  toast(`這份建議用 ${r.nm}（${r.W}×${r.H} mm）${r.pages>1?`，共 ${r.pages} 張`:''}，字 ${r.pt} pt；印表機紙張選 ${r.nm}`);
+  const done=()=>{document.body.classList.remove('ckp');st.textContent='';removeEventListener('afterprint',done);};addEventListener('afterprint',done);setTimeout(()=>{try{window.print();}catch(e){}},300);}
 function renderPot(){
   const pk=x=>'pot:'+x.s.type+':'+dispName(x.p.b)+'←'+dispName(x.s);
   const L=live().map(s=>({s,p:potOf(s)})).filter(x=>x.p).filter(x=>!(FBK[pk(x)]&&FBK[pk(x)].skip)).sort((a,b)=>b.p.eqv-a.p.eqv);

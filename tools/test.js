@@ -799,8 +799,10 @@ T('高度圖：點的位置不在地圖畫面裡，地圖會移過去', async p 
 });
 T('3D：滑鼠中鍵往上拖開 3D、改傾斜，壓回平面關 3D', async p => {
   await loadGpx(p); const b = await (await p.$('#rmap canvas')).boundingBox(); const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-  await p.mouse.move(cx, cy); await p.mouse.down({ button: 'middle' }); await p.mouse.move(cx, cy - 60, { steps: 4 }); await p.waitForTimeout(900); await p.mouse.move(cx + 40, cy - 120, { steps: 6 }); await p.mouse.up({ button: 'middle' }); await p.waitForTimeout(300);
-  let r = await p.evaluate(() => ({ on: window.__gp.fn('M3D').on, pitch: window.__gp.MAP.m.getPitch() })); ok(r.on && r.pitch > 10, '中鍵沒開 3D ' + JSON.stringify(r));
+  const b0 = await p.evaluate(() => window.__gp.MAP.m.getBearing());
+  await p.mouse.move(cx, cy); await p.mouse.down({ button: 'middle' }); await p.mouse.move(cx, cy - 60, { steps: 4 }); await p.waitForTimeout(900); await p.mouse.move(cx + 120, cy - 120, { steps: 6 }); await p.mouse.up({ button: 'middle' }); await p.waitForTimeout(300);
+  let r = await p.evaluate(() => ({ on: window.__gp.fn('M3D').on, pitch: window.__gp.MAP.m.getPitch(), b: window.__gp.MAP.m.getBearing() })); ok(r.on && r.pitch > 10, '中鍵沒開 3D ' + JSON.stringify(r));
+  ok(Math.abs(r.b - b0) < 0.5, '中鍵左右不該旋轉 ' + JSON.stringify([b0, r.b]));
   await p.mouse.move(cx, cy); await p.mouse.down({ button: 'middle' }); await p.mouse.move(cx, cy + 300, { steps: 6 }); await p.mouse.up({ button: 'middle' }); await p.waitForTimeout(700);
   r = await p.evaluate(() => ({ on: window.__gp.fn('M3D').on, pitch: window.__gp.MAP.m.getPitch() })); ok(!r.on && r.pitch < 1, '壓回平面沒關 3D ' + JSON.stringify(r));
 }, { vp: '網頁' });
@@ -843,6 +845,18 @@ T('省電模式（電腦）', async p => {
   ok(save ? r2.pr <= 2 : Math.abs(r2.pr - r2.dpr) < 0.01, '解析度不對 ' + JSON.stringify(r2));
   await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
   ok(await p.evaluate(s => window.__gp.fn('PWR').save === s, save), '重開沒記住');
+}, { vp: '網頁' });
+T('裝備數量：窄欄（手機、網頁沒收路線）也能改 ×數量', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S, s = S.slots.find(x => x.type === 'lamp'); Object.assign(s, { filled: true, on: true, brand: 'B', model: 'socks', g: 90, qty: 1, loc: 'pack' }); G.fn('renderCats')(); G.fn('compute')(); });
+  const sel = '#cats .row:has-text("socks") [data-a=qty]'; await p.locator(sel).scrollIntoViewIfNeeded();
+  const vis = await p.evaluate(() => { const i = [...document.querySelectorAll('#cats .row')].find(r => /socks/.test(r.textContent)).querySelector('[data-a=qty]'), r = i.getBoundingClientRect(); return r.width > 20 && r.height > 20; });
+  ok(vis, '數量欄看不到'); await p.fill(sel, '3'); await p.dispatchEvent(sel, 'change'); await p.waitForTimeout(100);
+  ok(await p.evaluate(() => window.__gp.S.slots.find(x => x.type === 'lamp').qty === 3), '數量沒改到'); await shot(p, 'qty');
+});
+T('裝備數量（網頁）', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S, s = S.slots.find(x => x.type === 'lamp'); Object.assign(s, { filled: true, on: true, brand: 'B', model: 'socks', g: 90, qty: 1, loc: 'pack' }); G.fn('renderCats')(); G.fn('compute')(); });
+  const vis = await p.evaluate(() => { const i = [...document.querySelectorAll('#cats .row')].find(r => /socks/.test(r.textContent)).querySelector('[data-a=qty]'), r = i.getBoundingClientRect(); return r.width > 20 && r.height > 20; });
+  ok(vis, '網頁沒收路線時數量欄看不到'); await shot(p, 'qtyweb');
 }, { vp: '網頁' });
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);

@@ -216,10 +216,10 @@ details.fmt td{border-bottom:1px solid var(--line);padding:3px 6px;vertical-alig
 .pk .man label{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--mut);margin-right:auto}
 @media (max-width:560px){
   .cb{padding:9px 10px}
-  .row{grid-template-columns:20px minmax(0,1fr) 72px 44px 26px 22px;grid-template-areas:"c s g l i r" "t t t t t t" "d d d d d d";gap:3px 6px;padding:5px 0}
+  .row{grid-template-columns:20px minmax(0,1fr) 34px 66px 40px 26px 22px;grid-template-areas:"c s q g l i r" "t t t t t t t" "d d d d d d d";gap:3px 5px;padding:5px 0}
   .row.empty{grid-template-columns:20px minmax(0,1fr) 28px;grid-template-areas:"c s i" "d d d"}
   .row>.chk{grid-area:c;align-self:center;margin:0}.sel{grid-area:s;gap:1px}.gw{grid-area:g}.loc{grid-area:l}.info{grid-area:i}.rm{grid-area:r;width:22px}.det{grid-area:d}.topt{grid-area:t;padding-left:26px}
-  .q:not(.capq){display:none}.row .capq{grid-area:l}.row .capq span{display:none}.row:has(.capq)>span.loc{display:none}
+  .q:not(.capq){grid-area:q;font-size:0}.q:not(.capq) input{width:34px;height:34px;padding:4px 2px;font-size:14px}.row .capq{grid-area:l}.row .capq span{display:none}.row:has(.capq)>span.loc{display:none}
   .row.empty .q,.row.empty .gw,.row.empty .loc,.row.empty .tag{display:none}
   .nm{font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}.nm small{font-size:11px}
   .tag{font-size:10.5px;gap:5px}.tag .net,.tag em{font-size:10px}
@@ -231,10 +231,10 @@ details.fmt td{border-bottom:1px solid var(--line);padding:3px 6px;vertical-alig
 }
 #gear{container-type:inline-size;container-name:gear}
 @container gear (max-width:620px){
-  #gear .row{grid-template-columns:20px minmax(0,1fr) 72px 44px 26px 22px;grid-template-areas:"c s g l i r" "t t t t t t" "d d d d d d";gap:3px 6px;padding:5px 0}
+  #gear .row{grid-template-columns:20px minmax(0,1fr) 34px 66px 40px 26px 22px;grid-template-areas:"c s q g l i r" "t t t t t t t" "d d d d d d d";gap:3px 5px;padding:5px 0}
   #gear .row.empty{grid-template-columns:20px minmax(0,1fr) 28px;grid-template-areas:"c s i" "d d d"}
   #gear .row>.chk{grid-area:c;align-self:center;margin:0}.sel{grid-area:s;gap:1px}.gw{grid-area:g}.loc{grid-area:l}.info{grid-area:i}.rm{grid-area:r;width:22px}.det{grid-area:d}.topt{grid-area:t;padding-left:26px}
-  #gear .q:not(.capq){display:none}#gear .row .capq{grid-area:l}#gear .row .capq span{display:none}#gear .row:has(.capq)>span.loc{display:none}
+  #gear .q:not(.capq){grid-area:q;font-size:0}#gear .q:not(.capq) input{width:34px;height:34px;padding:4px 2px;font-size:14px}#gear .row .capq{grid-area:l}#gear .row .capq span{display:none}#gear .row:has(.capq)>span.loc{display:none}
   #gear .row.empty .q,#gear .row.empty .gw,#gear .row.empty .loc,#gear .row.empty .tag{display:none}
   #gear .nm{font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}.nm small{font-size:11px}
   .tag{font-size:10.5px;gap:5px}.tag .net,.tag em{font-size:10px}
@@ -2323,13 +2323,13 @@ function map3dPR(){const m=MAP.m;if(!m||typeof m.setPixelRatio!=='function')retu
   const full=prFull(),pr=M3D.on&&PWR.save?Math.min(full,busy?1:1.5):full;/* 3D 平常 1.5 倍、跟隨或轉向時 1 倍；2D 照舊最多 2 倍 */try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
 function map3dSet(v){M3D.want=!!v;try{localStorage.setItem('gearPlanner.map3d',v?'1':'0');}catch(e){}map3dApply();}
 function map3dNavSet(v){M3D.navWant=!!v;try{localStorage.setItem('gearPlanner.map3dNav',v?'1':'0');}catch(e){}map3dApply();}
-/* 電腦版：按住滑鼠中鍵拖＝上下改傾斜（平面↔立體，拉上去自動開 3D、壓回平面自動關）、左右旋轉 */
+/* 電腦版：按住滑鼠中鍵上下拖＝改傾斜（平面↔立體，拉上去自動開 3D、壓回平面自動關）；左右不旋轉 */
 function midDrag3d(m){const el=m.getCanvasContainer();let D=null;
   el.addEventListener('mousedown',e=>{if(e.button!==1)return;e.preventDefault();D={x:e.clientX,y:e.clientY,p:m.getPitch(),b:m.getBearing(),on:false};});
   el.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
   addEventListener('mousemove',e=>{if(!D)return;const dx=e.clientX-D.x,dy=e.clientY-D.y;
     if(!M3D.on&&!D.on&&dy<-25){D.on=true;try{map3dToggle();}catch(err){}setTimeout(()=>{if(D){D.p=m.getPitch();D.y=e.clientY;}},650);return;}
-    if(!M3D.on)return;try{m.jumpTo({pitch:Math.max(0,Math.min(70,D.p-dy*0.4)),bearing:D.b+dx*0.4});}catch(err){}});
+    if(!M3D.on)return;try{m.jumpTo({pitch:Math.max(0,Math.min(70,D.p-dy*0.4))});}catch(err){}});/* 只改傾斜，不旋轉（使用者要求） */
   addEventListener('mouseup',e=>{if(!D||e.button!==1)return;D=null;try{if(M3D.on&&m.getPitch()<6)map3dToggle();}catch(err){}});}
 async function map3dToggle(){let nav=false;try{nav=NAV.on;}catch(e){}if(!nav){map3dSet(!M3D.want);return;}
   if(M3D.navWant){map3dNavSet(false);return;}

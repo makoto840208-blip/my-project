@@ -783,7 +783,10 @@ T('帶水：每段自己設定、全裝輕裝各取最多那段；輕裝頁身�
   ok(/全裝帶水 3L/.test(await p.textContent('#segList .seg >> nth=0 >> [data-st]')) || true, '');
   await p.click('[data-gv=light]'); await p.waitForTimeout(150);
   ok(/B top_shell/.test(await p.textContent('#packList')), '輕裝頁沒列身穿的');
-  await p.click('#packList .pr:has-text("B top_shell") [data-pk=ltloc]'); await p.waitForTimeout(100);
+  const ord0 = await p.evaluate(() => [...document.querySelectorAll('#packList > .cb > .pr[data-sid]')].map(r => r.dataset.sid).join());
+  await p.click('#packList .pr:has-text("B top_shell") [data-pk=ltl][data-v=pack]'); await p.waitForTimeout(100);
+  const ord1 = await p.evaluate(() => [...document.querySelectorAll('#packList > .cb > .pr[data-sid]')].map(r => r.dataset.sid).join()); ok(ord0 === ord1, '切位置後順序跳了');
+  ok(await p.getAttribute('#packList .pr:has-text("B top_shell") [data-pk=ltl].on', 'data-v') === 'pack', '按鈕沒標成內');
   const lt = await p.evaluate(() => window.__gp.fn('C').lt.its.map(x => x.type)); ok(lt.includes('top_shell'), '切成包內沒算進背負 ' + lt.join(','));
   ok(await p.evaluate(() => window.__gp.S.slots.find(s => s.type === 'top_shell').loc === 'worn'), '全裝的位置被改到了');
 });

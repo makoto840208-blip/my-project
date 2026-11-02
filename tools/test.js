@@ -701,6 +701,26 @@ T('回報：建議可寫備註、標不適用、恢復、一次匯出', async p 
   await p.reload(); await p.waitForFunction(() => document.getElementById('state') && document.getElementById('state').textContent === '已載入', null, { timeout: 20000 });
   ok(await p.evaluate(() => window.__gp.fn('fbCount')() === 1), '重開後回報不見');
 });
+T('輕裝日：大背包留營地、分天背負、打包清單輕裝日勾帶上去', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; const i = document.querySelector('[data-p=days]'); i.value = 3; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true }));
+    const set = (t, g) => { const s = S.slots.find(x => x.type === t); if (s) Object.assign(s, { filled: true, on: true, brand: 'B', model: t, g, qty: 1, loc: 'pack' }); };
+    set('pack', 2000); set('tent', 1400); set('bag', 900); set('lamp', 80); set('daypack', 300); G.fn('renderCats')(); G.fn('compute')(); });
+  await p.waitForSelector('[data-lday="2"]'); await p.click('[data-lday="2"]'); await p.fill('[data-lw="2"]', '1'); await p.waitForTimeout(500);
+  const d = await p.evaluate(() => window.__gp.fn('C').dd.map(q => ({ d: q.d, light: q.light, pack: q.pack, n: q.its.length, w: q.waterG })));
+  ok(d.length === 3 && d[1].light && !d[0].light, '分天不對 ' + JSON.stringify(d));
+  ok(d[1].pack < d[0].pack - 4000 && d[1].w === 1000, '輕裝日重量不對 ' + JSON.stringify(d));
+  ok(await p.evaluate(() => document.querySelectorAll('#dayRow [data-cday]').length === 3), '儀表板沒有分天');
+  await p.click('#dayRow [data-cday="2"]'); await p.waitForTimeout(100);
+  const dbg = await p.evaluate(() => ({ day: window.__gp.fn('COMP').day, its: window.__gp.fn('C').dd[1].its.map(x => x.type), lg: [...document.querySelectorAll('#legend [data-comp]')].map(e => e.textContent) }));
+  ok(!dbg.lg.some(t => /睡眠/.test(t)), '輕裝日組成還有睡眠系統 ' + JSON.stringify(dbg));
+  await p.click('[data-gv=list]'); await p.click('#packList [data-pk=mlight]'); await p.waitForTimeout(100); await shot(p, 'light');
+  const take = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('#packList .pr[data-sid]')].map(r => [r.querySelector('.pn b').textContent, r.querySelector('[data-pk=take]').checked])));
+  ok(take['B lamp'] === true && take['B tent'] === false && take['B pack'] === false, '預設帶不帶不對 ' + JSON.stringify(take));
+  const before = await p.evaluate(() => window.__gp.fn('C').dd[1].pack);
+  await p.click('#packList .pr:has-text("B lamp") [data-pk=take]'); await p.waitForTimeout(100);
+  ok(await p.evaluate(b => window.__gp.fn('C').dd[1].pack === b - 80, before), '取消帶上去沒扣重量');
+  await p.click('#packList [data-pk=mall]'); ok(await p.evaluate(() => !!document.querySelector('#packList [data-pk=off]')), '切回全程不對');
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

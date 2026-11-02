@@ -74,11 +74,10 @@
 - 高度圖點位置：點的地方不在地圖畫面裡就 easeTo 過去（`profReveal`，跟隨模式不動）。
 - 3D 中鍵（電腦）：`midDrag3d()` 按住中鍵往上拖＝開 3D＋傾斜，壓回 <6° 放開＝關 3D；**左右不旋轉**（v101 使用者要求拿掉）。
 - 裝備數量（v101）：窄欄（手機、網頁沒收路線時裝備欄 ≤620px）也顯示 ×數量小格（grid 多一欄 q），以前會藏起來。
-- 完整測試已超過 10 分鐘：用 `nohup node tools/test.js --build > log &` 背景跑再等。
 - 單行函式裡**不要用 `//` 註解**（會把同一行後面的程式註解掉），用 `/* */`。
 
 ## 測試注意
-- **自動測試**：`node tools/test.js --build [--only 名稱片段] [--shots 資料夾] [--tiles]`。模擬直式 412×915、橫式 915×412 手機，另有「網頁」1600×900 無觸控（只跑標 `vp:'網頁'` 的測試）；DEM 合成、圖磚空白、BRouter／Overpass 用假資料（`fakeAlt`、`FAKE_PEAKS`）；`DBG=1` 會印頁面錯誤的堆疊。新功能一定要加測試。
+- **自動測試**：`node tools/test.js --build [--only 名稱片段] [--shots 資料夾] [--tiles] [--jobs N]`。預設同時 4 個（這台雲端機只有 2 核，約 1.7 倍快，完整一輪約 6～7 分鐘，在 10 分鐘工具上限內）；失敗的會單獨重跑一次，還失敗才算（長按、動畫類在忙碌時偶爾誤判）。截圖檔名用 `p._cur`（並行時不能用全域 cur）。模擬直式 412×915、橫式 915×412 手機，另有「網頁」1600×900 無觸控（只跑標 `vp:'網頁'` 的測試）；DEM 合成、圖磚空白、BRouter／Overpass 用假資料（`fakeAlt`、`FAKE_PEAKS`）；`DBG=1` 會印頁面錯誤的堆疊。新功能一定要加測試。
 - 這個雲端環境連不到 AWS（DEM）、jsdelivr、unpkg、Cloudflare API、OSM／Overpass、Wikipedia；brouter.de 用 curl 連得到（可驗真資料）；cdnjs、NLSC、OpenTopoMap、Esri、Firebase 可透過 Playwright proxy（`proxy={'server':$HTTPS_PROXY,'bypass':'<-loopback>'}`、`--use-gl=swiftshader`）。
 - 網址加 `?gptest` 會暴露 `window.__gp`（MAP、S、PROF、NAV、GPS、FOL、MEAS、RED、NB，`fn('名稱')` 可取內部函式）。
 

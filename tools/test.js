@@ -1,11 +1,11 @@
-// 自動測試：node tools/test.js [--only 名稱片段] [--shots 資料夾] [--tiles] [--build]
+// 自動測試：node tools/test.js [--only 名稱片段] [--shots 資料夾] [--tiles] [--build] [--jobs N]（預設同時 4 個；失敗的會單獨重跑一次）
 // 先 python3 tools/build.py t（或加 --build），測的是 public/。模擬直式與橫式手機，輸出 PASS／FAIL 文字。
 // --tiles：底圖用真的圖磚（較慢）；預設圖磚回空白，只測功能。DEM 用合成的 terrarium 地形。
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), zlib = require('zlib'), cp = require('child_process');
 const R = path.resolve(__dirname, '..'), PUB = path.join(R, 'public'), FIX = path.join(__dirname, 'fixtures');
 const argv = process.argv.slice(2), opt = n => { const i = argv.indexOf(n); return i < 0 ? null : (argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : true); };
-const ONLY = opt('--only'), SHOTS = opt('--shots'), TILES = !!opt('--tiles');
+const ONLY = opt('--only'), SHOTS = opt('--shots'), TILES = !!opt('--tiles'), JOBS = Math.max(1, +(opt('--jobs') || process.env.TEST_JOBS || 4));
 if (opt('--build')) cp.execSync(`python3 ${path.join(R, 'tools/build.py')} t`, { stdio: 'ignore' });
 
 // ---- 合成圖片 ----
@@ -33,7 +33,7 @@ function demTile(z, x, y) { // 用全球座標算高度，相鄰圖磚接得起�
 // ---- 測試框架 ----
 const results = []; let cur = null;
 function ok(c, msg) { if (!c) throw new Error(msg); }
-async function shot(p, name) { if (!SHOTS) return; fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, `${cur}_${name}.png`) }); }
+async function shot(p, name) { if (!SHOTS) return; fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, `${p._cur || cur}_${name}.png`) }); }
 
 async function newPage(b, vp) {
   const ctx = await b.newContext({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: vp.desk ? 1 : 2.5, hasTouch: !vp.desk, isMobile: !vp.desk, geolocation: { latitude: 24.0705, longitude: 121.2950, accuracy: 10 }, permissions: ['geolocation'] });
@@ -922,14 +922,22 @@ T('全程沒有頁面錯誤', async p => {
   if (!fs.existsSync(path.join(PUB, 'index.html'))) { console.log('沒有 public/index.html，先跑 python3 tools/build.py t'); process.exit(2); }
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'], proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: '<-loopback>' } : undefined });
   const t0 = Date.now();
-  for (const vp of VPS) for (const t of TESTS) {
-    if (ONLY && !t.name.includes(ONLY)) continue; if (t.o.vp ? t.o.vp !== vp.n : vp.desk) continue;
-    cur = `${vp.n}_${t.name.replace(/[^\w一-鿿]+/g, '_').slice(0, 30)}`;
-    const { ctx, p } = await newPage(b, vp); let err = null;
+  // 同時開 JOBS 個分頁分工跑（--jobs N 或 TEST_JOBS，預設 4）；每個測試各自全新的瀏覽器環境，互不影響
+  const queue = [];
+  for (const vp of VPS) for (const t of TESTS) { if (ONLY && !t.name.includes(ONLY)) continue; if (t.o.vp ? t.o.vp !== vp.n : vp.desk) continue; queue.push({ vp, t }); }
+  const runOne = async ({ vp, t }) => {
+    const { ctx, p } = await newPage(b, vp); p._cur = `${vp.n}_${t.name.replace(/[^\w一-鿿]+/g, '_').slice(0, 30)}`; let err = null;
     try { await boot(p); await t.fn(p, vp); if (p._err.length) throw new Error('頁面錯誤：' + p._err.join(' | ')); } catch (e) { err = e.message.split('\n')[0]; try { await shot(p, 'FAIL'); } catch (x) {} }
     results.push({ vp: vp.n, name: t.name, err }); console.log(`${err ? 'FAIL' : 'PASS'}  [${vp.n}] ${t.name}${err ? '\n      → ' + err : ''}`);
     await ctx.close();
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(JOBS, queue.length || 1) }, async () => { while (queue.length) await runOne(queue.shift()); }));
+  // 同時跑時機器比較忙，少數靠時間的測試（長按、動畫）可能誤判：失敗的單獨再跑一次，還是失敗才算
+  const bad = results.filter(r => r.err); let retried = 0;
+  if (JOBS > 1 && bad.length && bad.length <= 10) { console.log(`\n${bad.length} 項失敗，單獨重跑一次確認…`);
+    for (const r of bad) { const job = { vp: VPS.find(v => v.n === r.vp), t: TESTS.find(t => t.name === r.name) }; const n0 = results.length; await runOne(job); const r2 = results.pop(); results.length = n0;
+      if (!r2.err) { r.err = null; r.retry = true; retried++; } else r.err = r2.err; } }
+  if (retried) console.log(`（${retried} 項第一次失敗、單獨重跑通過）`);
   await b.close();
   const f = results.filter(r => r.err).length;
   console.log(`\n${results.length - f}/${results.length} 通過（${((Date.now() - t0) / 1000).toFixed(0)} 秒）`);

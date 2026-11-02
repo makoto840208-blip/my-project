@@ -707,9 +707,9 @@ T('輕裝：分類｜打包清單｜輕裝、複製目前配置、✕留營地�
     set('pack', 2000); set('tent', 1400); set('bag', 900); set('lamp', 80); set('daypack', 300); G.fn('renderCats')(); G.fn('compute')(); });
   ok(!(await p.evaluate(() => !!document.querySelector('#dayRow [data-cmode]'))), '還沒開輕裝就出現全裝｜輕裝');
   await p.click('[data-gv=light]'); await p.waitForTimeout(150); await shot(p, 'light');
-  const names = () => p.evaluate(() => [...document.querySelectorAll('#packList > .cb > .pr[data-sid] .pn b')].map(e => e.textContent));
+  const names = () => p.evaluate(() => [...document.querySelectorAll('#packList .ltgrp .pr[data-sid] .pn b')].map(e => e.textContent));
   let n = await names(); ok(['B pack', 'B tent', 'B bag', 'B lamp', 'B daypack'].every(x => n.includes(x)), '沒有整份複製：' + n.join(','));
-  for (const t of ['B pack', 'B tent', 'B bag']) { await p.click(`#packList > .cb > .pr:has-text("${t}") [data-pk=ltx]`); await p.waitForTimeout(80); }
+  for (const t of ['B pack', 'B tent', 'B bag']) { await p.click(`#packList .ltgrp .pr:has-text("${t}") [data-pk=ltx]`); await p.waitForTimeout(80); }
   n = await names(); ok(!n.includes('B tent') && n.includes('B lamp'), '✕ 沒留營地：' + n.join(','));
   ok(/留營地 3 件/.test(await p.textContent('#packList details[open] > summary')), '沒列留營地');
   const lt = await p.evaluate(() => window.__gp.fn('C').lt); ok(lt && lt.waterG > 0 && Math.abs(lt.pack - (380 + lt.waterG + lt.foodG)) < 1, '輕裝重量不對 ' + JSON.stringify(lt && { p: lt.pack, w: lt.waterG, f: lt.foodG }));
@@ -783,9 +783,9 @@ T('帶水：每段自己設定、全裝輕裝各取最多那段；輕裝頁身�
   ok(/全裝帶水 3L/.test(await p.textContent('#segList .seg >> nth=0 >> [data-st]')) || true, '');
   await p.click('[data-gv=light]'); await p.waitForTimeout(150);
   ok(/B top_shell/.test(await p.textContent('#packList')), '輕裝頁沒列身穿的');
-  const ord0 = await p.evaluate(() => [...document.querySelectorAll('#packList > .cb > .pr[data-sid]')].map(r => r.dataset.sid).join());
+  const ord0 = await p.evaluate(() => [...document.querySelectorAll('#packList .ltgrp .pr[data-sid]')].map(r => r.dataset.sid).join());
   await p.click('#packList .pr:has-text("B top_shell") [data-pk=ltl][data-v=pack]'); await p.waitForTimeout(100);
-  const ord1 = await p.evaluate(() => [...document.querySelectorAll('#packList > .cb > .pr[data-sid]')].map(r => r.dataset.sid).join()); ok(ord0 === ord1, '切位置後順序跳了');
+  const ord1 = await p.evaluate(() => [...document.querySelectorAll('#packList .ltgrp .pr[data-sid]')].map(r => r.dataset.sid).join()); ok(ord0 === ord1, '切位置後順序跳了');
   ok(await p.getAttribute('#packList .pr:has-text("B top_shell") [data-pk=ltl].on', 'data-v') === 'pack', '按鈕沒標成內');
   const lt = await p.evaluate(() => window.__gp.fn('C').lt.its.map(x => x.type)); ok(lt.includes('top_shell'), '切成包內沒算進背負 ' + lt.join(','));
   ok(await p.evaluate(() => window.__gp.S.slots.find(s => s.type === 'top_shell').loc === 'worn'), '全裝的位置被改到了');
@@ -863,7 +863,7 @@ T('輕裝：診斷跟著全裝｜輕裝切換、留營地必帶會提醒、最�
     const set = (t, g) => { const s = S.slots.find(x => x.type === t); if (s) Object.assign(s, { filled: true, on: true, brand: 'B', model: t, g, qty: 1, loc: 'pack' }); };
     set('pack', 2000); set('tent', 1400); set('lamp', 80); set('meds', 200); set('top_shell', 400); set('top_insul', 350); G.fn('renderCats')(); G.fn('compute')(); });
   await p.click('[data-gv=light]'); await p.waitForTimeout(150);
-  await p.click('#packList > .cb > .pr:has-text("lamp") [data-pk=ltx]'); await p.waitForTimeout(100);
+  await p.click('#packList .ltgrp .pr:has-text("lamp") [data-pk=ltx]'); await p.waitForTimeout(100);
   await p.click('#dayRow [data-cmode="light"]'); await p.waitForTimeout(150);
   await p.evaluate(() => document.querySelectorAll('#dash .card').forEach(c => c.classList.remove('fold')));
   let d = await p.textContent('#diag'); ok(/輕裝的診斷/.test(d) && /頭燈留在營地/.test(d) && !/睡袋/.test(d), '輕裝診斷不對：' + d.slice(0, 200));
@@ -894,6 +894,24 @@ T('列印檢查表：東西少用 A6、多了改 B6，有日期人數溫度', as
   await p.click('#packList [data-pk=print]'); await p.waitForTimeout(500);
   r = await p.evaluate(() => ({ size: document.getElementById('ckPrint').dataset.size, pages: document.getElementById('ckPrint').dataset.pages })); ok(r.size === 'B6', '多了沒改 B6 ' + JSON.stringify(r));
 }, { vp: '網頁' });
+T('輕裝頁：分穿／內／掛三框，改位置先留原地標→，按整理才搬', async p => {
+  await p.evaluate(() => { const G = window.__gp, S = G.S; const set = (t, g, loc) => { const s = S.slots.find(x => x.type === t); if (s) Object.assign(s, { filled: true, on: true, brand: 'B', model: t, g, qty: 1, loc }); };
+    set('top_shell', 400, 'worn'); set('meds', 200, 'pack'); set('campshoe', 300, 'out'); G.fn('renderCats')(); G.fn('compute')(); });
+  await p.click('[data-gv=light]'); await p.waitForTimeout(150);
+  const grp = () => p.evaluate(() => [...document.querySelectorAll('#packList .ltgrp')].map(g => g.querySelector('.ltgh').firstChild.textContent + ':' + [...g.querySelectorAll('.pr .pn b')].map(b => b.firstChild.textContent).join(',')));
+  let g = await grp(); ok(g[0].startsWith('穿在身上') && /top_shell/.test(g[0]) && /meds/.test(g[1]) && /campshoe/.test(g[2]), '分框不對 ' + JSON.stringify(g));
+  await p.click('#packList .pr:has-text("top_shell") [data-pk=ltl][data-v=pack]'); await p.waitForTimeout(100);
+  g = await grp(); ok(/top_shell/.test(g[0]), '還沒整理就搬走了 ' + JSON.stringify(g));
+  ok(/→ 背包內/.test(await p.textContent('#packList .pr:has-text("top_shell")')), '沒標→');
+  await p.click('#packList [data-pk=ltsort]'); await p.waitForTimeout(100);
+  g = await grp(); ok(!/top_shell/.test(g.find(x => x.startsWith('穿在身上')) || '') && /top_shell/.test(g.find(x => x.startsWith('背包內'))), '整理後沒搬 ' + JSON.stringify(g));
+});
+T('診斷：複製給 AI（固定提問＋JSON，只輸出）', async p => {
+  await loadGpx(p); await p.evaluate(() => { const G = window.__gp, S = G.S; const s = S.slots.find(x => x.type === 'tent'); Object.assign(s, { filled: true, on: true, brand: 'B', model: 'tent', g: 1400, qty: 1 }); G.fn('renderCats')(); G.fn('compute')(); });
+  ok(!!(await p.$('#diag [data-aix]')), '沒有複製給 AI 按鈕');
+  const t = await p.evaluate(() => window.__gp.fn('aiExport')()); const m = t.match(/```json\n([\s\S]*)\n```/); ok(!!m && /繁體中文/.test(t), '格式不對');
+  const J = JSON.parse(m[1]); ok(J.gear.some(x => x.name === 'B tent') && J.route.segments.length > 0 && Array.isArray(J.diagnosis) && J.load.packKg > 0, 'JSON 內容不對 ' + Object.keys(J).join(','));
+});
 T('全程沒有頁面錯誤', async p => {
   await loadGpx(p); await openNav(p); await navBtn(p, 'follow'); await p.waitForTimeout(600); await navBtn(p, 'follow'); await navBtn(p, 'close'); await p.waitForTimeout(300);
   ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));

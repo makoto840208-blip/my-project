@@ -474,6 +474,9 @@ input:disabled,select:disabled{opacity:.6}
 #packList .pr.lnot .pn b{color:var(--mut)}
 #packList .ltadd{margin:0 0 8px}#packList .ltadd>summary{list-style:none;display:inline-block;cursor:pointer}#packList .ltadd>summary::-webkit-details-marker{display:none}#packList .ltadd[open]{border:1px dashed var(--line);border-radius:6px;padding:6px 8px}
 .dmode{font-size:12.5px;color:var(--coy2);margin-bottom:8px}
+#packList .ltacts{align-items:flex-start}#packList .ltgrp{margin-top:8px}#packList .ltgh{display:flex;justify-content:space-between;font-size:12.5px;color:var(--coy2);letter-spacing:.06em;border-bottom:1px solid var(--coy);padding:4px 0}#packList .ltgh span{color:var(--mut);letter-spacing:0;font-family:var(--mono)}
+#packList .pr.moved{background:rgba(168,134,90,.10)}#packList .mvtag{font-style:normal;font-size:11.5px;color:var(--coy2);border:1px solid var(--coy);border-radius:3px;padding:0 4px;margin-left:6px;font-weight:500}
+.aibar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mut)}
 .wfrow{font-size:12.5px;color:var(--mut);display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:28px}.wfrow input{width:62px;padding:3px 6px}.wfrow small{font-size:11px}
 #packList .lseg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}#packList .lseg button{width:30px;height:28px;padding:0;background:var(--panel);border:0;border-left:1px solid var(--line);color:var(--mut);font:inherit;font-size:13px;cursor:pointer}#packList .lseg button:first-child{border-left:0}#packList .lseg button.on{background:var(--olive);color:#f0ead8;font-weight:700}
 /* 路段時間軸 */
@@ -3878,19 +3881,23 @@ function gmClick(e){const f=e.target.closest('[data-gmf]');if(f){GM.f=f.dataset.
     toastAct(`已刪除「${dispName(d)}」`,'復原',()=>{if(d.builtin)d.owned=true;else DB.splice(Math.min(at,DB.length),0,d);mineChanged();gmRender();});}}
 $('#bMineMgr').addEventListener('click',mineOpen);
 /* ===== 打包清單：這趟所有裝備攤成一張表，由重到輕，佔背負 % 小橫條、數量、不帶、打包打勾、複製文字 ===== */
-const PACK={view:'cat',sort:'w',c:null};try{const gv=localStorage.getItem('gearPlanner.gview');PACK.view=gv==='list'||gv==='light'?gv:'cat';PACK.sort=localStorage.getItem('gearPlanner.psort')==='c'?'c':'w';}catch(e){}
-function packView(v){if(v==='light'&&!S.lt){S.lt={off:{}};setDirty(true);setTimeout(()=>toast('已複製目前配置，不帶上去的按 ✕'),0);}PACK.view=v;try{localStorage.setItem('gearPlanner.gview',v);}catch(e){}document.querySelectorAll('[data-gv]').forEach(b=>b.classList.toggle('on',b.dataset.gv===v));$('#packList').hidden=v==='cat';$('#cats').hidden=v!=='cat';compute();}
+const PACK={view:'cat',sort:'w',c:null,hold:{}};/* hold：改了位置但還沒按「整理」的，記原本那框 */try{const gv=localStorage.getItem('gearPlanner.gview');PACK.view=gv==='list'||gv==='light'?gv:'cat';PACK.sort=localStorage.getItem('gearPlanner.psort')==='c'?'c':'w';}catch(e){}
+function packView(v){PACK.hold={};if(v==='light'&&!S.lt){S.lt={off:{}};setDirty(true);setTimeout(()=>toast('已複製目前配置，不帶上去的按 ✕'),0);}PACK.view=v;try{localStorage.setItem('gearPlanner.gview',v);}catch(e){}document.querySelectorAll('[data-gv]').forEach(b=>b.classList.toggle('on',b.dataset.gv===v));$('#packList').hidden=v==='cat';$('#cats').hidden=v!=='cat';compute();}
 function packText(){const c=PACK.c||{},W=live(),nm=(document.querySelector('[data-r=name]')||{}).value||'';
   const L=[`${nm?nm+' ':''}裝備清單`,`背負 ${(c.pack/1000).toFixed(1)} kg・身穿 ${(c.worn/1000).toFixed(1)} kg・全身 ${(c.skin/1000).toFixed(1)} kg`];
   CATS.forEach(([k,cn])=>{const R=W.filter(x=>x.cat===k);if(!R.length)return;L.push('',`[${cn}]`);R.forEach(x=>L.push(`${x.packed?'☑':'☐'} ${dispName(x)||x.label}${x.qty>1?' ×'+x.qty:''}  ${tot(x)} g${x.loc==='worn'?'（穿）':x.loc==='out'?'（掛）':''}`));});
   if(c.waterG)L.push('',`水 ${(c.waterG/1000).toFixed(1)} kg`);if(c.foodG)L.push(`食物 ${(c.foodG/1000).toFixed(2)} kg`);return L.join('\n');}
 function renderPack(){const box=document.querySelector('#packList .cb');if(!box||PACK.view==='cat')return;if(box.contains(document.activeElement)&&document.activeElement.matches('[data-wf]'))return;const c=PACK.c;if(!c)return;
-  if(PACK.view==='light'){if(!S.lt)S.lt={off:{}};const LT=ltCalc()||{its:[],wornIts:[],pack:0,worn:0,waterG:0,foodG:0},L=LT.its.concat(LT.wornIts).sort((a,b)=>tot(b)-tot(a)||String(a.id).localeCompare(String(b.id))),off=live().filter(x=>!lightTake(x)),pk=Math.max(1,LT.pack),hasLS=S.route.segs.some(g=>!g.ret&&g.lt==='light');
+  if(PACK.view==='light'){if(!S.lt)S.lt={off:{}};const LT=ltCalc()||{its:[],wornIts:[],pack:0,worn:0,waterG:0,foodG:0},L=LT.its.concat(LT.wornIts).sort((a,b)=>tot(b)-tot(a)||String(a.id).localeCompare(String(b.id))),off=live().filter(x=>!lightTake(x)),pk=Math.max(1,LT.pack);
+    Object.keys(PACK.hold).forEach(k=>{const x=L.find(q=>q.id===k);if(!x||PACK.hold[k]===ltLoc(x))delete PACK.hold[k];});
+    const grp=x=>PACK.hold[x.id]||ltLoc(x),nH=Object.keys(PACK.hold).length;
+    const row=x=>{const lc=ltLoc(x),pc=lc==='worn'?0:tot(x)/pk*100,mv=PACK.hold[x.id];return `<div class="pr${lc==='worn'?' worn':''}${x.packedL?' done':''}${mv?' moved':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packedL"${x.packedL?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}${mv?`<i class="mvtag">→ ${LOCN[lc]}</i>`:''}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}${lc!==x.loc?`・全裝時${LOC[x.loc]}`:''}</small>${lc==='worn'?'':`<div class="pbar"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></div>`}</div><div class="pq">${x.type==='pack'?'':`<span class="lseg" role="group" aria-label="輕裝時放哪">${['worn','pack','out'].map(k=>`<button type="button" data-pk="ltl" data-v="${k}" class="${lc===k?'on':''}" title="${LOCN[k]}">${LOC[k]}</button>`).join('')}</span>`}</div><div class="pw">${tot(x)} g<small>${lc==='worn'?'身穿':pc.toFixed(0)+'%'}</small></div><button type="button" class="px" data-pk="ltx" aria-label="留營地" title="留營地">✕</button></div>`;};
+    const box3=[['worn','穿在身上'],['pack','背包內'],['out','外掛']].map(([k,t])=>{const G=L.filter(x=>grp(x)===k);return G.length?`<div class="ltgrp"><div class="ltgh">${t}<span>${G.length} 件・${kg(sum(G,tot))} kg</span></div>${G.map(row).join('')}</div>`:'';}).join('');
     box.innerHTML=`<div class="pk-sum">輕裝背負 <b>${kg(LT.pack)} kg</b>（${LT.its.length} 件 ${kg(sum(LT.its,tot))} kg＋水 ${kg(LT.waterG)} kg＋一天行動糧 ${kg(LT.foodG)} kg）・身穿 <b>${kg(LT.worn)} kg</b>　已裝 ${L.filter(x=>x.packedL).length}／${L.length}</div>
       <div class="pk-tools"><span style="font-size:12.5px;color:var(--mut);align-self:center">水：在下面「水」那列直接改，跟輕裝路段同步</span><button class="btn sm" data-pk="ltreset">重新從目前配置複製</button><button class="btn sm warn" data-pk="ltoff">不用輕裝</button></div>
-      ${off.length?`<details class="ltadd"><summary class="btn sm">＋ 加回留營地的（${off.length} 件）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}
-      <div style="font-size:12.5px;color:var(--mut);margin-bottom:6px">攻頂、往返營地時的配置。不帶的按 ✕ 留營地；在營地換衣服的，點「穿／內／掛」切換；左邊勾＝已裝。</div>
-      ${L.map(x=>{const lc=ltLoc(x),pc=lc==='worn'?0:tot(x)/pk*100;return `<div class="pr${lc==='worn'?' worn':''}${x.packedL?' done':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packedL"${x.packedL?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}${lc!==x.loc?`・全裝時${LOC[x.loc]}`:''}</small>${lc==='worn'?'':`<div class="pbar"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></div>`}</div><div class="pq">${x.type==='pack'?'':`<span class="lseg" role="group" aria-label="輕裝時放哪">${['worn','pack','out'].map(k=>`<button type="button" data-pk="ltl" data-v="${k}" class="${lc===k?'on':''}" title="${LOCN[k]}">${LOC[k]}</button>`).join('')}</span>`}</div><div class="pw">${tot(x)} g<small>${lc==='worn'?'身穿':pc.toFixed(0)+'%'}</small></div><button type="button" class="px" data-pk="ltx" aria-label="留營地" title="留營地">✕</button></div>`;}).join('')||'<div style="color:var(--mut);padding:10px 0">全部都留營地了。</div>'}
+      <div class="pk-tools ltacts">${off.length?`<details class="ltadd"><summary class="btn sm">＋ 加回留營地的（${off.length} 件）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}${nH?`<button class="btn sm pri" data-pk="ltsort">整理（${nH} 件改了位置）</button>`:''}</div>
+      <div style="font-size:12.5px;color:var(--mut);margin-bottom:6px">攻頂、往返營地時的配置。不帶的按 ✕ 留營地；在營地換衣服的，點「穿／內／掛」，改完按「整理」才搬到對應的框；左邊勾＝已裝。</div>
+      ${box3||'<div style="color:var(--mut);padding:10px 0">全部都留營地了。</div>'}
       <div class="pr pfix"><span></span><div class="pn"><b>水</b><small>裝水 <input type="number" min="0" step="0.5" inputmode="decimal" data-wf="light" value="${waterMax(true)}" style="width:58px;padding:2px 4px"> L（跟輕裝路段同步）</small></div><div class="pq"></div><div class="pw">${kg(LT.waterG)} kg</div><span class="px"></span></div>
       ${off.length?`<details open><summary>留營地 ${off.length} 件（可加回）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;return;}
   const W=live(),off=S.slots.filter(s=>s.filled&&!s.on),pk=Math.max(1,c.pack),wn=Math.max(1,c.worn);
@@ -3907,6 +3914,7 @@ function renderPack(){const box=document.querySelector('#packList .cb');if(!box|
     ${off.length?`<details><summary>這趟不帶的 ${off.length} 件</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="on" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;}
 document.addEventListener('click',e=>{const v=e.target.closest('[data-gv]');if(v){packView(v.dataset.gv);return;}});
 $('#packList').addEventListener('click',async e=>{const b=e.target.closest('[data-pk]');if(!b)return;const a=b.dataset.pk;
+  if(a==='ltsort'){PACK.hold={};renderPack();return;}
   if(a==='ltreset'){const o=S.lt&&S.lt.off;S.lt.off={};live().forEach(x=>delete x.packedL);setDirty(true);compute();toastAct('已重新複製目前配置','復原',()=>{S.lt.off=o||{};setDirty(true);compute();});return;}
   if(a==='ltoff'){const o=S.lt;delete S.lt;packView('list');setDirty(true);toastAct('已關閉輕裝','復原',()=>{S.lt=o;packView('light');setDirty(true);});return;}
   if(a==='sw'||a==='sc'){PACK.sort=a==='sc'?'c':'w';try{localStorage.setItem('gearPlanner.psort',PACK.sort);}catch(err){}renderPack();return;}
@@ -3919,7 +3927,7 @@ $('#packList').addEventListener('click',async e=>{const b=e.target.closest('[dat
   if(a==='packedL'){s.packedL=b.checked;setDirty(true);renderPack();return;}
   if(a==='ltx'){S.lt.off[s.id]=true;delete s.packedL;setDirty(true);compute();toastAct(`「${dispName(s)||s.label}」留營地`,'復原',()=>{delete S.lt.off[s.id];setDirty(true);compute();});return;}
   if(a==='lton'){delete S.lt.off[s.id];setDirty(true);compute();return;}
-  if(a==='ltl'){const nx=b.dataset.v;if(nx===ltLoc(s))return;S.lt.loc=S.lt.loc||{};if(nx===s.loc)delete S.lt.loc[s.id];else S.lt.loc[s.id]=nx;setDirty(true);compute();return;}
+  if(a==='ltl'){const nx=b.dataset.v;if(nx===ltLoc(s))return;if(!(s.id in PACK.hold))PACK.hold[s.id]=ltLoc(s);S.lt.loc=S.lt.loc||{};if(nx===s.loc)delete S.lt.loc[s.id];else S.lt.loc[s.id]=nx;setDirty(true);compute();return;}
   if(a==='plus'||a==='minus'){s.qty=Math.max(1,s.qty+(a==='plus'?1:-1));rerow(s);}
   else if(a==='off'){s.on=false;rerow(s);toastAct(`這趟不帶「${dispName(s)||s.label}」`,'復原',()=>{s.on=true;rerow(s);setDirty(true);compute();});}
   else if(a==='on'){s.on=true;rerow(s);}
@@ -4427,6 +4435,25 @@ const fbBar=()=>`<div class="fbbar"><span>回報 ${fbCount()} 條（存在這支
 const fbSkipped=kind=>Object.entries(FBK).filter(([k,f])=>f.skip&&k.startsWith(kind+':'));
 const fbSkipHTML=kind=>{const L=fbSkipped(kind);return L.length?`<details class="dmore fbsk"><summary>已標不適用 ${L.length} 項</summary>${L.map(([k,f])=>`<div class="fbr"><span>${esc(f.title||k)}${f.note?`<small>　備註：${esc(f.note)}</small>`:''}</span><button type="button" class="btn sm" data-fbun="${esc(k)}">恢復</button></div>`).join('')}</details>`:'';};
 /* 列印裝備檢查表（打勾用）：先在螢幕外排版量高度，A6 放得下就 A6，不然 B6；字最小 7.5pt，再不夠就印兩張 B6 */
+/* 診斷結果＋裝備＋路線＋天氣 → 固定提問＋JSON，貼給任何 AI。只輸出，App 不收回、不動資料庫 */
+function aiExport(){const c=C,strip=h=>String(h||'').replace(/<li>/g,'；').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+  const W=S.wx,d0=S.route.date;const J={app:'登山負重規劃師',ver:APPVER,route:{name:(document.querySelector('[data-r=name]')||{}).value||'',date:d0||'',days:S.days,people:S.route.team||1,km:S.km,up:S.elev,maxAlt:S.alt,tempC:[S.tmin,S.tmax],
+    segments:S.route.segs.filter(g=>!g.ret).map(g=>{const t=SEGT.get(g.id);return {day:g.day,from:g.from,to:g.to,km:g.km,up:g.up,down:g.down,top:g.top,hours:t?+t.h.toFixed(1):g.hrs,start:t&&t.st!=null?m2hm(t.st):null,load:g.lt==='light'?'輕裝':'全裝',waterL:segWater(g),water:WN[g.water]||g.water,signal:SN[g.sig]||g.sig,night:segNightOf(g)};})},
+    body:{kg:S.body,exp:S.exp},load:{packKg:+(c.pack/1000).toFixed(2),baseKg:+(c.base/1000).toFixed(2),wornKg:+(c.worn/1000).toFixed(2),ratioPct:+c.ratio.toFixed(1),waterL:+(c.waterG/1000).toFixed(1),foodKg:+(c.foodG/1000).toFixed(2)},
+    gear:live().map(x=>({cat:CATN[x.cat],type:x.label,name:dispName(x),g:x.g,qty:x.qty,where:LOCN[x.loc],light:S.lt?(lightTake(x)?LOCN[ltLoc(x)]:'留營地'):undefined})),
+    light:C.lt?{packKg:+(C.lt.pack/1000).toFixed(2),wornKg:+(C.lt.worn/1000).toFixed(2),waterL:waterMax(true)}:null,
+    weather:W?W.pts.map(p=>({place:p.label,days:p.daily.time.map((t,i)=>({date:t,min:p.daily.temperature_2m_min[i],max:p.daily.temperature_2m_max[i],feelsMin:p.daily.apparent_temperature_min[i],rainPct:p.daily.precipitation_probability_max[i],gustKmh:p.daily.wind_gusts_10m_max[i]}))})):null,
+    diagnosis:(c.diag||[]).map(([l,t,d])=>({level:{r:'重要',y:'注意',i:'參考',g:'正常'}[l]||l,title:t,detail:strip(d)}))};
+  const Q=`你是台灣高山的登山裝備與行程顧問。下面 JSON 是我用「登山負重規劃師」排好的行程、裝備和 App 的自動診斷。請用繁體中文回答，依序：
+1. 最該處理的 3 件事（安全優先，其次減重）
+2. 每項診斷你同不同意、為什麼（不同意要說理由）
+3. 具體減重建議：哪件換成什麼或不帶、大約省多少 g（只建議台灣買得到的）
+4. 我可能漏帶的東西
+5. 依天氣和路段時間，水、保暖、出發時間的建議
+不確定的地方請直接說不確定，不要編數字。
+\n\n`;return Q+'```json\n'+JSON.stringify(J,null,1)+'\n```';}
+document.addEventListener('click',async e=>{if(!e.target.closest('[data-aix]'))return;if(!C||!C.diag){toast('還沒有診斷結果');return;}toast(await copyText(aiExport())?'已複製：貼給 Gemini、Claude 或 ChatGPT 都可以':'複製失敗');});
+const aiBar=()=>`<div class="aibar"><button type="button" class="btn sm" data-aix>複製給 AI 建議</button><span>把行程、裝備、天氣、診斷整理好，貼給任何 AI 問意見（App 不會收回或改資料）</span></div>`;
 function ckHTML(){const c=PACK.c||{},W=live(),nm=(document.querySelector('[data-r=name]')||{}).value||'裝備檢查表',d0=S.route.date,days=Math.max(1,S.days||1);
   const dt=d0?(days>1?`${d0.slice(5).replace('-','/')}～${addDays(d0,days-1).slice(5).replace('-','/')}`:d0.slice(5).replace('-','/')):'日期未填';
   const it=(n,g,extra)=>`<div class="it"><span>☐</span><span class="n">${esc(n)}${extra||''}</span><span class="g">${g}</span></div>`;
@@ -4691,7 +4718,7 @@ function diagnose(){
   $('#dSum').innerHTML=[['r','var(--r)'],['y','var(--y)'],['i','var(--b)'],['g','var(--g)']].map(([k,c])=>cnt(k)?`<span><i style="background:${c}"></i>${cnt(k)}</span>`:'').join('');
   const wasOpen=!!document.querySelector('#diag .dmore[open]');
   $('#diag').innerHTML=(C.lt?'<div class="dmode">全裝的診斷（儀表板切到「輕裝」看輕裝的）</div>':'')+(imp.length?imp.map(dh).join(''):'<div class="d g"><h4>沒有需要特別注意的項目</h4></div>')
-    +(rest.length?`<details class="dmore"${wasOpen?' open':''}><summary>其他 ${rest.length} 項建議與正常項目</summary><div class="diag" style="margin-top:8px">${rest.map(dh).join('')}</div></details>`:'')+fbSkipHTML('dg')+fbBar();
+    +(rest.length?`<details class="dmore"${wasOpen?' open':''}><summary>其他 ${rest.length} 項建議與正常項目</summary><div class="diag" style="margin-top:8px">${rest.map(dh).join('')}</div></details>`:'')+fbSkipHTML('dg')+fbBar()+aiBar();
 }
 
 /* ---------- save / reset / csv / print ---------- */

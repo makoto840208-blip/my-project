@@ -472,6 +472,8 @@ input:disabled,select:disabled{opacity:.6}
 .dayrow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}.dayrow button{display:flex;flex-direction:column;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--mut);font:inherit;font-size:12px;padding:4px 8px;cursor:pointer}
 .dayrow button b{color:var(--txt);font-family:var(--mono);font-size:14px}.dayrow button small{font-size:11px}.dayrow button.on{border-color:var(--coy);color:var(--coy2)}.dayrow button.lt b{color:#9bb58a}
 #packList .pr.lnot .pn b{color:var(--mut)}
+#packList .ltadd{margin:0 0 8px}#packList .ltadd>summary{list-style:none;display:inline-block;cursor:pointer}#packList .ltadd>summary::-webkit-details-marker{display:none}#packList .ltadd[open]{border:1px dashed var(--line);border-radius:6px;padding:6px 8px}
+.dmode{font-size:12.5px;color:var(--coy2);margin-bottom:8px}
 #packList .lseg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}#packList .lseg button{width:30px;height:28px;padding:0;background:var(--panel);border:0;border-left:1px solid var(--line);color:var(--mut);font:inherit;font-size:13px;cursor:pointer}#packList .lseg button:first-child{border-left:0}#packList .lseg button.on{background:var(--olive);color:#f0ead8;font-weight:700}
 /* 路段時間軸 */
 .segt .ngt{display:flex;align-items:center;gap:6px;align-self:end;padding-bottom:6px}.segt .ngt input{width:18px;height:18px}.segst b{color:var(--coy2)}
@@ -3879,10 +3881,11 @@ function renderPack(){const box=document.querySelector('#packList .cb');if(!box|
   if(PACK.view==='light'){if(!S.lt)S.lt={off:{}};const LT=ltCalc()||{its:[],wornIts:[],pack:0,worn:0,waterG:0,foodG:0},L=LT.its.concat(LT.wornIts).sort((a,b)=>tot(b)-tot(a)||String(a.id).localeCompare(String(b.id))),off=live().filter(x=>!lightTake(x)),pk=Math.max(1,LT.pack),hasLS=S.route.segs.some(g=>!g.ret&&g.lt==='light');
     box.innerHTML=`<div class="pk-sum">輕裝背負 <b>${kg(LT.pack)} kg</b>（${LT.its.length} 件 ${kg(sum(LT.its,tot))} kg＋水 ${kg(LT.waterG)} kg＋一天行動糧 ${kg(LT.foodG)} kg）・身穿 <b>${kg(LT.worn)} kg</b>　已裝 ${L.filter(x=>x.packedL).length}／${L.length}</div>
       <div class="pk-tools"><span style="font-size:12.5px;color:var(--mut);align-self:center">水：${hasLS?'看輕裝路段「這段帶水」（取最多的那段）':`還沒有路段標輕裝，先用 ${ltWDef()}L`}</span><button class="btn sm" data-pk="ltreset">重新從目前配置複製</button><button class="btn sm warn" data-pk="ltoff">不用輕裝</button></div>
+      ${off.length?`<details class="ltadd"><summary class="btn sm">＋ 加回留營地的（${off.length} 件）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}
       <div style="font-size:12.5px;color:var(--mut);margin-bottom:6px">攻頂、往返營地時的配置。不帶的按 ✕ 留營地；在營地換衣服的，點「穿／內／掛」切換；左邊勾＝已裝。</div>
       ${L.map(x=>{const lc=ltLoc(x),pc=lc==='worn'?0:tot(x)/pk*100;return `<div class="pr${lc==='worn'?' worn':''}${x.packedL?' done':''}" data-sid="${esc(x.id)}"><input type="checkbox" data-pk="packedL"${x.packedL?' checked':''} aria-label="已裝"><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${esc(x.label)}${lc!==x.loc?`・全裝時${LOC[x.loc]}`:''}</small>${lc==='worn'?'':`<div class="pbar"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></div>`}</div><div class="pq">${x.type==='pack'?'':`<span class="lseg" role="group" aria-label="輕裝時放哪">${['worn','pack','out'].map(k=>`<button type="button" data-pk="ltl" data-v="${k}" class="${lc===k?'on':''}" title="${LOCN[k]}">${LOC[k]}</button>`).join('')}</span>`}</div><div class="pw">${tot(x)} g<small>${lc==='worn'?'身穿':pc.toFixed(0)+'%'}</small></div><button type="button" class="px" data-pk="ltx" aria-label="留營地" title="留營地">✕</button></div>`;}).join('')||'<div style="color:var(--mut);padding:10px 0">全部都留營地了。</div>'}
       <div class="pr pfix"><span></span><div class="pn"><b>水</b><small>輕裝路段帶水</small></div><div class="pq"></div><div class="pw">${kg(LT.waterG)} kg</div><span class="px"></span></div>
-      ${off.length?`<details><summary>留營地 ${off.length} 件</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;return;}
+      ${off.length?`<details open><summary>留營地 ${off.length} 件（可加回）</summary>${off.map(x=>`<div class="pr" data-sid="${esc(x.id)}"><span></span><div class="pn"><b>${esc(dispName(x)||x.label)}</b><small>${esc(CATN[x.cat]||'')}・${tot(x)} g</small></div><div></div><div></div><button type="button" class="btn sm" data-pk="lton" style="grid-column:span 2">加回</button></div>`).join('')}</details>`:''}`;return;}
   const W=live(),off=S.slots.filter(s=>s.filled&&!s.on),pk=Math.max(1,c.pack),wn=Math.max(1,c.worn);
   const rows=W.map(x=>({x,g:tot(x),pc:x.loc==='worn'?tot(x)/wn*100:tot(x)/pk*100}));
   if(c.waterG)rows.push({fix:'水',g:c.waterG,pc:c.waterG/pk*100});if(c.foodG)rows.push({fix:'食物',g:c.foodG,pc:c.foodG/pk*100});
@@ -4474,7 +4477,27 @@ function routeDiag(D,W,c){
   if(RD.length>1&&!RD.some(d=>d.note))D.push(['i','沒有寫撤退點','每天至少寫一個可以下撤的點和判斷時間，遇到天候或體力問題才不會猶豫。','']);
   if(isNew)D.push(['i','新手提醒',ul(['不要單獨行動，跟有經驗的隊友或領隊同行','設定折返時間，到了就回頭','第一次過夜行程，背負盡量壓在體重 15% 以下，重的公裝先分給有經驗的隊友']),'']);
 }
+/* 輕裝診斷：儀表板切到「輕裝」時，診斷報告換成輕裝的重點（必帶、水、當天天氣、負重比） */
+function diagLight(){const LT=C.lt,D=[],tk=live().filter(lightTake),has=t=>tk.some(x=>x.type===t),full=t=>live().some(x=>x.type===t);
+  const r=LT.pack/(Math.max(1,S.body)*1000)*100;D.push([r>15?'y':'g',`輕裝負重比 ${r.toFixed(1)}%`,r>15?'輕裝超過體重 15%，攻頂或往返營地會比較吃力，看看哪些可以留營地。':`背 ${kg(LT.pack)} kg，身穿 ${kg(LT.worn)} kg。`,RULEL]);
+  const need=[['lamp','頭燈','攻頂常摸黑出發或晚歸'],['top_shell','防水外套','山頂天氣變化快，下雨起風一定要有'],['meds','急救包','受傷時最需要的時候常常是離營地最遠的時候'],['top_insul','保暖層','停下來休息、拍照、等日出最容易失溫']];
+  if(S.tmin<5)need.push(['gloves','手套',`最低約 ${S.tmin}°C，手凍到會抓不住繩子、岩石`]);
+  need.forEach(([t,n,why])=>{if(full(t)&&!has(t))D.push(['r',`${n}留在營地了`,`${why}。輕裝頁把它「加回」。`,RULEL]);else if(!full(t))D.push(['y',`沒有${n}`,`${why}。裝備欄還沒選${n}。`,RULEL]);});
+  if(!has('nav')&&!has('power')&&!has('gps'))D.push(['y','導航／電源都留在營地','手機沒電就沒有地圖；至少帶行動電源或手錶。',RULEL]);
+  const LS=S.route.segs.filter(g=>!g.ret&&g.lt==='light');
+  if(!LS.length)D.push(['i','還沒有路段標輕裝','到路段把攻頂、往返營地那幾段的「背負」改成輕裝，才會算輕裝的時間和水。','']);
+  LS.forEach(g=>{const t=SEGT.get(g.id),h=t?t.h:(g.hrs||0),rec=Math.max(0.5,Math.round(h*(S.tmax>20?0.6:0.5)*2)/2),w=segWater(g);
+    if(h>0)D.push([w<rec*0.8?'y':'g',`${g.from||'?'} → ${g.to||'?'}：帶水 ${w}L / 建議約 ${rec}L`,`約 ${hm2(h)}，${w<rec*0.8?'水可能不夠，路段「這段帶水」調一下或確認沿途水源。':'夠用。'}`,EST2]);});
+  const W=S.wx;if(W&&LS.length){const d0=S.route.date||W.start;[...new Set(LS.map(g=>g.day))].forEach(d=>{const ds=addDays(d0,d-1);let pp=0,gu=0;W.pts.forEach(p=>{const i=p.daily.time.indexOf(ds);if(i>=0){pp=Math.max(pp,p.daily.precipitation_probability_max[i]||0);gu=Math.max(gu,p.daily.wind_gusts_10m_max[i]||0);}});
+    if(pp>=50&&!has('bot_rain'))D.push(['y',`第 ${d} 天降雨 ${pp}%：雨褲留在營地`,'輕裝那天預報會下雨，雨褲建議帶上去。','Open-Meteo 預報']);
+    if(gu>=40&&!has('top_insul')&&!has('top_mid'))D.push(['y',`第 ${d} 天陣風 ${Math.round(gu)} km/h`,'稜線風大體感會掉很多，保暖層帶上去。','Open-Meteo 預報']);});}
+  const order={r:0,y:1,i:2,g:3};D.sort((a,b)=>order[a[0]]-order[b[0]]);const DV=D.filter(x=>!(FBK[fbKey('dg',x[1])]&&FBK[fbKey('dg',x[1])].skip));
+  const dh=([l,t,d,src])=>{const k=fbKey('dg',t);return `<div class="d ${l}">${fbBtn(k,t,'dg')}<h4>${esc(t)}</h4>${d?`<div class="dd">${d}</div>`:''}${src?`<span class="src">依據：${esc(src)}</span>`:''}${fbView(k)}</div>`;};
+  const cnt=k=>D.filter(x=>x[0]===k).length;$('#dSum').innerHTML=[['r','var(--r)'],['y','var(--y)'],['i','var(--b)'],['g','var(--g)']].map(([k,c])=>cnt(k)?`<span><i style="background:${c}"></i>${cnt(k)}</span>`:'').join('');
+  $('#diag').innerHTML=`<div class="dmode">輕裝的診斷（儀表板切回「全裝」看完整診斷）</div>`+DV.map(dh).join('')+fbSkipHTML('dg')+fbBar();}
+const RULEL='登山經驗法則',EST2='經驗值估算（行進約 0.5 L/h，熱天 0.6）';
 function diagnose(){
+  if(COMP.mode==='light'&&C.lt){try{diagLight();return;}catch(e){}}
   const D=[],c=C,packKg=c.pack/1000,W=c.W;
   const has=t=>W.some(x=>x.type===t),get=t=>W.find(x=>x.type===t);
   const nameHas=(t,re)=>W.some(x=>x.type===t&&re.test(dispName(x)));
@@ -4635,7 +4658,7 @@ function diagnose(){
   const cnt=k=>D.filter(x=>x[0]===k).length;
   $('#dSum').innerHTML=[['r','var(--r)'],['y','var(--y)'],['i','var(--b)'],['g','var(--g)']].map(([k,c])=>cnt(k)?`<span><i style="background:${c}"></i>${cnt(k)}</span>`:'').join('');
   const wasOpen=!!document.querySelector('#diag .dmore[open]');
-  $('#diag').innerHTML=(imp.length?imp.map(dh).join(''):'<div class="d g"><h4>沒有需要特別注意的項目</h4></div>')
+  $('#diag').innerHTML=(C.lt?'<div class="dmode">全裝的診斷（儀表板切到「輕裝」看輕裝的）</div>':'')+(imp.length?imp.map(dh).join(''):'<div class="d g"><h4>沒有需要特別注意的項目</h4></div>')
     +(rest.length?`<details class="dmore"${wasOpen?' open':''}><summary>其他 ${rest.length} 項建議與正常項目</summary><div class="diag" style="margin-top:8px">${rest.map(dh).join('')}</div></details>`:'')+fbSkipHTML('dg')+fbBar();
 }
 

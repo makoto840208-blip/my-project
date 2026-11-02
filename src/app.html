@@ -2337,7 +2337,7 @@ function map3dApply(){const m=MAP.m;if(!m||!MAP.loaded)return;let nav=false,blk=
   map3dPR();}
 // 導航中 3D 開著、又在跟隨或跟著方向轉（地圖一直重畫）時，繪製解析度降到 1 倍省電
 function map3dPR(){const m=MAP.m;if(!m||typeof m.setPixelRatio!=='function')return;let busy=false;try{busy=NAV.on&&(FOL.on||HEAD.on);}catch(e){}
-  const full=prFull(),pr=M3D.on&&PWR.save?Math.min(full,busy?1:1.5):full;/* 3D 平常 1.5 倍、跟隨或轉向時 1 倍；2D 照舊最多 2 倍 */try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
+  const full=prFull(),pr=PWR.save?(M3D.on?Math.min(full,busy?1:1.5):(busy?Math.min(full,1.5):full)):full;/* 3D 平常 1.5 倍、跟隨或轉向時 1 倍；2D 照舊最多 2 倍 */try{if(Math.abs(m.getPixelRatio()-pr)>0.01)m.setPixelRatio(pr);}catch(e){}}
 function map3dSet(v){M3D.want=!!v;try{localStorage.setItem('gearPlanner.map3d',v?'1':'0');}catch(e){}map3dApply();}
 function map3dNavSet(v){M3D.navWant=!!v;try{localStorage.setItem('gearPlanner.map3dNav',v?'1':'0');}catch(e){}map3dApply();}
 /* 電腦版：按住滑鼠中鍵上下拖＝改傾斜（平面↔立體，拉上去自動開 3D、壓回平面自動關）；左右不旋轉 */
@@ -2407,7 +2407,7 @@ function headStop(){if(!HEAD.on)return;removeEventListener('deviceorientationabs
 async function headToggle(){if(HEAD.on){headStop();if(MAP.m)MAP.m.easeTo({bearing:0,duration:300});return;}
   try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted'){toast('沒有取得方向感測權限');return;}}}catch(e){toast('沒有取得方向感測權限');return;}
   HEAD.got=false;HEAD.h=e=>{let hd=devHeading(e);if(hd==null)return;HEAD.got=true;hd=smoothH(HEAD.last,hd);HEAD.last=hd;
-    const now=performance.now();if(now-(HEAD.ts||0)<90)return;if(MAP.m&&Math.abs(((HEAD.last-MAP.m.getBearing()+540)%360)-180)<1.5)return;HEAD.ts=now;
+    const now=performance.now();if(now-(HEAD.ts||0)<130)return;if(MAP.m&&Math.abs(((HEAD.last-MAP.m.getBearing()+540)%360)-180)<3)return;HEAD.ts=now;
     if(!HEAD.raf)HEAD.raf=requestAnimationFrame(()=>{HEAD.raf=0;if(MAP.m&&HEAD.on&&document.getElementById('navBlack').hidden)MAP.m.setBearing(HEAD.last);});};
   addEventListener('deviceorientationabsolute',HEAD.h,true);addEventListener('deviceorientation',HEAD.h,true);HEAD.on=true;HEAD.last=null;
   const b=document.querySelector('[data-nav=head]');if(b)b.classList.add('on');try{map3dPR();}catch(e){}
@@ -2654,7 +2654,7 @@ function navBoard(){const el=$('#navCard');if(!el||!NAV.on)return;const P=MAP.P,
   let pkL='';try{const ah=pkAhead(pkRef(),BK.hd);if(ah)pkL+=`<div class="nbsub" style="color:#c9c2a8">▲ 正前方：${esc(ah.p.n)}${ah.p.e?' '+ah.p.e+' m':''}　${ah.d<10?ah.d.toFixed(1):Math.round(ah.d)} km（${Math.round(ah.b)}°）</div>`;
     if(NB.fix&&Date.now()-NB.fix.ts<3*3600e3&&!(g&&fresh&&(g.ac||99)<NB.fix.err))pkL+=`<div class="nbsub" style="color:#ffb347">◎ ${pkFixTxt(NB.fix)}</div>`;}catch(e){}
   const html=`${(()=>{try{return pendHTML()+excHTML();}catch(e){return '';}})()}${head}${weak}${stale}${pkL}${slopeL}${rrS?`<div class="nbsub" style="color:#ffe14d">${rrS}</div>`:''}${restL}${selL}${sunWarn}${main}${list}${pinL}`;
-  NB.say={ts:Date.now(),g:g?{la:g.la,lo:g.lo,al:g.al,ac:g.ac}:null,live,isOff,far,off,km0:P[i0][3],ele0:P[i0][2],nx:nx?{n:nx.o.n,km:nx.km,h:nx.h,up:nx.up,dn:nx.dn}:null,last:last&&last!==nx?{n:last.o.n,km:last.km,h:last.h}:null};
+  NB.say={ts:Date.now(),g:g?{la:g.la,lo:g.lo,al:g.al,ac:g.ac}:null,live,isOff,far,off,km0:P[i0][3],ele0:P[i0][2],nx:nx?{n:nx.o.n,km:nx.km,h:nx.h,up:nx.up,dn:nx.dn}:null,last:last&&last!==nx?{n:last.o.n,km:last.km,h:last.h}:null,rest:rr?{km:rr.km,h:rr.h,up:rr.up,dn:rr.dn}:null,restS:rrS,end:(()=>{const e=R.find(r=>r.o.camp||r.o.end);return e?{n:e.o.n,km:e.km,h:e.h,up:e.up,dn:e.dn}:null;})()};
   if(el._h!==html){el._h=html;el.innerHTML=html;}
   if(inf){const t=(tst||isOff?`⚠︎ 偏離 ${tst?'（測試）':offTxt}　`:'')+(rr?`◆ ${fmtK(rr.km)}${rr.h&&live?' → '+clk(rr.h):''}　`:'')+(nx?`${nx.o.n} ${fmtK(nx.km)} ↑${Math.round(nx.up)} ↓${Math.round(nx.dn)}${nx.h&&live?' → '+clk(nx.h):''}`:'');inf.textContent=t;inf.classList.toggle('warn',!!(tst||isOff));}
   const bk=$('#nbkTxt');if(bk&&!$('#navBlack').hidden){NB.tgt=null;let farTxt='';if(g&&!far){const la=bkLA(g)/1000;let k=i0;while(k<P.length-1&&P[k][3]-P[i0][3]<la)k++;NB.tgt=isOff?P[i0]:P[k];}
@@ -2664,10 +2664,10 @@ function navBoard(){const el=$('#navCard');if(!el||!NAV.on)return;const P=MAP.P,
     const bat=BAT.lv!=null?`　電量 ${Math.round(BAT.lv*100)}%${BAT.ch?ic('bolt'):''}`:'';
     const slopeStr=slopeNow!=null?`　前方坡 ${slopeNow>=0?'+':''}${slopeNow}%`:'';
     const mulStr=pmul!==1?`　×${pmul.toFixed(2)}`:'';
-    const t=`<div class="bkT"><div class="clk">${hhmm}<small>${bat}</small></div>`+(tst||isOff?`<div class="w">⚠︎ 偏離路線 ${tst?'（測試）':offTxt}</div>`:'')+farTxt+(rrS?`<div class="w2" style="color:#8a7a3a">${rrS}</div>`:'')+(NB.fix&&Date.now()-NB.fix.ts<3*3600e3?`<div class="w2" style="color:#8a6a2a">◎ ${pkFixTxt(NB.fix)}</div>`:'')+(EXC.offer?`<div class="w2" style="color:#a8862a">剛才偏離過路線：回地圖決定要不要用實際走的路取代</div>`:'')+(RM.pend?`<div class="w2" style="color:#a8862a">有新路線，回地圖套用</div>`:'')+`</div><div class="bkL"><svg class="arr" viewBox="-62 -62 124 124"><defs><clipPath id="bkClip"><circle r="50"/></clipPath></defs><g id="bkRose"><g clip-path="url(#bkClip)">${bkRadar(P,g,rr)}</g><circle r="52" fill="none" stroke="#333" stroke-width="2"/>${[0,90,180,270].map(a=>`<line x1="0" y1="-52" x2="0" y2="-44" stroke="#444" stroke-width="2" transform="rotate(${a})"/>`).join('')}<text x="0" y="-36" text-anchor="middle" font-size="15" font-weight="700" fill="#a3170b">N</text><text x="0" y="46" text-anchor="middle" font-size="13" fill="#555">S</text><text x="42" y="5" text-anchor="middle" font-size="12" fill="#444">E</text><text x="-42" y="5" text-anchor="middle" font-size="12" fill="#444">W</text></g>${NB.tgt?`<g id="bkArr">${BK.hl?'<path d="M0,-62 L13,-41 L-13,-41 Z" fill="#ff3b1f" stroke="#ffb3a6" stroke-width="1.5"/>':'<path d="M0,-61 L8,-47 L-8,-47 Z" fill="#c0180c"/>'}</g>`:''}${g?(BK.hd!=null?'<path d="M0,-7 L5,5 L0,2 L-5,5 Z" fill="#9aa8ff"/>':'<circle r="3.5" fill="#9aa8ff"/>'):''}</svg><div class="hdg" id="bkHdg"></div><button type="button" class="bkHl${BK.hl?' on':''}" data-bkhl>${BK.hl?'紅標：高亮':'紅標：一般'}</button></div><div class="bkR">`+[rr||nx,(rr||nx)!==last?last:null].filter(Boolean).map((x,k)=>`<div class="n${k?' n2':''}">${esc(x.o.n)}${live?'':'<small>（從起點算）</small>'}</div><div class="v${k?' v2':''}"><b>${fmtK(x.km)}</b><span class="ud">↑${Math.round(x.up)} ↓${Math.round(x.dn)}</span></div>${x.h?`<div class="t${k?' t2':''}">約 ${hm2(x.h)}${live?' → '+clk(x.h):''}</div>`:''}`).join('')+(sunT?`<div class="sun">${sunT}</div>`:'')+(g?`<div class="s">${g.al!=null?Math.round(g.al)+' m'+slopeStr+mulStr+'　':''}定位 ${Math.round((Date.now()-g.t)/1000)} 秒前</div>`:'<div class="s">等待 GPS…</div>')+'</div>';
+    const t=`<div class="bkT"><div class="clk">${hhmm}<small>${bat}</small></div>`+(tst||isOff?`<div class="w">⚠︎ 偏離路線 ${tst?'（測試）':offTxt}</div>`:'')+farTxt+(rrS?`<div class="w2" style="color:#8a7a3a">${rrS}</div>`:'')+(NB.fix&&Date.now()-NB.fix.ts<3*3600e3?`<div class="w2" style="color:#8a6a2a">◎ ${pkFixTxt(NB.fix)}</div>`:'')+(EXC.offer?`<div class="w2" style="color:#a8862a">剛才偏離過路線：回地圖決定要不要用實際走的路取代</div>`:'')+(RM.pend?`<div class="w2" style="color:#a8862a">有新路線，回地圖套用</div>`:'')+`</div><div class="bkL"><svg class="arr" viewBox="-62 -62 124 124"><defs><clipPath id="bkClip"><circle r="50"/></clipPath></defs><g id="bkRose"><g clip-path="url(#bkClip)">${bkRadar(P,g,rr)}</g><circle r="52" fill="none" stroke="#333" stroke-width="2"/>${[0,90,180,270].map(a=>`<line x1="0" y1="-52" x2="0" y2="-44" stroke="#444" stroke-width="2" transform="rotate(${a})"/>`).join('')}<text x="0" y="-36" text-anchor="middle" font-size="15" font-weight="700" fill="#a3170b">N</text><text x="0" y="46" text-anchor="middle" font-size="13" fill="#555">S</text><text x="42" y="5" text-anchor="middle" font-size="12" fill="#444">E</text><text x="-42" y="5" text-anchor="middle" font-size="12" fill="#444">W</text></g>${NB.tgt?`<g id="bkArr">${BK.hl?'<path d="M0,-64 L8,-32 L0,-39 L-8,-32 Z" fill="#ff3b1f" stroke="#ffb3a6" stroke-width="1.5" stroke-linejoin="round"/>':'<path d="M0,-62 L6,-36 L0,-42 L-6,-36 Z" fill="#c0180c"/>'}</g>`:''}${g?(BK.hd!=null?'<path d="M0,-7 L5,5 L0,2 L-5,5 Z" fill="#9aa8ff"/>':'<circle r="3.5" fill="#9aa8ff"/>'):''}</svg><div class="hdg" id="bkHdg"></div><button type="button" class="bkHl${BK.hl?' on':''}" data-bkhl>${BK.hl?'紅標：高亮':'紅標：一般'}</button><button type="button" class="bkHl${BK.voice?' on':''}" data-bkvoice style="margin-left:6px">${BK.voice?'語音：開':'語音：關'}</button></div><div class="bkR">`+[rr||nx,(rr||nx)!==last?last:null].filter(Boolean).map((x,k)=>`<div class="n${k?' n2':''}">${esc(x.o.n)}${live?'':'<small>（從起點算）</small>'}</div><div class="v${k?' v2':''}"><b>${fmtK(x.km)}</b><span class="ud">↑${Math.round(x.up)} ↓${Math.round(x.dn)}</span></div>${x.h?`<div class="t${k?' t2':''}">約 ${hm2(x.h)}${live?' → '+clk(x.h):''}</div>`:''}`).join('')+(sunT?`<div class="sun">${sunT}</div>`:'')+(g?`<div class="s">${g.al!=null?Math.round(g.al)+' m'+slopeStr+mulStr+'　':''}定位 ${Math.round((Date.now()-g.t)/1000)} 秒前</div>`:'<div class="s">等待 GPS…</div>')+'</div>';
     if(bk._h!==t){bk._h=t;bk.innerHTML=t;}bkArrow();}}
 // 黑屏指向箭頭：指向路線前方約 80 m 的點（偏航時指向最近的路線點）
-const BK={hd:null,h:null,on:false,la:'auto',rad:500,hl:false};try{BK.hl=localStorage.getItem('gearPlanner.bkHl')==='1';}catch(e){}try{const v=+localStorage.getItem('gearPlanner.bkRad');if(v)BK.rad=v;}catch(e){}
+const BK={hd:null,h:null,on:false,la:'auto',rad:500,hl:false,voice:true};try{BK.voice=localStorage.getItem('gearPlanner.bkVoice')!=='0';}catch(e){}try{BK.hl=localStorage.getItem('gearPlanner.bkHl')==='1';}catch(e){}try{const v=+localStorage.getItem('gearPlanner.bkRad');if(v)BK.rad=v;}catch(e){}
 // 黑屏雷達：只畫路線線條＋自己（不畫底圖），以自己為中心；OLED 上只有幾條暗線會亮
 function bkRadar(P,g,rr){if(!g||!P)return '';const Rm=BK.rad,k=48/Rm,cl=Math.cos(g.la*Math.PI/180),out=[];let seg=[];
   const step=Math.max(1,Math.floor(P.length/3000));
@@ -2707,13 +2707,15 @@ function bkText(kind){const s=NB.say;if(!s||!MAP.P||MAP.P.length<2)return '還�
     return t.join('，')+'。';}
   if(s.isOff)t.push(`你偏離路線 ${s.off<1000?Math.round(s.off)+' 公尺':dist(s.off/1000)}`);
   if(!s.g)t.push('還沒定位，先從起點算');else if(s.far)t.push(`你離路線 ${dist(s.off/1000)}，不在路線附近，先從起點算`);
-  if(!s.nx)t.push('已到終點附近');
-  else{t.push(`${s.nx.n}，還有 ${dist(s.nx.km)}`);if(s.nx.up>=10)t.push(`往上爬 ${Math.round(s.nx.up)} 公尺`);
-    if(s.nx.h){t.push(`約 ${hh(s.nx.h)}`);if(s.live)t.push(`預計 ${clk(s.nx.h)} 到`);}
-    if(s.live&&left!=null){if(left<=0)t.push('已經天黑了');else if(s.nx.h&&s.nx.h*60>left)t.push(`注意，天黑前到不了，日落 ${m2hm(set)}`);else if(s.nx.h)t.push(`天黑前到得了，日落 ${m2hm(set)}`);
-      if(s.last&&s.last.h&&s.last.h*60>left&&left>0)t.push(`今天終點${s.last.n}預計天黑後才到`);}}
+  const tg=s.rest?{n:'休息點',km:s.rest.km,h:s.rest.h,up:s.rest.up}:(s.restS&&!s.rest?null:(s.end?{n:'今日終點'+(s.end.n?' '+s.end.n:''),km:s.end.km,h:s.end.h,up:s.end.up}:null));
+  if(s.restS&&!s.rest)t.push(s.restS.replace(/[◆]/g,'').replace(/\s*km\b/g,' 公里').replace(/(\d)\s*m\b/g,'$1 公尺').replace(/（(\d+)°）/g,'，$1 度'));
+  else if(!tg)t.push('已到終點附近');
+  else{t.push(`${tg.n}，還有 ${dist(tg.km)}`);if(tg.up>=10)t.push(`往上爬 ${Math.round(tg.up)} 公尺`);
+    if(tg.h){t.push(`約 ${hh(tg.h)}`);if(s.live)t.push(`預計 ${clk(tg.h)} 到`);}
+    if(s.live&&left!=null){if(left<=0)t.push('已經天黑了');else if(tg.h&&tg.h*60>left)t.push(`注意，天黑前到不了，日落 ${m2hm(set)}`);else if(tg.h)t.push(`天黑前到得了，日落 ${m2hm(set)}`);
+      if(s.end&&tg.n.indexOf('今日終點')!==0&&s.end.h&&s.end.h*60>left&&left>0)t.push(`今日終點${s.end.n}預計天黑後才到`);}}
   return t.join('，')+'。';}
-function bkSpeak(kind){const txt=bkText(kind);NB.lastSay=txt;
+function bkSpeak(kind){if(!BK.voice)return '';const txt=bkText(kind);NB.lastSay=txt;
   try{const ss=window.speechSynthesis;if(!ss||!window.SpeechSynthesisUtterance){try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}return txt;}
     ss.cancel();const u=new SpeechSynthesisUtterance(txt),vs=ss.getVoices()||[];u.lang='zh-TW';u.rate=0.95;const v=vs.find(x=>/zh[-_]TW/i.test(x.lang))||vs.find(x=>/^zh/i.test(x.lang));if(v)u.voice=v;ss.speak(u);}catch(e){}
   return txt;}
@@ -2886,7 +2888,7 @@ function folToggle(force){const on=force!=null?force:!FOL.on;if(on===FOL.on)retu
   if(on){if(HEAD.on)headStop();if(GPS.watch==null)gpsStart();bkHeadOn();folApply(true);}
   else{const npb=NAV.on?Math.round(parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0):0;MAP.m.easeTo({padding:{top:0,bottom:npb,left:0,right:0},duration:300});if($('#navBlack').hidden)bkHeadOff();}}
 function folApply(force){if(!FOL.on||!MAP.m||!NAV.on||!$('#navBlack').hidden)return;const g=GPS.last;if(!g)return;const now=Date.now();if(!force&&now-FOL.t<300)return;
-  if(!force&&FOL.k===g.t&&BK.hd!=null&&Math.abs(((BK.hd-MAP.m.getBearing()+540)%360)-180)<2)return;FOL.k=g.t;FOL.t=now;
+  if(!force&&FOL.k===g.t&&BK.hd!=null&&Math.abs(((BK.hd-MAP.m.getBearing()+540)%360)-180)<3)return;FOL.k=g.t;FOL.t=now;
   const br=BK.hd!=null?BK.hd:(g.sp!=null&&g.sp>0.6&&g.hd!=null&&isFinite(g.hd)?g.hd:MAP.m.getBearing()),H=MAP.m.getContainer().clientHeight,npb=parseFloat(getComputedStyle(document.getElementById('navMode')).getPropertyValue('--npb'))||0,Hv=Math.max(100,H-npb);
   MAP.m.easeTo({center:[g.lo,g.la],bearing:br,padding:{top:Math.round(Hv*0.34),bottom:Math.round(npb),left:0,right:0},duration:force?500:280,essential:true});}
 // ===== 鎖定觸控 =====
@@ -2903,8 +2905,8 @@ function bigTxt(v){document.getElementById('navMode').classList.toggle('bigtxt',
 try{if(localStorage.getItem('gearPlanner.bigTxt')==='1')setTimeout(()=>bigTxt(true),0);}catch(e){}
 function offSetting(){const v=prompt('偏航提醒距離（公尺）。填 0 關閉。\n離路線超過這個距離、連續兩次定位，就會震動＋嗶聲。\n（離路線 5 km 以上視為不在路線附近，不會提醒）',OFF.on?OFF.thr:0);if(v==null)return;const n=Math.round(num(v));if(n<=0)OFF.on=false;else{OFF.on=true;OFF.thr=Math.max(20,Math.min(500,n));}offSave();toast(OFF.on?`偏航提醒：離路線 ${OFF.thr} m`:'偏航提醒已關閉');navBoard();}
 // ===== 偏航提醒 =====
-(()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;bkHeadOff();try{map3dApply();folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bksos]');
-  b.addEventListener('click',e=>{if(e.target.closest('[data-bksos]')){sosOpen();return;}if(e.target.closest('[data-bkhl]')){BK.hl=!BK.hl;try{localStorage.setItem('gearPlanner.bkHl',BK.hl?'1':'0');}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(!inArr(e))return;if(e.target.closest('#bkHdg'))bkLAcycle();else bkRadCycle();});b.addEventListener('dblclick',e=>{if(!inArr(e))ex();});let vt=0,lp=0,lpd=false;const vcl=()=>{clearTimeout(vt);clearTimeout(lp);};
+(()=>{const b=document.getElementById('navBlack');if(!b)return;let lt=0;const ex=()=>{b.hidden=true;bkHeadOff();try{map3dApply();folApply(true);}catch(e){}};const inArr=e=>e.target.closest&&e.target.closest('.arr,#bkHdg,[data-bkhl],[data-bkvoice],[data-bksos]');
+  b.addEventListener('click',e=>{if(e.target.closest('[data-bksos]')){sosOpen();return;}if(e.target.closest('[data-bkvoice]')){BK.voice=!BK.voice;try{localStorage.setItem('gearPlanner.bkVoice',BK.voice?'1':'0');}catch(err){}try{speechSynthesis.cancel();}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(e.target.closest('[data-bkhl]')){BK.hl=!BK.hl;try{localStorage.setItem('gearPlanner.bkHl',BK.hl?'1':'0');}catch(err){}const bk=$('#nbkTxt');if(bk)bk._h='';navBoard();return;}if(!inArr(e))return;if(e.target.closest('#bkHdg'))bkLAcycle();else bkRadCycle();});b.addEventListener('dblclick',e=>{if(!inArr(e))ex();});let vt=0,lp=0,lpd=false;const vcl=()=>{clearTimeout(vt);clearTimeout(lp);};
   b.addEventListener('touchstart',e=>{if(inArr(e))return;lpd=false;clearTimeout(lp);lp=setTimeout(()=>{lpd=true;clearTimeout(vt);bkSpeak('where');},650);},{passive:true});
   b.addEventListener('touchmove',()=>clearTimeout(lp),{passive:true});b.addEventListener('touchcancel',()=>clearTimeout(lp),{passive:true});
   b.addEventListener('touchend',e=>{clearTimeout(lp);if(inArr(e)){lt=0;return;}if(lpd){lpd=false;lt=0;return;}const n=Date.now();if(n-lt<400){e.preventDefault();clearTimeout(vt);try{speechSynthesis.cancel();}catch(x){}ex();}else{clearTimeout(vt);vt=setTimeout(()=>bkSpeak('status'),420);}lt=n;});})();
@@ -3873,7 +3875,7 @@ function renderTabs(){
 function rerenderAll(){try{if(!S.route.trk&&!virtualTrk()){MAP.P=null;MAP.idx=null;MAP.key=null;mapClearRoute();mapSrc('sel',EMPTY);mapSrc('selpt',EMPTY);}PROF.key=null;PROF.a=PROF.b=null;}catch(e){}
   openInfo.clear();picking.clear();$('#wxAuto').checked=S.wxAuto!==false;
   $('#wxOut').innerHTML='';$('#wxLoc').textContent='輸入路線名稱或貼上計畫書文字，就會自動定位並抓天氣。';$('#presetNote').innerHTML='';$('#gpxPanel').hidden=true;$('#txtPanel').hidden=true;
-  renderPresets._alt=null;fillParams();fillRoute();renderSegs();renderProfile();renderPresets();renderCats();renderFood();renderLoc();renderWx();compute();
+  renderPresets._alt=null;fillParams();fillRoute();renderSegs();renderProfile();if(PAGE!=='nav'){renderPresets();renderCats();renderFood();}renderLoc();renderWx();compute();
   roomStart();
   if(S.route.name&&!S.route.loc&&PAGE!=='nav')scheduleGeo(); /* 導航頁（山上）不自動連網查地名，省電；到規劃頁才查 */
 }

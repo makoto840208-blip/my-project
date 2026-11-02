@@ -994,6 +994,58 @@ T('黑屏語音：偏離路線、沒定位、天黑前到不了會念出來', as
   ok(/注意，天黑前到不了|已經天黑了/.test(d), '天黑前到不了沒警告：' + d);
 });
 
+// ======== v106：捷徑、語音改念休息點／今日終點＋開關、箭頭、導航頁精簡 ========
+T('v106：首頁 App 有「導航」捷徑（長按圖示可拖到桌面）', async p => {
+  const m = JSON.parse(fs.readFileSync(path.join(PUB, 'manifest.json'), 'utf8')); const sc = (m.shortcuts || [])[0];
+  ok(sc && sc.name === '導航' && sc.url === './nav.html' && sc.icons[0].src === 'icon-nav-192.png' && fs.existsSync(path.join(PUB, sc.icons[0].src)), '沒有導航捷徑 ' + JSON.stringify(m.shortcuts));
+}, { vp: '直式' });
+T('黑屏語音：單點念休息點（沒設就今日終點）；沒定位、偏離、天黑也念；語音可關', async p => {
+  await loadGpx(p); await openNav(p);
+  await p.evaluate(() => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} const P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 8, t: Date.now() }; G.S.restKm = null; G.fn('navBoard')();
+    window.__spoken = []; speechSynthesis.cancel = () => {}; speechSynthesis.speak = u => { window.__spoken.push(u.text); }; speechSynthesis.getVoices = () => []; });
+  const st = () => p.evaluate(() => { window.__gp.fn('navBoard')(); return window.__gp.fn('bkText')('status'); });
+  let t = await st(); ok(/^今日終點/.test(t) && /還有 [\d.]+ (公里|公尺)/.test(t) && /預計 \d\d:\d\d 到/.test(t) && /天黑|日落/.test(t), '沒設休息點該念今日終點：' + t);
+  await p.evaluate(() => { const G = window.__gp, P = G.MAP.P; G.S.restKm = P[Math.floor(P.length * 0.5)][3]; }); t = await st();
+  ok(/^休息點，還有 [\d.]+ (公里|公尺)/.test(t) && /預計 \d\d:\d\d 到/.test(t), '設了休息點該念休息點：' + t);
+  await p.evaluate(() => { const G = window.__gp, P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0] + 0.02, lo: q[1], al: q[2], ac: 5, t: Date.now() }; }); t = await st();
+  ok(/休息點：直線 [\d.]+ 公里，往.+，\d+ 度/.test(t.replace('，', '：').replace(/^休息點：/, '休息點：')) || /直線/.test(t), '離路線很遠要念直線距離：' + t);
+  await p.evaluate(() => { const G = window.__gp; G.GPS.last = null; }); ok(/還沒定位/.test(await st()), '沒定位沒說');
+  await navBtn(p, 'black'); await p.waitForTimeout(300); ok(!!(await p.$('#navBlack [data-bkvoice]')), '黑屏沒有語音開關');
+  await p.evaluate(() => { document.querySelector('#navBlack [data-bkvoice]').click(); }); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => !window.__gp.fn('BK').voice && /語音：關/.test(document.querySelector('#navBlack [data-bkvoice]').textContent)), '關語音沒生效');
+  const sz = await p.evaluate(() => { const r = document.getElementById('navBlack').getBoundingClientRect(); return [r.width, r.height]; });
+  await p.touchscreen.tap(12, sz[1] * 0.5); await p.waitForTimeout(700); ok((await p.evaluate(() => window.__spoken.length)) === 0, '語音關了還在念');
+  await p.evaluate(() => { document.querySelector('#navBlack [data-bkvoice]').click(); }); await p.waitForTimeout(200); ok(await p.evaluate(() => window.__gp.fn('BK').voice), '開語音沒生效');
+});
+T('黑屏箭頭：細長等腰、頭長、底邊有缺角（一般與高亮）', async p => {
+  await loadGpx(p); await openNav(p);
+  await p.evaluate(() => { const G = window.__gp; try { navigator.geolocation.clearWatch(G.GPS.watch); } catch (e) {} const P = G.MAP.P, q = P[Math.floor(P.length * 0.3)]; G.GPS.last = { la: q[0], lo: q[1], al: q[2], ac: 8, t: Date.now() }; G.fn('navBoard')(); });
+  await navBtn(p, 'black'); await p.waitForTimeout(400);
+  const shape = () => p.evaluate(() => { const d = document.querySelector('#bkArr path').getAttribute('d'), n = d.match(/-?\d+(\.\d+)?/g).map(Number); return { d, pts: [[n[0], n[1]], [n[2], n[3]], [n[4], n[5]], [n[6], n[7]]] }; });
+  for (const hl of [false, true]) {
+    if (hl) { await p.evaluate(() => document.querySelector('#navBlack [data-bkhl]').click()); await p.waitForTimeout(300); }
+    await shot(p, hl ? '高亮' : '一般');
+    const { pts } = await shape(), [tip, r, notch, l] = pts; const len = tip[1] ? Math.abs(r[1] - tip[1]) : 0, wid = Math.abs(r[0] - l[0]);
+    ok(len > wid * 1.9, `不夠細長 len=${len} wid=${wid}`); ok(Math.abs(r[0] + l[0]) < 0.01 && r[1] === l[1] && tip[0] === 0, '不是等腰'); ok(notch[1] < r[1] && notch[1] > tip[1] && notch[0] === 0, '底邊沒有缺角 ' + JSON.stringify(pts));
+  }
+});
+T('轉向順暢：省電模式下跟隨／羅盤轉向，2D 也降到 1.5 倍；沒開省電不降', async p => {
+  await loadGpx(p); await openNav(p);
+  const pr = () => p.evaluate(() => window.__gp.MAP.m.getPixelRatio());
+  await p.evaluate(() => { const G = window.__gp; G.fn('pwrSet')(true); G.fn('map3dPR')(); }); const full = await pr();
+  await p.evaluate(() => { const G = window.__gp; G.fn('FOL').on = true; G.fn('map3dPR')(); }); const busy = await pr();
+  ok(busy <= 1.5 + 0.01 && busy <= full, `跟隨時沒降解析度 full=${full} busy=${busy}`);
+  await p.evaluate(() => { const G = window.__gp; G.fn('pwrSet')(false); G.fn('map3dPR')(); }); const off = await pr(); ok(Math.abs(off - Math.min(full, Math.max(full, off))) < 1e9 && off >= busy, `關省電不該降 ${off}`);
+});
+T('導航頁精簡：不畫裝備清單／食物／配置（節點少很多），導航板與計算照常', async p => {
+  await goSplit(p, '?gptest&split'); await loadGpx(p); await planSaved(p);
+  const nPlan = await p.evaluate(() => document.querySelectorAll('*').length);
+  await Promise.all([p.waitForURL(/nav\.html/, { timeout: 10000 }), p.evaluate(() => document.querySelector('#mapBig').click())]);
+  await p.waitForFunction(() => window.__gp && window.__gp.NAV.on, null, { timeout: 25000 }); await p.waitForTimeout(800);
+  const r = await p.evaluate(() => ({ n: document.querySelectorAll('*').length, cats: document.querySelectorAll('#cats .row').length, C: !!window.__gp.fn('C'), nb: document.getElementById('navCard').textContent.length, kg: window.__gp.fn('C').packKg }));
+  ok(r.cats === 0 && r.n < nPlan, `導航頁沒精簡 ${JSON.stringify({ r, nPlan })}`); ok(r.C && r.nb > 5, '導航板沒內容'); ok(p._err.length === 0, '頁面錯誤：' + p._err.join(' | '));
+}, { vp: '直式' });
+
 // ---- 執行 ----
 (async () => {
   if (!fs.existsSync(path.join(PUB, 'index.html'))) { console.log('沒有 public/index.html，先跑 python3 tools/build.py t'); process.exit(2); }

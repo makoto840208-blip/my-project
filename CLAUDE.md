@@ -14,7 +14,8 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v104 在 main（原本線上）；v109 在分支 `nav-split`（導航分家＋黑屏語音＋捷徑＋箭頭＋轉向平滑追蹤＋Android 外殼原始碼＋氣象署天氣＋3D 防當機；使用者有上傳 nav-split 的 zip 實測，但還沒說要合併 main，下山前不要自己合併）**。repo 的 `public/` 停在 v77。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v109 在 main＝線上（2026-11-05 使用者確認合併 nav-split 並用 git 自動部署；Cloudflare 連 GitHub 的建置還在、可用）**。`nav-split` 跟 main 相同，之後直接在 main 改即可。repo 的 `public/` 現在是 v109。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- **v108 起有 Worker（`src/worker.js`，氣象署轉抓）**：拖 zip 上傳只換網站檔案，可能把 Worker 拿掉（沒驗證過）；之後發布優先走 git（連 `public/` 一起 commit＋push main），推完用 WebFetch 看 `/version.txt` 與 `/__cwa/V8/C/L/Mountain/MOD/Week/D055_Week_PC.html`（沙箱 shell 連不到 workers.dev，WebFetch 可以）。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -47,7 +48,7 @@
   - App：`cwaGet()` 先試 `/__cwa`，再試直接 `www.cwa.gov.tw`（大概會被 CORS 擋）；`cwaOverlay(pts)` 在 Open-Meteo 抓完後，每個天氣點找 **6 km 內、名字對得上**的氣象署山頭：座標用 OSM 山頭（`PK.list`，沒有全台就 `pkEnsure`）＋`cwaNorm()`（去掉「主山／大山／山」再接方位峰：奇萊主山南峰＝奇萊南峰）；溫度依海拔差每 100 m 0.65°C 修正。`cwaParseWeek()` 解析失敗會丟錯 → `S.wx.cwaErr`，表下寫原因、整張用 Open-Meteo。
   - `wxVal(p,d,i)`：一格天氣的合併值（氣象署有就用它的最低／最高、體感最低、降雨機率、天氣文字；**雨量 mm、陣風**氣象署沒有，仍是 Open-Meteo；氣象署 3 天後沒降雨機率，改 Open-Meteo 並標 *）。天氣表、診斷 `wxDiag`、輕裝診斷、計畫書列印、文字匯出、`aiExport` 全部改用 `wxVal`。表格每列 `data-wxsrc="cwa|om"`、地點下小字「氣象署・山名（低 N m 已修正）」。
   - **沙箱連不到 cwa.gov.tw（代理 403）**：HTML 結構只能從 WebFetch 的摘要推，**沒拿真資料驗過**；測試用模仿的表（`cwaWeekHtml()`）。第一次上線若表下寫「氣象署：…格式變了／讀不懂」就是解析要修。
-  - **部署**：Worker 程式要靠 `wrangler deploy`（Cloudflare 連 git 的自動建置＝「手機用」流程，只看 main 分支）才會上去；**手動拖 zip 只會上傳網站檔案，不會有 Worker** → `/__cwa` 404 → 自動退回 Open-Meteo（不會壞）。`wrangler deploy --dry-run` 驗過設定。
+  - **部署**（v109 已用 git 部署成功，`/__cwa` 會回氣象署週預報表）：Worker 程式要靠 `wrangler deploy`（Cloudflare 連 git 的自動建置＝「手機用」流程，只看 main 分支）才會上去；**手動拖 zip 只會上傳網站檔案，不會有 Worker** → `/__cwa` 404 → 自動退回 Open-Meteo（不會壞）。`wrangler deploy --dry-run` 驗過設定。
 - **v109 天氣來源圈圈＋抓取資訊**（使用者要的）：表格上方三選一 `input[name=wxsrc]`：自動（氣象署優先，預設）／只看氣象署（沒有的格子溫度降雨天氣留空、寫原因，雨量陣風照樣顯示 Open-Meteo 並標 OM）／只看 Open-Meteo。存 localStorage `gearPlanner.wxSrc`（`WXSRC.m`，這支手機的偏好，不跟規劃走）；切換不重抓，`wxVal()` 依模式回值（只看氣象署又沒資料＝`src:'none'`，溫度為 null），`wxAutoT()` 依目前來源重算自動最低／最高溫，診斷／列印／匯出跟著走。表下「抓取資訊」：抓取時間＋每個地點一行（氣象署 ✓ 山名、距離、海拔差、幾天，或 ✕ 原因＝`p.cwaI`；Open-Meteo ✓ 幾天、依幾 m 修正）。圈圈是自訂樣式（空心沙色圈，不用白色）。
 - **圖層選單選了不關**：規劃地圖 `.lyrmenu` 和導航圖層橫條（`navStrip('layers')`）選底圖／3D／山名／省電後都留著（點外面、✕、或再按圖層鈕才關），保留橫向捲動位置。
 - **網頁版導航「更多」**：`@media (pointer:fine)` 時 `#navStrip .nsl`、導航 `.lyrmenu` 改換行排（以前一排超出畫面、滑鼠滑不動，後面的按鈕點不到），太矮時上下捲；`hScrollMouse()` 讓滾輪／按住拖可左右捲（拖完 `HSDRAG` 擋掉誤點）。

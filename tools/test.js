@@ -851,15 +851,23 @@ async function wxSetup(p, cwa, mtName) {
 }
 T('氣象署：營地附近有氣象署山頭就用它（海拔修正、標來源），雨量陣風仍用 Open-Meteo', async p => {
   const R = await wxSetup(p, true, '北測峰');
-  ok(/氣象署・北測峰（低 200 m 已修正）/.test(R[0]) && /\|cwa$/.test(R[0]), '應標氣象署來源：' + R.join(' / '));
+  if (SHOTS) { await p.evaluate(() => document.getElementById('wxOut').scrollIntoView({ block: 'center' })); await p.locator('#wxOut').screenshot({ path: path.join(SHOTS, p._cur + '_wx.png') }); }
+  ok(/氣象署・北測峰/.test(R[0]) && /\|cwa$/.test(R[0]), '應標氣象署來源：' + R.join(' / '));
   ok(/^\d\d-\d\d.*?3～13/.test(R[0]), '溫度應是氣象署 2～12 加 200 m 修正（約 3～13）：' + R[0]);
   ok(/20%/.test(R[0]) && /1\.2/.test(R[0]) && /28/.test(R[0]), '降雨用氣象署、雨量陣風用 Open-Meteo：' + R[0]);
-  ok(/氣象署登山預報（北測峰/.test(R[R.length - 1]), '表下說明應寫來源：' + R[R.length - 1]);
+  ok(/抓取資訊/.test(R[R.length - 1]) && /氣象署：✓ 北測峰（距離 0\.\d km，山頭比這裡高 200 m，已修正；7 天）/.test(R[R.length - 1]) && /Open-Meteo：✓/.test(R[R.length - 1]), '表下要列每個地點的抓取資訊：' + R[R.length - 1]);
+  /* 圈圈：只看 Open-Meteo → 回到 9～20；只看氣象署 → 氣象署那格；自動 → 氣象署 */
+  const sw = v => p.evaluate(v => { const r = document.querySelector(`#wxOut input[name=wxsrc][value=${v}]`); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); const tr = document.querySelector('#wxOut tr[data-wxsrc]'); return tr.textContent + '|' + tr.dataset.wxsrc + '|' + localStorage.getItem('gearPlanner.wxSrc') + '|' + window.__gp.S.tmin + '/' + window.__gp.S.tmax; }, v);
+  const a = await sw('om'); ok(/9～20/.test(a) && /\|om\|om\|9\/20$/.test(a), '只看 Open-Meteo 不對（含自動最低最高溫）：' + a);
+  const b = await sw('cwa'); ok(/3～13/.test(b) && /\|cwa\|cwa\|3\/14$/.test(b), '只看氣象署不對：' + b);
+  const c = await sw('auto'); ok(/3～13/.test(c) && /\|cwa\|auto\|/.test(c), '自動不對：' + c);
 });
 T('氣象署：抓不到就退回 Open-Meteo，並說明原因', async p => {
   const R = await wxSetup(p, false);
   ok(/\|om$/.test(R[0]) && /9～20/.test(R[0]) && /76%/.test(R[0]), '應退回 Open-Meteo：' + R[0]);
-  ok(/Open-Meteo 預報（氣象署：連不到氣象署/.test(R[R.length - 1]), '要寫為什麼沒用氣象署：' + R[R.length - 1]);
+  ok(/氣象署：✕ 連不到氣象署/.test(R[R.length - 1]), '抓取資訊要寫為什麼沒用氣象署：' + R[R.length - 1]);
+  const b = await p.evaluate(() => { const r = document.querySelector('#wxOut input[name=wxsrc][value=cwa]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); const tr = document.querySelector('#wxOut tr[data-wxsrc]'); const o = tr.textContent + '|' + tr.dataset.wxsrc; localStorage.removeItem('gearPlanner.wxSrc'); window.__gp.fn('WXSRC').m = 'auto'; return o; });
+  ok(/氣象署沒有這格（連不到氣象署/.test(b) && /\|none$/.test(b) && /1\.2/.test(b), '只看氣象署又抓不到：溫度留空寫原因、雨量照樣顯示：' + b);
 });
 T('氣象署：名字比對（主山／大山＋方位峰）', async p => {
   const r = await p.evaluate(() => { const f = window.__gp.fn('cwaNorm'); return [f('奇萊主山南峰'), f('奇萊南峰'), f('南湖大山東峰'), f('南湖東峰'), f('合歡山東峰'), f('雪山'), f('雪山北峰')]; });

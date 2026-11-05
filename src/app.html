@@ -414,6 +414,8 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 .wxbar{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}.wxbar input:not([type=checkbox]){flex:1;min-width:200px}
 .wxt td,.wxt th{white-space:nowrap}
 .wxsrc{font-size:10px;color:var(--mut);white-space:nowrap}
+.wxsrcsel{display:flex;flex-wrap:wrap;gap:6px 14px;margin:2px 0 8px;font-size:13px}.wxsrcsel label{display:inline-flex!important;align-items:center;gap:5px;cursor:pointer;width:auto!important;flex:none;white-space:nowrap;margin:0!important;padding:0!important;font-size:13px!important;color:var(--txt,#e8d9b5)}.wxsrcsel input[type=radio]{-webkit-appearance:none;appearance:none;margin:0!important;width:16px!important;height:16px!important;min-width:0!important;padding:0!important;flex:none;border:2px solid #a8865a!important;border-radius:50%!important;background:transparent!important;cursor:pointer}.wxsrcsel input[type=radio]:checked{background:#cfaa70!important;box-shadow:inset 0 0 0 3px #141a11}.wxsrcsel input[type=radio]:focus-visible{outline:2px solid #cfaa70;outline-offset:2px}
+.wxinfo{font-size:11px;color:var(--mut);margin-top:6px;line-height:1.6}.wxinfo .wxih{color:var(--coy2,#cfaa70);font-size:12px}.wxinfo ul{margin:2px 0 4px;padding-left:16px}.wxinfo li{margin:2px 0}.wxinfo .ok{color:var(--mut)}.wxinfo .u{color:#d9bf6e}.wxt sup{font-size:8px;color:var(--mut);margin-left:1px}
 #expPanel{border:1px dashed var(--coy);border-radius:5px;padding:10px;margin:8px 0}
 #txtPanel{border:1px dashed var(--coy);border-radius:5px;padding:10px;margin:8px 0}#txtPanel textarea{min-height:150px;font-family:inherit;font-size:14px}
 #gpxPanel{border:1px dashed var(--coy);border-radius:5px;padding:10px;margin:8px 0;font-size:13px}
@@ -3830,10 +3832,10 @@ async function fetchWx(){
     const out=await Promise.all(P.map(async p=>{
       const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}${p.ele?'&elevation='+p.ele:''}&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,weather_code&timezone=Asia%2FTaipei&start_date=${start}&end_date=${e2}`;
       const r=await fetch(u);if(!r.ok)throw new Error('天氣服務 '+r.status);return Object.assign({},p,{daily:(await r.json()).daily});}));
-    let cwaErr=null;try{await cwaOverlay(out);}catch(e){cwaErr=e.message||String(e);}
+    let cwaErr=null;try{await cwaOverlay(out);}catch(e){cwaErr=e.message||String(e);out.forEach(p=>{if(!p.cwaI||p.cwaI.msg==='還沒抓')p.cwaI={ok:false,msg:cwaErr};});}
+    out.forEach(p=>{p.omI={ok:true};});
     S.wx={at:new Date().toISOString(),key:wxKey(),start,end:e2,pts:out,partial:end>lim,cwaErr};
-    if(S.wxAuto!==false){const mins=out.flatMap(p=>p.daily.time.map((d,i)=>wxVal(p,d,i).tmin).filter(v=>v!=null)),maxs=out.flatMap(p=>p.daily.time.map((d,i)=>wxVal(p,d,i).tmax).filter(v=>v!=null));
-      if(mins.length){S.tmin=Math.floor(Math.min(...mins));S.tmax=Math.ceil(Math.max(...maxs));fillParams();}}
+    wxAutoT();
     wxBusy=false;setDirty(true);compute();renderWx();
   }catch(e){renderWx('抓取失敗（'+e.message+'），顯示上次的資料');}
   finally{wxBusy=false;}
@@ -3884,34 +3886,46 @@ function cwaParseWeek(h,now){now=now||new Date();
 const cwaKm=(a,b,c,d)=>{const k=Math.PI/180,x=(d-b)*k*Math.cos((a+c)/2*k),y=(c-a)*k;return Math.hypot(x,y)*6371;};
 /* 每個天氣點找最近、名字對得上的氣象署山頭（6 km 內）；溫度依海拔差修正（每 100 m 0.65°C） */
 async function cwaOverlay(pts){
-  if(!pts.length)return;const L=await cwaMtList(),byN=new Map();L.forEach(([pid,n])=>{byN.set(n,pid);byN.set(cwaNorm(n),pid);});
+  if(!pts.length)return;pts.forEach(p=>{delete p.cwa;p.cwaI={ok:false,msg:'還沒抓'};});
+  let L;try{L=await cwaMtList();}catch(e){pts.forEach(p=>p.cwaI={ok:false,msg:e.message});throw e;}
+  const byN=new Map();L.forEach(([pid,n])=>{byN.set(n,pid);byN.set(cwaNorm(n),pid);});
   if(!PK.full){const Q=pts.map(p=>[p.lat,p.lon]);if(Q.length<2)Q.push(Q[0]);const ac=new Promise(r=>setTimeout(r,15000));await Promise.race([pkEnsure(Q).catch(()=>{}),ac]);}
   const pick=p=>{let best=null;for(const q of PK.list){const pid=byN.get(q.n)||byN.get(cwaNorm(q.n));if(!pid)continue;const k=cwaKm(p.lat,p.lon,q.la,q.lo);if(k<=6&&(!best||k<best.km))best={pid,n:L.find(x=>x[0]===pid)[1],km:k,e:q.e};}return best;};
-  const want=new Map();pts.forEach(p=>{const b=pick(p);if(b){p._cw=b;want.set(b.pid,null);}});
-  if(!want.size)throw new Error('附近 6 km 沒有氣象署有預報的山頭');
-  const now=new Date();let fail=null;
-  await Promise.all([...want.keys()].map(async pid=>{try{want.set(pid,cwaParseWeek(await cwaGet(`/V8/C/L/Mountain/MOD/Week/${pid}_Week_PC.html`),now));}catch(e){fail=e.message;}}));
-  let any=false;pts.forEach(p=>{const b=p._cw;delete p._cw;if(!b)return;const W=want.get(b.pid);if(!W)return;
+  const want=new Map(),err=new Map();pts.forEach(p=>{const b=pick(p);if(b){p._cw=b;want.set(b.pid,null);}else p.cwaI={ok:false,msg:PK.list.length?'附近 6 km 沒有氣象署有預報的山頭':'沒有山頭資料，找不到附近的氣象署山頭'};});
+  const now=new Date();
+  await Promise.all([...want.keys()].map(async pid=>{try{want.set(pid,cwaParseWeek(await cwaGet(`/V8/C/L/Mountain/MOD/Week/${pid}_Week_PC.html`),now));}catch(e){err.set(pid,e.message);}}));
+  let any=false;pts.forEach(p=>{const b=p._cw;delete p._cw;if(!b)return;const W=want.get(b.pid);
+    if(!W){p.cwaI={ok:false,name:b.n,km:Math.round(b.km*10)/10,msg:err.get(b.pid)||'氣象署沒有資料'};return;}
     const de=b.e&&p.ele?Math.round(b.e-p.ele):0,adj=v=>v==null?null:Math.round((v+de*0.0065)*10)/10,days={};
     for(const d in W){const w=W[d];days[d]={tmin:adj(w.tmin),tmax:adj(w.tmax),amin:adj(w.amin),pop:w.pop,wx:w.wx};}
-    p.cwa={pid:b.pid,name:b.n,km:Math.round(b.km*10)/10,de,days};any=true;});
-  if(!any)throw new Error(fail||'氣象署沒有資料');}
+    p.cwa={pid:b.pid,name:b.n,km:Math.round(b.km*10)/10,de,days};p.cwaI={ok:true,name:b.n,km:p.cwa.km,de,n:Object.keys(days).length};any=true;});
+  if(!any)throw new Error([...err.values()][0]||'附近沒有氣象署的山頭');}
+/* v108：天氣來源（表格上方的圈圈）：auto＝有氣象署用氣象署、其他用 Open-Meteo；cwa＝只看氣象署（沒有就空白）；om＝只看 Open-Meteo。存在這支手機，不跟規劃走 */
+const WXSRC={m:'auto'};try{const v=localStorage.getItem('gearPlanner.wxSrc');if(v==='cwa'||v==='om')WXSRC.m=v;}catch(e){}
 /* 一格天氣：氣象署有就用（溫度、體感、降雨機率、天氣），雨量與陣風氣象署沒有，仍用 Open-Meteo */
-function wxVal(p,d,i){const D=p.daily,c=p.cwa&&p.cwa.days[d];
+function wxVal(p,d,i){const D=p.daily,M=WXSRC.m,c=M!=='om'&&p.cwa&&p.cwa.days[d];
   const o={tmin:D.temperature_2m_min[i],tmax:D.temperature_2m_max[i],amin:D.apparent_temperature_min[i],pop:D.precipitation_probability_max[i],mm:D.precipitation_sum[i],gu:D.wind_gusts_10m_max[i],wc:D.weather_code[i],wx:WMO[D.weather_code[i]]||D.weather_code[i],src:'om'};
   if(c&&c.tmin!=null&&c.tmax!=null){o.tmin=c.tmin;o.tmax=c.tmax;if(c.amin!=null)o.amin=c.amin;if(c.pop!=null)o.pop=c.pop;else o.popOm=true;if(c.wx){o.wx=c.wx;o.wc=/雷/.test(c.wx)?95:/雪|霰|冰/.test(c.wx)?71:0;}o.src='cwa';}
+  else if(M==='cwa')Object.assign(o,{tmin:null,tmax:null,amin:null,pop:null,wx:'',wc:null,src:'none'});
   return o;}
+function wxAutoT(){const W=S.wx;if(!W||S.wxAuto===false)return;const v=W.pts.flatMap(p=>p.daily.time.map((d,i)=>wxVal(p,d,i))),mins=v.map(x=>x.tmin).filter(x=>x!=null),maxs=v.map(x=>x.tmax).filter(x=>x!=null);
+  if(mins.length){S.tmin=Math.floor(Math.min(...mins));S.tmax=Math.ceil(Math.max(...maxs));fillParams();}}
 function renderWx(msg){
   const W=S.wx;if(!W){$('#wxOut').innerHTML=msg?`<div class="rec">${esc(msg)}</div>`:'';return;}
   const age=(Date.now()-new Date(W.at).getTime())/3600e3;
   /* 每個地點只列它那天：D 營地＝那天晚上；最高點＝走到那天；沒有天數的（只有一個地點）列全部 */
   const d0=S.route.date||W.start,want=p=>p.day>0?addDays(d0,p.day-1):null,lim=addDays(W.at.slice(0,10),15);
   const rows=W.pts.flatMap(p=>{const wd=want(p);if(wd&&!p.daily.time.includes(wd))return [`<tr><td>${wd.slice(5)}</td><td>${esc(p.label)}</td><td colspan="6" style="color:var(--mut);text-align:left">${wd>lim?`還沒進入預報範圍（${addDays(wd,-15).slice(5)} 起查得到）`:'這天沒有預報資料'}</td></tr>`];
-    return p.daily.time.map((d,i)=>[d,i]).filter(([d])=>!wd||d===wd).map(([d,i])=>{const v=wxVal(p,d,i),pp=v.pop,gu=v.gu,cw=v.src==='cwa';
-    return `<tr data-wxsrc="${v.src}"><td>${d.slice(5)}</td><td>${esc(p.label)}${cw?`<div class="wxsrc">氣象署・${esc(p.cwa.name)}${p.cwa.de?`（${p.cwa.de>0?'低':'高'} ${Math.abs(p.cwa.de)} m 已修正）`:''}</div>`:''}</td><td>${Math.round(v.tmin)}～${Math.round(v.tmax)}</td><td>${v.amin==null?'–':Math.round(v.amin)}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%${cw&&v.popOm?'<sup>*</sup>':''}</td><td>${(v.mm||0).toFixed(1)}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${Math.round(gu)}</td><td class="${v.wc>=95?'w':''}">${esc(String(v.wx))}</td></tr>`;});}).join('');
-  const nC=W.pts.filter(p=>p.cwa).length,src=nC?`氣象署登山預報（${[...new Set(W.pts.filter(p=>p.cwa).map(p=>p.cwa.name))].join('、')}；有標「氣象署」的列：氣溫、體感、降雨、天氣；雨量與陣風仍是 Open-Meteo；* 氣象署 3 天後不給降雨機率，改用 Open-Meteo）＋ Open-Meteo`:`Open-Meteo 預報${W.cwaErr?`（氣象署：${esc(W.cwaErr)}）`:''}`;
-  $('#wxOut').innerHTML=(msg?`<div class="rec">${esc(msg)}</div>`:'')+`<div style="overflow-x:auto"><table class="rtab wxt"><tr><th>日期</th><th>地點</th><th>°C</th><th>體感低</th><th>降雨</th><th>mm</th><th>陣風 km/h</th><th>天氣</th></tr>${rows}</table></div>
-    <div style="font-size:11px;color:var(--mut);margin-top:4px">${src}，${age<1?'剛剛':Math.round(age)+' 小時前'}更新。每天：營地（最後一天為終點）＋當天最高點；預報只到 16 天內。氣溫已依該點海拔修正。</div>`;
+    return p.daily.time.map((d,i)=>[d,i]).filter(([d])=>!wd||d===wd).map(([d,i])=>{const v=wxVal(p,d,i),pp=v.pop,gu=v.gu,cw=v.src==='cwa',no=v.src==='none',R=x=>x==null?'–':Math.round(x);
+    return `<tr data-wxsrc="${v.src}"><td>${d.slice(5)}</td><td>${esc(p.label)}${cw?`<div class="wxsrc">氣象署・${esc(p.cwa.name)}</div>`:''}</td>${no?`<td colspan="4" style="color:var(--mut);text-align:left">氣象署沒有這格（${esc((p.cwaI&&p.cwaI.msg)||'沒資料')}）</td>`:`<td>${R(v.tmin)}～${R(v.tmax)}</td><td>${R(v.amin)}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%${cw&&v.popOm?'<sup>*</sup>':''}</td>`}<td>${(v.mm||0).toFixed(1)}${cw||no?'<sup>OM</sup>':''}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${R(gu)}${cw||no?'<sup>OM</sup>':''}</td>${no?'':`<td class="${v.wc>=95?'w':''}">${esc(String(v.wx))}</td>`}</tr>`;});}).join('');
+  const M=WXSRC.m,when=new Date(W.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+  const radio=`<div class="wxsrcsel" role="radiogroup" aria-label="天氣來源">${[['auto','自動（氣象署優先）'],['cwa','只看氣象署'],['om','只看 Open-Meteo']].map(([k,l])=>`<label><input type="radio" name="wxsrc" value="${k}"${M===k?' checked':''}> ${l}</label>`).join('')}</div>`;
+  const info=W.pts.map(p=>{const c=p.cwaI,om=`Open-Meteo：${p.daily&&p.daily.time.length?`✓ ${p.daily.time.length} 天（10 km 格點，已依 ${p.ele||'?'} m 修正）`:'✕ 沒資料'}`;
+    const cw=!c?'氣象署：這次沒抓（舊資料）':c.ok?`氣象署：✓ ${esc(c.name)}（距離 ${c.km} km${c.de?`，山頭比這裡${c.de>0?'高':'低'} ${Math.abs(c.de)} m，已修正`:''}；${c.n} 天）`:`氣象署：✕ ${c.name?esc(c.name)+'：':''}${esc(c.msg||'')}`;
+    return `<li data-wxinfo><b>${esc(p.label)}</b><br><span class="${c&&c.ok?'ok':'u'}">${cw}</span><br><span class="ok">${om}</span></li>`;}).join('');
+  $('#wxOut').innerHTML=(msg?`<div class="rec">${esc(msg)}</div>`:'')+radio+`<div style="overflow-x:auto"><table class="rtab wxt"><tr><th>日期</th><th>地點</th><th>°C</th><th>體感低</th><th>降雨</th><th>mm</th><th>陣風 km/h</th><th>天氣</th></tr>${rows}</table></div>
+    <div class="wxinfo"><div class="wxih">抓取資訊　${when}（${age<1?'剛剛':Math.round(age)+' 小時前'}）</div><ul>${info}</ul>
+    <div>OM＝這格是 Open-Meteo（氣象署沒有雨量與陣風）；* 氣象署 3 天後不給降雨機率，用 Open-Meteo。氣象署溫度依山頭與這裡的海拔差修正（每 100 m 0.65°C）。每天：營地（最後一天為終點）＋當天最高點；預報只到 16 天內。</div></div>`;
 }
 $('#bWxRe').addEventListener('click',()=>{const L=S.route.loc;if(L&&L.src==='osm'&&!S.route.segs.some(g=>g.lat)){L.q=null;autoGeo();}else if(!L)autoGeo();else wxCheck(true);});
 $('#bWxSet').addEventListener('click',()=>{const m=($('#wxCoord').value||'').match(/(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)/);
@@ -3929,6 +3943,7 @@ $('#bNet').addEventListener('click',async()=>{
   const bad=res.some(x=>x.startsWith('✕'));
   out.innerHTML=`<div class="rec">${res.join('<br>')}${bad?`<br><span style="color:#d9bf6e">連不上：${location.protocol==='file:'?'有些手機直接開檔案時會擋網路，可以把檔案放到網站上再開（見說明）；':''}也可能是目前沒有網路。</span>`:'<br>連線正常，可以自動定位與抓天氣。'}</div>`;
 });
+$('#wxOut').addEventListener('change',e=>{const r=e.target.closest('input[name=wxsrc]');if(!r)return;WXSRC.m=r.value;try{localStorage.setItem('gearPlanner.wxSrc',r.value);}catch(err){}wxAutoT();compute();renderWx();});
 $('#wxAuto').addEventListener('change',e=>{S.wxAuto=e.target.checked;setDirty(true);if(S.wxAuto)fetchWx();});
 window.addEventListener('online',()=>{autoGeo();wxCheck(false);});
 function wxDiag(D,W){
@@ -3938,7 +3953,7 @@ function wxDiag(D,W){
   if(age>24)D.push(['i','天氣資料已超過 1 天','連上網路打開 App 會自動更新；出發前一天再確認一次。','']);
   const days=X.pts[0].daily.time.map((d,i)=>({d,i}));
   const by=f=>days.filter(({d,i})=>X.pts.some(p=>p.daily.time[i]===d&&f(wxVal(p,d,i))));
-  const SRC=X.pts.some(p=>p.cwa)?'氣象署＋Open-Meteo 預報':'Open-Meteo 預報';
+  const SRC=WXSRC.m==='om'||!X.pts.some(p=>p.cwa)?'Open-Meteo 預報':WXSRC.m==='cwa'?'氣象署預報':'氣象署＋Open-Meteo 預報';
   const rain=by(v=>(v.pop||0)>=60||(v.mm||0)>=10);
   if(rain.length)D.push([has('top_shell')&&has('bot_rain')?'y':'r',`預報 ${rain.map(x=>x.d.slice(5)).join('、')} 降雨機率高`,(has('top_shell')&&has('bot_rain')?'雨衣雨褲都有帶。':'<b>防水外套或雨褲還沒選</b>。')+'雨褲蓋在靴子外面；箭竹與泥濘路段會很濕，保暖層放防水袋。',SRC]);
   const th=by(v=>v.wc>=95);
@@ -4403,7 +4418,7 @@ function planText(){
       const ex=[d<days[days.length-1]&&o.water!=='u'?`營地水源：${WN[o.water]}`:'',o.sig!=='u'?`訊號：${SN[o.sig]}`:'',HZ.some(([k])=>o.hz[k]==='y')?`路況：${HZ.filter(([k])=>o.hz[k]==='y').map(h=>h[1]).join('、')}`:'',o.note?`撤退點／備註：${o.note}`:''].filter(Boolean);
       if(ex.length)L.push(ex.join('｜'));}
   });
-  if(S.wx&&S.wx.pts&&S.wx.pts.length&&S.wx.pts[S.wx.pts.length-1].daily.time.length){const p=S.wx.pts[S.wx.pts.length-1],a=p.daily;L.push('');L.push(`天氣（${p.label}，${p.cwa?'氣象署＋':''}Open-Meteo）：`+a.time.map((t,i)=>{const v=wxVal(p,t,i);return `${t.slice(5).replace('-','/')} ${Math.round(v.tmin)}～${Math.round(v.tmax)}°C 降雨${v.pop??'–'}%`;}).join('；'));}
+  if(S.wx&&S.wx.pts&&S.wx.pts.length&&S.wx.pts[S.wx.pts.length-1].daily.time.length){const p=S.wx.pts[S.wx.pts.length-1],a=p.daily;L.push('');L.push(`天氣（${p.label}，${WXSRC.m==='om'||!p.cwa?'':WXSRC.m==='cwa'?'氣象署 ':'氣象署＋'}${WXSRC.m==='cwa'?'':'Open-Meteo'}）：`+a.time.map((t,i)=>{const v=wxVal(p,t,i);return `${t.slice(5).replace('-','/')} ${(v.tmin==null?'–':Math.round(v.tmin))}～${(v.tmax==null?'–':Math.round(v.tmax))}°C 降雨${v.pop??'–'}%`;}).join('；'));}
   return L.join('\n');
 }
 $('#bExpTxt').addEventListener('click',()=>{const t=planText();if(!t){toast('還沒有路段');return;}$('#expTxt').value=t;$('#expPanel').hidden=false;$('#txtPanel').hidden=true;$('#gpxPanel').hidden=true;});
@@ -4598,7 +4613,7 @@ function aiExport(){const c=C,strip=h=>String(h||'').replace(/<li>/g,'；').repl
     body:{kg:S.body,exp:S.exp},load:{packKg:+(c.pack/1000).toFixed(2),baseKg:+(c.base/1000).toFixed(2),wornKg:+(c.worn/1000).toFixed(2),ratioPct:+c.ratio.toFixed(1),waterL:+(c.waterG/1000).toFixed(1),foodKg:+(c.foodG/1000).toFixed(2)},
     gear:live().map(x=>({cat:CATN[x.cat],type:x.label,name:dispName(x),g:x.g,qty:x.qty,where:LOCN[x.loc],light:S.lt?(lightTake(x)?LOCN[ltLoc(x)]:'留營地'):undefined})),
     light:C.lt?{packKg:+(C.lt.pack/1000).toFixed(2),wornKg:+(C.lt.worn/1000).toFixed(2),waterL:waterMax(true)}:null,
-    weather:W?W.pts.map(p=>({place:p.label,source:p.cwa?'氣象署 '+p.cwa.name+'（溫度/降雨）＋Open-Meteo':'Open-Meteo',days:p.daily.time.map((t,i)=>{const v=wxVal(p,t,i);return {date:t,min:v.tmin,max:v.tmax,feelsMin:v.amin,rainPct:v.pop,gustKmh:v.gu,weather:v.wx};})})):null,
+    weather:W?W.pts.map(p=>({place:p.label,source:WXSRC.m==='om'||!p.cwa?'Open-Meteo':(WXSRC.m==='cwa'?'氣象署 ':'氣象署 ')+p.cwa.name+'（溫度/降雨）＋Open-Meteo（雨量/陣風）',days:p.daily.time.map((t,i)=>{const v=wxVal(p,t,i);return {date:t,min:v.tmin,max:v.tmax,feelsMin:v.amin,rainPct:v.pop,gustKmh:v.gu,weather:v.wx};})})):null,
     diagnosis:(c.diag||[]).map(([l,t,d])=>({level:{r:'重要',y:'注意',i:'參考',g:'正常'}[l]||l,title:t,detail:strip(d)}))};
   const Q=`你是台灣高山的登山裝備與行程顧問。下面 JSON 是我用「登山負重規劃師」排好的行程、裝備和 App 的自動診斷。請用繁體中文回答，依序：
 1. 最該處理的 3 件事（安全優先，其次減重）
@@ -4906,7 +4921,7 @@ function planHTML(c){
   const RD=c.RD||[],r=S.route;if(!r.name&&!RD.length)return '';
   return `<div class="plan"><h2><span>登山計畫${r.name?'：'+esc(r.name):''}</span><span>${esc(r.date||'')}</span></h2>
     <div class="meta"><span>隊伍 ${r.team} 人</span><span>留守人 ${esc(r.keeper||'＿＿＿＿')}　${esc(r.tel||'')}</span>${r.permit?`<span>入山／入園 ${esc(r.permit)}</span>`:''}</div>
-    ${S.wx&&S.wx.pts.length?`<div class="meta">天氣（${S.wx.pts[S.wx.pts.length-1].cwa?'氣象署＋':''}Open-Meteo，${new Date(S.wx.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 抓取）：${S.wx.pts[S.wx.pts.length-1].daily.time.map((d,i)=>{const v=wxVal(S.wx.pts[S.wx.pts.length-1],d,i);return `${d.slice(5)} ${Math.round(v.tmin)}～${Math.round(v.tmax)}°C 雨${v.pop??'–'}% 陣風${Math.round(v.gu)}`;}).join('　')}</div>`:''}
+    ${S.wx&&S.wx.pts.length?`<div class="meta">天氣（${WXSRC.m==='om'||!S.wx.pts[S.wx.pts.length-1].cwa?'Open-Meteo':WXSRC.m==='cwa'?'氣象署':'氣象署＋Open-Meteo'}，${new Date(S.wx.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 抓取）：${S.wx.pts[S.wx.pts.length-1].daily.time.map((d,i)=>{const v=wxVal(S.wx.pts[S.wx.pts.length-1],d,i);return `${d.slice(5)} ${(v.tmin==null?'–':Math.round(v.tmin))}～${(v.tmax==null?'–':Math.round(v.tmax))}°C 雨${v.pop??'–'}% 陣風${(v.gu==null?'–':Math.round(v.gu))}`;}).join('　')}</div>`:''}
     ${RD.length?`<table><tr><th>天</th><th>路段</th><th>km</th><th>↑/↓ m</th><th>等效 km</th><th>體力度</th><th>營地 m</th><th>上河/計畫 h</th><th>營地水</th><th>訊號</th><th>路況</th><th>撤退點／備註</th></tr>${RD.map((d,i)=>`<tr><td>D${d.day}</td><td>${esc(d.from)} → ${esc(d.to)}</td><td>${+d.km.toFixed(1)}</td><td>${d.up}/${d.down}</td><td>${d.eq}</td><td>${(d.ci||0).toFixed(0)}</td><td>${d.camp||''}</td><td>${d.sh||'–'}/${d.plan||d.est.toFixed(1)}</td><td>${i===RD.length-1?'':WN[d.water]}</td><td>${SN[d.sig]}</td><td>${HZ.filter(([k])=>d.hz[k]==='y').map(h=>h[1]).join('、')}${HZ.some(([k])=>d.hz[k]==='u')?'（部分未確認）':''}</td><td>${esc(d.note)}</td></tr>`).join('')}</table>`:''}</div>`;
 }
 $('#bPrint').addEventListener('click',()=>{

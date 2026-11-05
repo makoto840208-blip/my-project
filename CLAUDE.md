@@ -14,7 +14,7 @@
 - **預設**：改完 `python3 tools/build.py <下一版>`，把 dist 的 zip 傳給使用者，他自己拖到 Cloudflare 上傳。原始碼照樣 commit＋push，但**只 commit `src/`、`tools/`、`CLAUDE.md`，不要 commit `public/`**（push 不會觸發建置）。
 - **使用者說「手機用」**：才連 `public/` 一起 commit 並 push，Cloudflare 會自動部署（約 1～2 分鐘，可用 `/version.txt` 驗證）。
 - push 前用 `git diff --stat origin/main..HEAD` 確認沒有 `public/`（除非是「手機用」）。
-- 目前版本：**v104 在 main（線上）；v107 在分支 `nav-split`（導航分家＋黑屏語音＋捷徑＋箭頭＋轉向平滑追蹤＋Android 外殼原始碼；v105 使用者已上傳實測過「聲音可以」，但還沒說要合併 main，下山前不要自己合併）**。repo 的 `public/` 停在 v77。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
+- 目前版本：**v104 在 main（原本線上）；v108 在分支 `nav-split`（導航分家＋黑屏語音＋捷徑＋箭頭＋轉向平滑追蹤＋Android 外殼原始碼＋氣象署天氣＋3D 防當機；使用者有上傳 nav-split 的 zip 實測，但還沒說要合併 main，下山前不要自己合併）**。repo 的 `public/` 停在 v77。v69～v75 是在別的環境改的，v75 從使用者上傳的 zip 還原進 repo。
 
 ## 工作方式（使用者要求）
 - **討論還沒結束不要先開工**，使用者明確說「開始／做」才動手。
@@ -41,6 +41,20 @@
 - 音量鍵：只有網頁呼叫 `AndroidBridge.volCapture(true)`（黑屏中）才攔截，其他時候照常調音量；＋短按→`window.__vol('up','short')`（念休息點／今日終點）、＋長按 650 ms→`('up','long')`（方位與位置）、＋－同按 3 秒→`('both','sos')`（`sosOpen`）、－鍵先空著（只攔下不調音量）。`keepOn(true/false)`：導航中螢幕常亮＋沉浸式。
 - 編譯：**雲端沙箱連不到 Google／Maven／Gradle（403 政策拒絕），所以不能在這裡編 APK**。改用 `.github/workflows/android-apk.yml`（GitHub Actions，JDK 17＋Gradle 8.7＋AGP 8.5.2，GitHub 的 ubuntu 機器內建 Android SDK）：Actions 頁面手動執行 `android-apk`（或推 `android/**` 自動跑），成功後 APK 在 Releases 的 `apk-latest`（公開，手機直接下載安裝）。簽章金鑰由 workflow 產生並用 `actions/cache` 快取（key `apk-keystore-v1`，**久沒編譯被快取清掉就會換金鑰，要先解除安裝再裝**；解除安裝前先用同步碼備份）。Java／workflow 在沙箱只做過語法檢查，**還沒實際編過**，第一次編失敗請看 Actions 的紀錄修。
 - 網頁端：`andCall()`、`window.__vol`（app.html，`bkSpeak` 附近）；測試只驗網頁這端（假的 `AndroidBridge`）。
+
+## v108（2026-11-05，使用者 11/09 上奇萊南華）
+- **氣象署登山天氣**（使用者選「B：免註冊、經 Cloudflare 轉抓，壞了退回 Open-Meteo」；他覺得 Open-Meteo 太不準）：`src/worker.js`（Cloudflare Worker，`wrangler.jsonc` 加 `main`＋`assets.binding:"ASSETS"`）只處理 `/__cwa/…`，白名單兩種路徑：`/Data/js/info/Info_Mountain.js`（山名清單 PID/Name，**沒有座標**）、`/V8/C/L/Mountain/MOD/Week/Dxxx_Week_PC.html`（週預報表片段，7 天白天／晚上；溫度格是 `tem-C`/`tem-F` 兩個 span，純文字會黏成「1661」，`cwaNum()` 用 °F 拆回來；降雨機率只有前 3 天，後面是「-」），快取 30 分鐘。其他路徑照舊給 assets。sw.js 不碰 `/__cwa/`。
+  - App：`cwaGet()` 先試 `/__cwa`，再試直接 `www.cwa.gov.tw`（大概會被 CORS 擋）；`cwaOverlay(pts)` 在 Open-Meteo 抓完後，每個天氣點找 **6 km 內、名字對得上**的氣象署山頭：座標用 OSM 山頭（`PK.list`，沒有全台就 `pkEnsure`）＋`cwaNorm()`（去掉「主山／大山／山」再接方位峰：奇萊主山南峰＝奇萊南峰）；溫度依海拔差每 100 m 0.65°C 修正。`cwaParseWeek()` 解析失敗會丟錯 → `S.wx.cwaErr`，表下寫原因、整張用 Open-Meteo。
+  - `wxVal(p,d,i)`：一格天氣的合併值（氣象署有就用它的最低／最高、體感最低、降雨機率、天氣文字；**雨量 mm、陣風**氣象署沒有，仍是 Open-Meteo；氣象署 3 天後沒降雨機率，改 Open-Meteo 並標 *）。天氣表、診斷 `wxDiag`、輕裝診斷、計畫書列印、文字匯出、`aiExport` 全部改用 `wxVal`。表格每列 `data-wxsrc="cwa|om"`、地點下小字「氣象署・山名（低 N m 已修正）」。
+  - **沙箱連不到 cwa.gov.tw（代理 403）**：HTML 結構只能從 WebFetch 的摘要推，**沒拿真資料驗過**；測試用模仿的表（`cwaWeekHtml()`）。第一次上線若表下寫「氣象署：…格式變了／讀不懂」就是解析要修。
+  - **部署**：Worker 程式要靠 `wrangler deploy`（Cloudflare 連 git 的自動建置＝「手機用」流程，只看 main 分支）才會上去；**手動拖 zip 只會上傳網站檔案，不會有 Worker** → `/__cwa` 404 → 自動退回 Open-Meteo（不會壞）。`wrangler deploy --dry-run` 驗過設定。
+- **圖層選單選了不關**：規劃地圖 `.lyrmenu` 和導航圖層橫條（`navStrip('layers')`）選底圖／3D／山名／省電後都留著（點外面、✕、或再按圖層鈕才關），保留橫向捲動位置。
+- **網頁版導航「更多」**：`@media (pointer:fine)` 時 `#navStrip .nsl`、導航 `.lyrmenu` 改換行排（以前一排超出畫面、滑鼠滑不動，後面的按鈕點不到），太矮時上下捲；`hScrollMouse()` 讓滾輪／按住拖可左右捲（拖完 `HSDRAG` 擋掉誤點）。
+- **3D 當機**（使用者：3D＋山名＋純黑等高線→黑畫面、跳重開；關山名比較順）：
+  - `GL3D`：3D 開著時 localStorage `gearPlanner.gl3d`＝時間；切到背景（visibilitychange）或 pagehide 清掉。開機時記號還在（6 小時內）＝上次 3D 時被瀏覽器殺掉 → 先關 3D（規劃／導航都關、存檔）並提示 6 秒。
+  - `webglcontextlost`：關 3D、提示；6 秒內沒 `webglcontextrestored` 就存檔 `location.reload()`。
+  - 省電模式 3D 最多傾斜 60°（原 70，預設 50°）；3D 山名上限：省電 12／不省電 25（原 40／不限）；3D 移動一開始就把山名 marker 整個移除（以前只是 CSS 藏，MapLibre 仍每格重算），停下 120 ms 後放回。
+  - 3D 黑等高線：省電模式下本來就換成地形陰影（v82 設計）；使用者問為什麼 3D 不能用黑等高線，**還沒決定**要不要做「3D 粗版黑等高線」。山名改用地圖自己畫（symbol layer）也還沒做（使用者還沒選）。
 
 ## 設計原則（使用者明確要求過）
 - 全 App 低飽和、軍事風；圖示一律單色線條 SVG（`ic('name')`、`ICO2`），**不用彩色 emoji、不用白色**；SOS／偏航警告才用醒目紅。
@@ -82,7 +96,7 @@
 - 減重建議：`SHOEACC` 排除鞋墊／鞋帶／鞋套／綁腿／冰爪等配件，不拿來當換鞋建議（v92 前曾建議用鞋墊換 RAT 靴）。
 - 輕裝配置（v94，取代 v93 的「輕裝日」）：裝備欄切換「分類｜打包清單｜輕裝」（`[data-gv=light]`）。第一次點輕裝建 `S.lt={off:{}}`＝整份複製目前配置，✕＝`S.lt.off[slotId]=true` 留營地（下方「留營地 N 件」加回），`S.lt.w` 輕裝背水（預設 min(背水,1.5)L），食物算一天份行動糧；`s.packedL` 輕裝打勾；「重新從目前配置複製」「不用輕裝」都有復原。`ltCalc()` 算輕裝重量（任何地方都能叫），compute 存 `C.lt`；儀表板 `#dayRow` 兩顆「全裝｜輕裝」（`COMP.mode`）切換背負組成。不綁天數（使用者：攻頂後可能回營地再全裝下山）。
 - 路段時間軸（v95）：以路段為主、天數由「在這裡過夜」自動數。軌跡：`T.cuts`＝換天（高度圖實線）、`T.sc`＝同一天的路段分割（虛線）；`rebuildFromTrk` 用兩者聯集切路段、`dayAt()` 算天數，舊路段用 ai/ci 對回來（保留 lt/ts/t0/t1）；所有重編索引處（QR 精簡、編輯器、刪減、undo、房間同步陣列化）都要同時處理 `sc`。高度圖「切天／切段」模式有「換天（實線）｜分段（虛線）」（`PROF.sk`）。手動路段：`g.night`，`segRenum()` 照順序數天數，舊資料 `segMigrate()` 從 day 推回 night；「＋新增路段」預設同一天。每段 `segTimeRow()`：這段出發 `g.ts`（空白＝接上一段到達；每天第一段用啟登時間 t0）、背負 `g.lt`（'light'＝用 `ltCalc()` 的輕裝重量算時數）、在這裡過夜（軌跡＝把終點在 cuts/sc 之間搬）。`routeDays` 依序鏈出 `SEGT`（每段 st/en/h），當天結束時間＝最後一段到達。高度圖輕裝段淡綠底＋「輕裝」字。地圖上還沒畫分段點（只有換天營地標記）。
-- 天氣表（v99）：`wxPoints()` 每天一組＝營地（最後一天＝終點，沒座標用起點）＋緊接當天最高點（跟營地同點就不重複）；不列「全程最高點」，也不列每座山頭（預報格約 10 km，同稜線重複）。每個地點只列它那天，超出 16 天預報的寫「MM-DD 起查得到」。各點並行抓。
+- 天氣表（v99，v108 加氣象署見上）：`wxPoints()` 每天一組＝營地（最後一天＝終點，沒座標用起點）＋緊接當天最高點（跟營地同點就不重複）；不列「全程最高點」，也不列每座山頭（預報格約 10 km，同稜線重複）。每個地點只列它那天，超出 16 天預報的寫「MM-DD 起查得到」。各點並行抓。
 - 帶水（v96）：每段 `g.wL`（「這段帶水 L」，空白＝全裝用生理參數 `S.water`、輕裝用 `ltWDef()`）；`waterMax(light)` 取全裝／輕裝路段裡最多的那段，compute 的 `waterG` 和 `ltCalc().waterG` 都用它；每段時數用那段自己的水算重量。生理參數背水量只是預設值。
 - 水（v103）：生理參數背水量改唯讀參考（水量 chips 藏起來）；水以路段「這段帶水」為準。`setModeWater(light,L)`：改全裝／輕裝的水＝那個配置的路段全部同步（沒路段改 `S.water`／`S.lt.w`）。入口：分類第一個水袋列下「這次裝水」、打包清單「水」那列、輕裝頁「水」那列（`[data-wf=full|light]`，防抖 400ms；打字時 renderPack 不重畫）。compute 會把 `[data-wf]` 更新成目前值。
 - 列印檢查表（v103）：打包清單「列印檢查表」→ `ckPrint()`：`ckFit()` 在螢幕外量高度，依序試 A6 8.5/8/7.5pt → B6 8.5/8/7.5pt，都放不下就 B6 7.5pt 多張；動態 `@page` size、`body.ckp` 只印 `#ckPrint`。表頭：路線、日期、天數、人數、氣溫、背負、身穿；兩欄 ☐ 清單＋水食物＋輕裝區。原本 A4 的計畫書列印（`#print`）不動。

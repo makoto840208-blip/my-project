@@ -1,6 +1,8 @@
 {
   // Cloudflare Workers 靜態網站設定：public/ 裡的檔案直接當網站
+  // v108：加 src/worker.js，只處理 /__cwa/…（轉抓氣象署登山預報）；其他路徑照舊是 public/ 的檔案
   "name": "square-mode-1f4a",
+  "main": "src/worker.js",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./public" }
+  "assets": { "directory": "./public", "binding": "ASSETS" }
 }

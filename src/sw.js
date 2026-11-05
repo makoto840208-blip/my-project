@@ -8,6 +8,7 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.a
 self.addEventListener('fetch',e=>{
   const u=new URL(e.request.url);
   if(e.request.method!=='GET')return;
+  if(u.origin===location.origin&&u.pathname.startsWith('/__cwa/'))return; // 氣象署轉抓：直接走網路，不快取（離線時用上次存在規劃裡的天氣）
   if(u.origin!==location.origin){
     // 離線地圖圖磚：先用下載好的，沒有再上網
     if(TILE.test(u.host)){e.respondWith(caches.open('gp-tiles').then(c=>c.match(e.request.url)).then(r=>r||fetch(e.request)));return;}

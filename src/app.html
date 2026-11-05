@@ -350,6 +350,7 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 #navStrip[hidden]{display:none}#edSlope{position:fixed;z-index:1200;transform:translateX(-50%);background:rgba(16,19,14,.95);border:1px solid #ffb347;border-radius:8px;padding:4px 8px;font-size:13px;white-space:nowrap;pointer-events:none;color:#f0e6c8}#edSlope small{color:#8f9481;font-size:11px;margin-left:4px}#edSlope[hidden]{display:none}#navStrip .nsh{display:flex;align-items:center;gap:8px;padding:0 2px 6px;color:#cfaa70;font-size:13.5px}#navStrip .nsh small{flex:1;color:#8f9481;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#navStrip .nsh small.w{color:#e6a090}
 #navStrip .nsx{all:unset;width:40px;height:34px;text-align:center;color:#cfaa70;font-size:18px;cursor:pointer;border:1px solid rgba(207,170,112,.35);border-radius:8px}
 #navStrip .nsl{display:flex;gap:8px;overflow-x:auto;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}#navStrip .nsl::-webkit-scrollbar{display:none}
+@media (pointer:fine){/* 電腦：按鈕排不下就換行，全部看得到（滑鼠沒辦法像手指一樣左右滑） */#navStrip .nsl,#navMode .lyrmenu{flex-wrap:wrap!important;max-height:calc(100dvh - var(--npb,180px) - 90px);overflow-y:auto}#navStrip .nsl,#navMode .lyrmenu{scrollbar-width:thin;scrollbar-color:#6b5a3c transparent;padding-bottom:6px}#navStrip .nsl::-webkit-scrollbar,#navMode .lyrmenu::-webkit-scrollbar{display:block;height:8px}#navStrip .nsl::-webkit-scrollbar-thumb,#navMode .lyrmenu::-webkit-scrollbar-thumb{background:#6b5a3c;border-radius:4px}#navStrip .nsl.drag,#navMode .lyrmenu.drag{cursor:grabbing}}
 #navStrip .nsi{all:unset;box-sizing:border-box;flex:none;min-width:80px;height:78px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(207,170,112,.35);border-radius:10px;background:#1b2316;color:#d9ccb0;font-size:13px;line-height:1.2;text-align:center;cursor:pointer;position:relative;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #navStrip .nsi svg.ic{width:28px;height:28px;color:#cfaa70}#navStrip .nsi.on{background:#3d3420;color:#ffd27a;border-color:#cfaa70}#navStrip .nsi.pin::after{content:'';position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#cfaa70}
 #navStrip .nsi.lb{min-width:118px;font-size:13.5px}#navStrip .nsi.hold{outline:2px solid #ffb347}.navmenu svg.ic{width:20px;height:20px;color:#cfaa70;flex:none}.navmenu{position:absolute;left:calc(100% + 8px);top:0;border-radius:8px!important;max-height:calc(100vh - 24px - env(safe-area-inset-top));max-height:calc(100dvh - 24px - env(safe-area-inset-top));overflow:auto;display:flex;flex-direction:column;background:rgba(17,21,15,.96);border:1px solid rgba(207,170,112,.5);border-radius:12px;padding:6px;min-width:210px;box-shadow:0 4px 16px rgba(0,0,0,.6)}#navMode .navbtns .navmenu button{all:unset;width:auto;height:auto;color:#d9ccb0;display:flex;align-items:center;gap:10px;font-size:15px;padding:10px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}#navMode .navbtns .navmenu button:hover,#navMode .navbtns .navmenu button.on{background:rgba(207,170,112,.25)}
@@ -412,6 +413,7 @@ html,body,*{scrollbar-color:#4a4a36 #12150e;scrollbar-width:thin}
 .rtab th:first-child,.rtab td:first-child{text-align:left}
 .wxbar{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}.wxbar input:not([type=checkbox]){flex:1;min-width:200px}
 .wxt td,.wxt th{white-space:nowrap}
+.wxsrc{font-size:10px;color:var(--mut);white-space:nowrap}
 #expPanel{border:1px dashed var(--coy);border-radius:5px;padding:10px;margin:8px 0}
 #txtPanel{border:1px dashed var(--coy);border-radius:5px;padding:10px;margin:8px 0}#txtPanel textarea{min-height:150px;font-family:inherit;font-size:14px}
 #gpxPanel{border:1px dashed var(--coy);border-radius:5px;padding:10px;margin:8px 0;font-size:13px}
@@ -1031,6 +1033,7 @@ let dirty=false;
 function setDirty(v){dirty=v;const el=$('#state');el.textContent=v?'● 儲存中…':'已儲存';el.classList.toggle('dirty',v);
   if(v&&typeof PL!=='undefined'&&PL){clearTimeout(saveT);saveT=setTimeout(()=>{if(savePlan()){dirty=false;el.textContent='已自動儲存';el.classList.remove('dirty');if(typeof SY!=='undefined'&&SY.code){clearTimeout(SY.t);SY.t=setTimeout(()=>syPush(false),3000);}}},700);}}
 const ICO2={"dash": "<path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/>", "install": "<rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"2\"/><path d=\"M12 7v7M9 11l3 3 3-3\"/>", "expand": "<path d=\"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z\"/>", "save": "<path d=\"M5 3h11l3 3v15H5z\"/><path d=\"M8 3v5h7V3M8 21v-6h8v6\"/>", "print": "<path d=\"M7 9V3h10v6M7 17H4v-7h16v7h-3\"/><rect x=\"7\" y=\"14\" width=\"10\" height=\"7\"/>", "download": "<path d=\"M12 3v12M7 10l5 5 5-5M4 21h16\"/>", "trash": "<path d=\"M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14\"/>", "cross": "<circle cx=\"12\" cy=\"12\" r=\"7\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\"/>", "stop": "<rect x=\"6\" y=\"6\" width=\"12\" height=\"12\" rx=\"1\"/>", "trim": "<circle cx=\"6\" cy=\"7\" r=\"2.5\"/><circle cx=\"6\" cy=\"17\" r=\"2.5\"/><path d=\"M8 8.5L20 17M8 15.5L20 7\"/>", "contrast": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 4v16A8 8 0 0 0 12 4z\" fill=\"currentColor\"/>", "draw": "<path d=\"M4 20l4-1L19 8l-3-3L5 16z\"/><path d=\"M14 7l3 3\"/>", "paste": "<rect x=\"6\" y=\"4\" width=\"12\" height=\"17\" rx=\"1\"/><path d=\"M9 4V2h6v2M9 10h6M9 14h6\"/>", "crown": "<path d=\"M3 18h18M4 16L3 7l5 4 4-6 4 6 5-4-1 9z\"/>", "link": "<path d=\"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1\"/>", "eye": "<path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>", "lock": "<rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>", "search": "<circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"M15 15l6 6\"/>", "check": "<path d=\"M4 12l5 5L20 6\"/>", "pin": "<path d=\"M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z\"/><circle cx=\"12\" cy=\"10\" r=\"2.2\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 7v5l3 2\"/>", "bolt": "<path d=\"M13 2L5 14h6l-1 8 8-12h-6z\"/>", "signal": "<path d=\"M12 20v-6M8 20v-3M16 20V10M20 20V6M4 20v-1\"/>"},ic=n=>`<svg class="ic2" viewBox="0 0 24 24">${ICO2[n]}</svg>`;
+function toastLong(ms){clearTimeout(toast.t);toast.t=setTimeout(()=>$('#toast').classList.remove('show'),ms);}
 function toast(t){const el=$('#toast');el.textContent=t;el.style.pointerEvents='';el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2000);}
 function toastAct(t,lbl,fn){const el=$('#toast');el.innerHTML=`${esc(t)} <button type="button" style="margin-left:10px;background:none;border:1px solid #f0ead8;color:#f0ead8;border-radius:4px;padding:2px 10px;font:inherit;cursor:pointer">${esc(lbl)}</button>`;el.style.pointerEvents='auto';
   el.querySelector('button').onclick=()=>{fn();el.classList.remove('show');el.style.pointerEvents='';};el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>{el.classList.remove('show');el.style.pointerEvents='';},5000);}
@@ -2321,17 +2324,21 @@ function altsMap(){const f=[];let nav=false;try{nav=NAV.on;}catch(e){}if(!nav)(S
 function mapSetBase(k){try{localStorage.setItem('gearPlanner.mapBase',k);}catch(e){}mapApplyStyle();}
 class LayerCtl{onAdd(){const d=document.createElement('div');d.className='maplibregl-ctrl maplibregl-ctrl-group lyrctl';
     d.innerHTML=`<button type="button" title="切換底圖" aria-label="切換底圖" style="display:flex;align-items:center;justify-content:center"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></button><div class="lyrmenu" hidden>${Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}">${b.name}</button>`).join('')}<button type="button" data-3d style="border-top:1px solid var(--line)">3D 地形</button><button type="button" data-pks>山頭名稱</button><button type="button" data-pwr style="border-top:1px solid var(--line)">省電模式</button></div>`;
-    const menu=d.querySelector('.lyrmenu');document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!d.contains(e.target))menu.hidden=true;},true);d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);pwrBtn();}catch(err){}};
-    menu.onclick=e=>{if(e.target.closest('[data-3d]')){menu.hidden=true;map3dToggle();return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);menu.hidden=true;return;}if(e.target.closest('[data-pwr]')){pwrSet(!PWR.save);menu.hidden=true;return;}const b=e.target.closest('[data-base]');if(b){mapSetBase(b.dataset.base);menu.hidden=true;}};this._d=d;return d;}onRemove(){this._d.remove();}}
+    const menu=d.querySelector('.lyrmenu');try{hScrollMouse(menu);}catch(e){}document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!d.contains(e.target))menu.hidden=true;},true);d.firstChild.onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;mapApplyStyle();try{map3dApply();pkShowSet(PK.show);pwrBtn();}catch(err){}};
+    /* v108：選了不關，可以連續切底圖／3D／山名／省電；點選單外面或再按圖層鈕才關 */menu.onclick=e=>{e.stopPropagation();if(e.target.closest('[data-3d]')){map3dToggle();return;}if(e.target.closest('[data-pks]')){pkShowSet(!PK.show);return;}if(e.target.closest('[data-pwr]')){pwrSet(!PWR.save);return;}const b=e.target.closest('[data-base]');if(b)mapSetBase(b.dataset.base);};this._d=d;return d;}onRemove(){this._d.remove();}}
 // 3D 地形：規劃和導航各自一個開關（導航預設關、打開先提醒耗電）；黑屏時關地形；導航中跟隨／跟著方向轉時降低繪製解析度
 const M3D={want:false,navWant:false,on:false};try{M3D.want=localStorage.getItem('gearPlanner.map3d')==='1';M3D.navWant=localStorage.getItem('gearPlanner.map3dNav')==='1';}catch(e){}
+/* v108：3D 開著時頁面被瀏覽器殺掉（手機記憶體不夠，黑屏後要重開）→ 下次開啟先把 3D 關掉，免得一開又當 */
+const GL3D={k:'gearPlanner.gl3d',crashed:false,mark(on){try{if(on)localStorage.setItem(this.k,String(Date.now()));else localStorage.removeItem(this.k);}catch(e){}}};
+try{const ts=+localStorage.getItem(GL3D.k)||0;if(ts&&Date.now()-ts<6*3600e3&&(M3D.want||M3D.navWant)){GL3D.crashed=true;M3D.want=M3D.navWant=false;localStorage.setItem('gearPlanner.map3d','0');localStorage.setItem('gearPlanner.map3dNav','0');}localStorage.removeItem(GL3D.k);}catch(e){}
+addEventListener('pagehide',()=>GL3D.mark(false));document.addEventListener('visibilitychange',()=>GL3D.mark(document.visibilityState==='visible'&&M3D.on));
 function map3dApply(){const m=MAP.m;if(!m||!MAP.loaded)return;let nav=false,blk=false;try{nav=NAV.on;blk=!document.getElementById('navBlack').hidden;}catch(e){}
   const w=nav?M3D.navWant:M3D.want,on=w&&!blk;
   document.querySelectorAll('.lyrmenu [data-3d]').forEach(b=>{b.classList.toggle('on',w);b.textContent=w?`3D 地形${nav?'（導航）':''}：開（點一下關）`:`3D 地形${nav?'（導航，較耗電）':''}`;});
-  if(on!==M3D.on){M3D.on=on;
+  if(on!==M3D.on){M3D.on=on;GL3D.mark(on);
     try{if(on){if(!m.getSource('dem3d'))m.addSource('dem3d',{type:'raster-dem',tiles:[TPL.dem],tileSize:256,encoding:'terrarium',maxzoom:15});
-        m.setMaxPitch(70);m.setTerrain({source:'dem3d',exaggeration:1.3});m.dragRotate.enable();m.touchPitch.enable();m.easeTo({pitch:55,duration:600});
-        setTimeout(()=>{try{if(M3D.on&&m.getPitch()<5)m.easeTo({pitch:55,duration:500});}catch(e){}},350);}
+        const P0=PWR.save?50:55;/* v108：省電模式最多傾斜 60°（越平看越遠、要載的地形與圖塊多好幾倍，手機會被撐爆） */m.setMaxPitch(PWR.save?60:70);m.setTerrain({source:'dem3d',exaggeration:1.3});m.dragRotate.enable();m.touchPitch.enable();m.easeTo({pitch:P0,duration:600});
+        setTimeout(()=>{try{if(M3D.on&&m.getPitch()<5)m.easeTo({pitch:P0,duration:500});}catch(e){}},350);}
       else{m.setTerrain(null);m.easeTo({pitch:0,duration:nav?0:400});setTimeout(()=>{try{if(!M3D.on){m.setMaxPitch(0);m.touchPitch.disable();if(!nav)m.dragRotate.disable();}}catch(e){}},nav?0:450);}}catch(e){}
     try{mapApplyStyle();pkMarkers();}catch(e){}}
   map3dPR();}
@@ -2431,6 +2438,11 @@ async function renderMap(P,idx,WP,nTurn,T){const box=$('#rmap');if(!box)return;M
     MAP.m=new maplibregl.Map({container:box,style:mapStyle(),center:[121,23.7],zoom:7,attributionControl:{compact:true},cooperativeGestures:true,pixelRatio:prFull(),fadeDuration:0,maxTileCacheSize:200,dragRotate:false,pitchWithRotate:false,touchPitch:false,maxPitch:0,
       locale:{'CooperativeGesturesHandler.WindowsHelpText':'按住 Ctrl 再滾動來縮放地圖','CooperativeGesturesHandler.MacHelpText':'按住 ⌘ 再滾動來縮放地圖','CooperativeGesturesHandler.MobileHelpText':'用兩指移動地圖，或按「全螢幕地圖」','NavigationControl.ResetBearing':'轉回正北','NavigationControl.ZoomIn':'放大','NavigationControl.ZoomOut':'縮小'}});
     MAP.m.touchZoomRotate.disableRotation();MAP.m.invalidateSize=()=>MAP.m.resize();try{midDrag3d(MAP.m);}catch(e){}MAP.touch=touch;
+    /* v108：繪圖（WebGL）被手機中斷時：關掉 3D、等它自己恢復；6 秒還沒恢復就存檔重開這一頁（不再停在黑畫面） */
+    MAP.m.on('webglcontextlost',()=>{GL3D.lost=Date.now();try{if(M3D.want||M3D.navWant){M3D.want=M3D.navWant=false;localStorage.setItem('gearPlanner.map3d','0');localStorage.setItem('gearPlanner.map3dNav','0');}}catch(e){}GL3D.mark(false);
+      toast('地圖顯示被手機中斷（記憶體不夠），已關掉 3D，恢復中…');toastLong(6000);clearTimeout(GL3D.t);GL3D.t=setTimeout(()=>{if(!GL3D.lost)return;try{if(dirty)savePlan();}catch(e){}location.reload();},6000);});
+    MAP.m.on('webglcontextrestored',()=>{GL3D.lost=0;clearTimeout(GL3D.t);try{map3dApply();mapApplyStyle();pkMarkers();}catch(e){}});
+    if(GL3D.crashed){GL3D.crashed=false;setTimeout(()=>{toast('上次開著 3D 時地圖當掉了，已先關掉 3D（要用再從圖層打開）');toastLong(6000);},1200);}
     MAP.m.addControl(new maplibregl.NavigationControl({showCompass:true,visualizePitch:false}),'top-right');MAP.m.addControl(new LayerCtl(),'top-right');MAP.m.addControl(new FitCtl(),'top-right');
     MAP.m.on('click',e=>{if(ED.on){edMapClick(e);return;}if(DRAW.on)drawTap({lat:e.lngLat.lat,lng:e.lngLat.lng});else if(TRIM.on)trimTap(null,{lat:e.lngLat.lat,lng:e.lngLat.lng});else if(MEAS.on)measTap({lat:e.lngLat.lat,lng:e.lngLat.lng});});
     MAP.m.on('rotatestart',e=>{if(e.originalEvent&&HEAD.on)headStop();});try{edHook();}catch(e){}
@@ -2801,9 +2813,9 @@ function pkAllBtn(){const b=$('#pkAll');if(!b)return;b.innerHTML=ic('download')+
 // 地圖上標山頭：看目前畫面裡的山，由高到低放，文字框會重疊的就跳過（分散在整個畫面，不會全擠在主稜）；省電模式有上限、3D 移動時先藏
 function pkMarkers(){(PK.mks||[]).forEach(m=>m.remove());PK.mks=[];const m=MAP.m;if(!m||!MAP.loaded||!PK.show||!PK.list.length)return;
   let on3=false;try{on3=M3D.on;}catch(e){}
-  if(!PK.mvReg){PK.mvReg=true;const c=m.getContainer();m.on('movestart',()=>{if(M3D.on&&PWR.save)c.classList.add('mv3d');});m.on('moveend',()=>{c.classList.remove('mv3d');clearTimeout(PK.mvT);PK.mvT=setTimeout(pkMarkers,120);});}
+  if(!PK.mvReg){PK.mvReg=true;const c=m.getContainer();m.on('movestart',()=>{if(M3D.on){(PK.mks||[]).forEach(x=>x.remove());PK.mks=[];}});/* v108：3D 移動時整個拿掉（藏起來 MapLibre 仍每格重算位置），停下再放回 */m.on('moveend',()=>{c.classList.remove('mv3d');clearTimeout(PK.mvT);PK.mvT=setTimeout(pkMarkers,120);});}
   const c=m.getContainer(),Wc=c.clientWidth,Hc=c.clientHeight;if(!Wc||!Hc)return;const b=m.getBounds(),pad=on3?0.6:0.05,la0=b.getSouth()-pad,la1=b.getNorth()+pad,lo0=b.getWest()-pad,lo1=b.getEast()+pad;
-  const cap=PWR.save?(on3?40:80):1e9,boxes=[],fits=(x,y,w,h)=>!boxes.some(r=>x<r[0]+r[2]&&x+w>r[0]&&y<r[1]+r[3]&&y+h>r[1]);
+  const cap=on3?(PWR.save?12:25):(PWR.save?80:1e9),boxes=[],fits=(x,y,w,h)=>!boxes.some(r=>x<r[0]+r[2]&&x+w>r[0]&&y<r[1]+r[3]&&y+h>r[1]);
   const C=PK.list.filter(p=>p.e&&p.la>=la0&&p.la<=la1&&p.lo>=lo0&&p.lo<=lo1).sort((a,b)=>b.e-a.e);
   for(const p of C){if(PK.mks.length>=cap)break;let q;try{q=m.project([p.lo,p.la]);}catch(e){continue;}if(!(q.x>=0&&q.x<=Wc&&q.y>=0&&q.y<=Hc))continue;
     const w=String(p.n).length*12+String(p.e).length*7+18,h=20,x=q.x-w/2,y=q.y-h-6;if(!fits(x-3,y-3,w+6,h+6))continue;boxes.push([x,y,w,h]);
@@ -3299,7 +3311,16 @@ function navPinsApply(){['L','R'].forEach(sd=>{const B=npBox(sd);if(!B.bar||!B.p
     NORD[sd].forEach(k=>{const b=get(k);if(b&&!NPIN[sd].includes(k))B.pool.appendChild(b);});NPIN[sd].forEach(k=>{const b=get(k);if(b)B.bar.insertBefore(b,more);});});
   try{if(NAV.on)npSize();}catch(e){}}
 function navPinsSave(){try{localStorage.setItem('gearPlanner.navPins',JSON.stringify(NPIN));}catch(e){}}
-function navStrip(kind,keep){const st=$('#navStrip');if(!st)return;if(!keep&&!st.hidden&&st._k===kind){st.hidden=true;return;}st._k=kind;
+
+/* v108：橫向按鈕列（導航「更多」、圖層）在電腦上：滾輪＝左右捲、滑鼠按住拖＝捲（拖過就不算點擊） */
+function hScrollMouse(el){if(!el||el._hs)return;el._hs=1;
+  el.addEventListener('wheel',e=>{if(el.scrollWidth<=el.clientWidth+1)return;const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();el.scrollLeft+=d*(e.deltaMode===1?32:1);},{passive:false});
+  let sx=0,sl=0,on=false,moved=false;
+  el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;on=true;moved=false;sx=e.clientX;sl=el.scrollLeft;});
+  window.addEventListener('pointermove',e=>{if(!on)return;const dx=e.clientX-sx;if(!moved&&Math.abs(dx)>6){moved=true;el.classList.add('drag');}if(moved)el.scrollLeft=sl-dx;});
+  window.addEventListener('pointerup',()=>{if(!on)return;on=false;el.classList.remove('drag');if(moved){HSDRAG=Date.now();moved=false;}});}
+let HSDRAG=0;window.addEventListener('click',e=>{if(Date.now()-HSDRAG<350){HSDRAG=0;e.stopPropagation();e.preventDefault();}},true);
+function navStrip(kind,keep){const st=$('#navStrip');if(!st)return;hScrollMouse($('#nsL'));if(!keep&&!st.hidden&&st._k===kind){st.hidden=true;return;}st._k=kind;
   const L=$('#nsL'),T=$('#nsT'),H=$('#nsHint');H.classList.remove('w');
   if(kind==='layers'){let on3=false,pks=true;try{on3=M3D.navWant;pks=PK.show;}catch(e){}const bk=mapBaseKey();T.textContent='地圖圖層';H.textContent='左右滑看更多';
     L.innerHTML=Object.entries(BASES).map(([k,b])=>`<button type="button" class="nsi lb${k===bk?' on':''}" data-lb="${k}">${esc(b.name.replace(/（/,'\n（'))}</button>`).join('')
@@ -3318,9 +3339,9 @@ function navStrip(kind,keep){const st=$('#navStrip');if(!st)return;if(!keep&&!st
   st.addEventListener('scroll',clear,true);st.addEventListener('contextmenu',e=>e.preventDefault());
   st.addEventListener('click',e=>{if(held){held=false;e.stopPropagation();e.preventDefault();return;}
     if(e.target.closest('[data-ns=x]')){st.hidden=true;return;}
-    const lb=e.target.closest('[data-lb]');if(lb){mapSetBase(lb.dataset.lb);st.hidden=true;return;}
-    if(e.target.closest('[data-l3d]')){st.hidden=true;map3dToggle();return;}
-    if(e.target.closest('[data-lpk]')){pkShowSet(!PK.show);navStrip('layers',true);return;}},true);
+    const lb=e.target.closest('[data-lb]');if(lb){const sl=$('#nsL').scrollLeft;mapSetBase(lb.dataset.lb);navStrip('layers',true);$('#nsL').scrollLeft=sl;return;}/* v108：選了不關，可以接著開關 3D／山名 */
+    if(e.target.closest('[data-l3d]')){const sl=$('#nsL').scrollLeft;map3dToggle();setTimeout(()=>{if(!st.hidden&&st._k==='layers'){navStrip('layers',true);$('#nsL').scrollLeft=sl;}},60);return;}
+    if(e.target.closest('[data-lpk]')){const sl=$('#nsL').scrollLeft;pkShowSet(!PK.show);navStrip('layers',true);$('#nsL').scrollLeft=sl;return;}},true);
   // 點橫條外面就收起來（按「更多」本身由它自己切換）
   document.addEventListener('pointerdown',e=>{if(st.hidden||st.contains(e.target)||e.target.closest('[data-nav=menu],[data-nr=more],[data-nr=layers]'))return;st.hidden=true;},true);})();
 // 右邊按鈕的動作
@@ -3809,23 +3830,88 @@ async function fetchWx(){
     const out=await Promise.all(P.map(async p=>{
       const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}${p.ele?'&elevation='+p.ele:''}&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,weather_code&timezone=Asia%2FTaipei&start_date=${start}&end_date=${e2}`;
       const r=await fetch(u);if(!r.ok)throw new Error('天氣服務 '+r.status);return Object.assign({},p,{daily:(await r.json()).daily});}));
-    S.wx={at:new Date().toISOString(),key:wxKey(),start,end:e2,pts:out,partial:end>lim};
-    if(S.wxAuto!==false){const mins=out.flatMap(p=>p.daily.temperature_2m_min.filter(v=>v!=null)),maxs=out.flatMap(p=>p.daily.temperature_2m_max.filter(v=>v!=null));
+    let cwaErr=null;try{await cwaOverlay(out);}catch(e){cwaErr=e.message||String(e);}
+    S.wx={at:new Date().toISOString(),key:wxKey(),start,end:e2,pts:out,partial:end>lim,cwaErr};
+    if(S.wxAuto!==false){const mins=out.flatMap(p=>p.daily.time.map((d,i)=>wxVal(p,d,i).tmin).filter(v=>v!=null)),maxs=out.flatMap(p=>p.daily.time.map((d,i)=>wxVal(p,d,i).tmax).filter(v=>v!=null));
       if(mins.length){S.tmin=Math.floor(Math.min(...mins));S.tmax=Math.ceil(Math.max(...maxs));fillParams();}}
     wxBusy=false;setDirty(true);compute();renderWx();
   }catch(e){renderWx('抓取失敗（'+e.message+'），顯示上次的資料');}
   finally{wxBusy=false;}
 }
+
+/* ── 氣象署登山天氣（v108）：經自己的 Cloudflare 網站轉抓（/__cwa/…），抓不到或格式變了就用 Open-Meteo ── */
+const CWA={mt:null,to:9000};
+try{const o=JSON.parse(localStorage.getItem('gearPlanner.cwaMt')||'null');if(o&&Array.isArray(o.l)&&Date.now()-o.ts<30*864e5)CWA.mt=o.l;}catch(e){}
+async function cwaGet(path){const tries=[];
+  if(/^https?:$/.test(location.protocol))tries.push('/__cwa'+path);
+  tries.push('https://www.cwa.gov.tw'+path);let last=null;
+  for(const u of tries){const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),CWA.to);
+    try{const r=await fetch(u,{signal:ac.signal,cache:'no-store'});if(!r.ok){last='HTTP '+r.status;continue;}const s=await r.text();if(s&&s.length>200)return s;last='內容太短';}
+    catch(e){last=e.name==='AbortError'?'逾時':e.message;}finally{clearTimeout(tm);}}
+  throw new Error('連不到氣象署（'+last+'）');}
+/* 山名比對：氣象署「奇萊主山南峰」對 OSM「奇萊南峰」 */
+const cwaNorm=s=>String(s||'').replace(/\s/g,'').replace(/(主山|大山|山)(?=[東西南北]+[峰山])/,'').replace(/[（(].*$/,'');
+function cwaMtParse(js){const L=[],re=/"PID"\s*:\s*"(D\d+)"[^{}]*?"Name"\s*:\s*\{\s*"C"\s*:\s*"([^"]+)"/g;let m;while((m=re.exec(js)))L.push([m[1],m[2]]);return L;}
+async function cwaMtList(){if(CWA.mt&&CWA.mt.length)return CWA.mt;const L=cwaMtParse(await cwaGet('/Data/js/info/Info_Mountain.js'));
+  if(L.length<20)throw new Error('氣象署山名清單格式變了');CWA.mt=L;try{localStorage.setItem('gearPlanner.cwaMt',JSON.stringify({l:L,ts:Date.now()}));}catch(e){}return L;}
+/* 溫度格：<span class="tem-C">16</span><span class="tem-F">61</span>；沒有 class 時是「1661」這種黏在一起的，用 °F 對回來拆 */
+function cwaNum(h){const c=h.match(/tem-C[^>]*>\s*(-?\d+)/);if(c)return +c[1];const s=h.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ');
+  const m=s.match(/-?\d+/);if(!m)return null;const x=m[0],neg=x[0]==='-',d=neg?x.slice(1):x;if(d.length<=2)return +x;
+  for(const k of [1,2]){const c=+(d.slice(0,k))*(neg?-1:1),f=d.slice(k);if(f!==''&&Math.round(c*9/5+32)===+((neg&&k>=d.length?'-':'')+f))return c;}
+  for(const k of [1,2]){const c=+(d.slice(0,k))*(neg?-1:1),f=+d.slice(k);if(Math.abs(Math.round(c*9/5+32)-f)<=1)return c;}return null;}
+const cwaTxt=h=>{const a=h.match(/(?:alt|title)\s*=\s*"([^"]+)"/);return (a?a[1]:h.replace(/<[^>]*>/g,' ')).replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();};
+function cwaParseWeek(h,now){now=now||new Date();
+  const rows=h.split(/<tr[\s>]/i).slice(1).map(r=>{const th=[...r.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)].map(x=>x[1]),td=[...r.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(x=>x[1]);
+    return {lab:th.length?th[0].replace(/<[^>]*>/g,'').replace(/\s/g,''):'',th,td};});
+  const dates=[];for(const r of rows)for(const x of r.th){const m=x.replace(/<[^>]*>/g,' ').match(/(\d{1,2})\/(\d{1,2})/);if(m){const k=m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');if(!dates.includes(k))dates.push(k);}}
+  if(!dates.length)throw new Error('氣象署預報表找不到日期');
+  const row=re=>rows.find(r=>re.test(r.lab));
+  const cells=r=>r?(r.td.length?r.td:r.th.slice(1)):[];
+  const R={tx:cells(row(/^最高溫/)),tn:cells(row(/^最低溫/)),ax:cells(row(/^體感最高溫/)),an:cells(row(/^體感最低溫/)),pop:cells(row(/^降雨機率/)),wx:cells(row(/^天氣狀況/)),ti:cells(row(/^時間/))};
+  const n=R.tx.length;if(n<4||R.tn.length!==n)throw new Error('氣象署預報表格式變了');
+  let lab=R.ti.map(x=>/晚|夜/.test(x.replace(/<[^>]*>/g,''))?'n':'d');
+  if(lab.length!==n)lab=Array.from({length:n},(_,i)=>(n===2*dates.length-1?i+1:i)%2?'n':'d');
+  const y0=now.getFullYear(),m0=now.getMonth()+1,P=[];let di=0;
+  for(let i=0;i<n;i++){if(i>0&&lab[i]==='d')di++;const md=dates[Math.min(di,dates.length-1)],mm=+md.slice(0,2),y=mm<m0-6?y0+1:mm>m0+6?y0-1:y0;
+    const pp=R.pop[i]&&R.pop[i].replace(/<[^>]*>/g,'').match(/(\d+)\s*%/);
+    P.push({d:`${y}-${md}`,h:lab[i],tx:cwaNum(R.tx[i]),tn:cwaNum(R.tn[i]),ax:R.ax[i]!=null?cwaNum(R.ax[i]):null,an:R.an[i]!=null?cwaNum(R.an[i]):null,pop:pp?+pp[1]:null,wx:R.wx[i]?cwaTxt(R.wx[i]):''});}
+  const ok=P.filter(p=>p.tx!=null&&p.tn!=null&&p.tx>=-30&&p.tx<=45&&p.tn>=-30&&p.tn<=45&&p.tn<=p.tx+1);
+  if(ok.length<Math.max(4,n*0.7))throw new Error('氣象署溫度讀不懂');
+  const D={};for(const p of P){const o=D[p.d]||(D[p.d]={});o[p.h]=p;}
+  const out={};for(const d in D){const a=D[d].d,b=D[d].n,v=[a,b].filter(Boolean),mn=(k)=>{const z=v.map(x=>x[k]).filter(x=>x!=null);return z.length?Math.min(...z):null},mx=(k)=>{const z=v.map(x=>x[k]).filter(x=>x!=null);return z.length?Math.max(...z):null};
+    out[d]={tmin:mn('tn'),tmax:mx('tx'),amin:mn('an'),pop:mx('pop'),wx:(a||b).wx};}
+  return out;}
+const cwaKm=(a,b,c,d)=>{const k=Math.PI/180,x=(d-b)*k*Math.cos((a+c)/2*k),y=(c-a)*k;return Math.hypot(x,y)*6371;};
+/* 每個天氣點找最近、名字對得上的氣象署山頭（6 km 內）；溫度依海拔差修正（每 100 m 0.65°C） */
+async function cwaOverlay(pts){
+  if(!pts.length)return;const L=await cwaMtList(),byN=new Map();L.forEach(([pid,n])=>{byN.set(n,pid);byN.set(cwaNorm(n),pid);});
+  if(!PK.full){const Q=pts.map(p=>[p.lat,p.lon]);if(Q.length<2)Q.push(Q[0]);const ac=new Promise(r=>setTimeout(r,15000));await Promise.race([pkEnsure(Q).catch(()=>{}),ac]);}
+  const pick=p=>{let best=null;for(const q of PK.list){const pid=byN.get(q.n)||byN.get(cwaNorm(q.n));if(!pid)continue;const k=cwaKm(p.lat,p.lon,q.la,q.lo);if(k<=6&&(!best||k<best.km))best={pid,n:L.find(x=>x[0]===pid)[1],km:k,e:q.e};}return best;};
+  const want=new Map();pts.forEach(p=>{const b=pick(p);if(b){p._cw=b;want.set(b.pid,null);}});
+  if(!want.size)throw new Error('附近 6 km 沒有氣象署有預報的山頭');
+  const now=new Date();let fail=null;
+  await Promise.all([...want.keys()].map(async pid=>{try{want.set(pid,cwaParseWeek(await cwaGet(`/V8/C/L/Mountain/MOD/Week/${pid}_Week_PC.html`),now));}catch(e){fail=e.message;}}));
+  let any=false;pts.forEach(p=>{const b=p._cw;delete p._cw;if(!b)return;const W=want.get(b.pid);if(!W)return;
+    const de=b.e&&p.ele?Math.round(b.e-p.ele):0,adj=v=>v==null?null:Math.round((v+de*0.0065)*10)/10,days={};
+    for(const d in W){const w=W[d];days[d]={tmin:adj(w.tmin),tmax:adj(w.tmax),amin:adj(w.amin),pop:w.pop,wx:w.wx};}
+    p.cwa={pid:b.pid,name:b.n,km:Math.round(b.km*10)/10,de,days};any=true;});
+  if(!any)throw new Error(fail||'氣象署沒有資料');}
+/* 一格天氣：氣象署有就用（溫度、體感、降雨機率、天氣），雨量與陣風氣象署沒有，仍用 Open-Meteo */
+function wxVal(p,d,i){const D=p.daily,c=p.cwa&&p.cwa.days[d];
+  const o={tmin:D.temperature_2m_min[i],tmax:D.temperature_2m_max[i],amin:D.apparent_temperature_min[i],pop:D.precipitation_probability_max[i],mm:D.precipitation_sum[i],gu:D.wind_gusts_10m_max[i],wc:D.weather_code[i],wx:WMO[D.weather_code[i]]||D.weather_code[i],src:'om'};
+  if(c&&c.tmin!=null&&c.tmax!=null){o.tmin=c.tmin;o.tmax=c.tmax;if(c.amin!=null)o.amin=c.amin;if(c.pop!=null)o.pop=c.pop;else o.popOm=true;if(c.wx){o.wx=c.wx;o.wc=/雷/.test(c.wx)?95:/雪|霰|冰/.test(c.wx)?71:0;}o.src='cwa';}
+  return o;}
 function renderWx(msg){
   const W=S.wx;if(!W){$('#wxOut').innerHTML=msg?`<div class="rec">${esc(msg)}</div>`:'';return;}
   const age=(Date.now()-new Date(W.at).getTime())/3600e3;
   /* 每個地點只列它那天：D 營地＝那天晚上；最高點＝走到那天；沒有天數的（只有一個地點）列全部 */
   const d0=S.route.date||W.start,want=p=>p.day>0?addDays(d0,p.day-1):null,lim=addDays(W.at.slice(0,10),15);
   const rows=W.pts.flatMap(p=>{const wd=want(p);if(wd&&!p.daily.time.includes(wd))return [`<tr><td>${wd.slice(5)}</td><td>${esc(p.label)}</td><td colspan="6" style="color:var(--mut);text-align:left">${wd>lim?`還沒進入預報範圍（${addDays(wd,-15).slice(5)} 起查得到）`:'這天沒有預報資料'}</td></tr>`];
-    return p.daily.time.map((d,i)=>[d,i]).filter(([d])=>!wd||d===wd).map(([d,i])=>{const pp=p.daily.precipitation_probability_max[i],gu=p.daily.wind_gusts_10m_max[i],wc=p.daily.weather_code[i];
-    return `<tr><td>${d.slice(5)}</td><td>${esc(p.label)}</td><td>${Math.round(p.daily.temperature_2m_min[i])}～${Math.round(p.daily.temperature_2m_max[i])}</td><td>${Math.round(p.daily.apparent_temperature_min[i])}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%</td><td>${(p.daily.precipitation_sum[i]||0).toFixed(1)}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${Math.round(gu)}</td><td class="${wc>=95?'w':''}">${WMO[wc]||wc}</td></tr>`;});}).join('');
+    return p.daily.time.map((d,i)=>[d,i]).filter(([d])=>!wd||d===wd).map(([d,i])=>{const v=wxVal(p,d,i),pp=v.pop,gu=v.gu,cw=v.src==='cwa';
+    return `<tr data-wxsrc="${v.src}"><td>${d.slice(5)}</td><td>${esc(p.label)}${cw?`<div class="wxsrc">氣象署・${esc(p.cwa.name)}${p.cwa.de?`（${p.cwa.de>0?'低':'高'} ${Math.abs(p.cwa.de)} m 已修正）`:''}</div>`:''}</td><td>${Math.round(v.tmin)}～${Math.round(v.tmax)}</td><td>${v.amin==null?'–':Math.round(v.amin)}</td><td class="${pp>=60?'w':pp>=30?'u':'ok'}">${pp??'–'}%${cw&&v.popOm?'<sup>*</sup>':''}</td><td>${(v.mm||0).toFixed(1)}</td><td class="${gu>=60?'w':gu>=40?'u':''}">${Math.round(gu)}</td><td class="${v.wc>=95?'w':''}">${esc(String(v.wx))}</td></tr>`;});}).join('');
+  const nC=W.pts.filter(p=>p.cwa).length,src=nC?`氣象署登山預報（${[...new Set(W.pts.filter(p=>p.cwa).map(p=>p.cwa.name))].join('、')}；有標「氣象署」的列：氣溫、體感、降雨、天氣；雨量與陣風仍是 Open-Meteo；* 氣象署 3 天後不給降雨機率，改用 Open-Meteo）＋ Open-Meteo`:`Open-Meteo 預報${W.cwaErr?`（氣象署：${esc(W.cwaErr)}）`:''}`;
   $('#wxOut').innerHTML=(msg?`<div class="rec">${esc(msg)}</div>`:'')+`<div style="overflow-x:auto"><table class="rtab wxt"><tr><th>日期</th><th>地點</th><th>°C</th><th>體感低</th><th>降雨</th><th>mm</th><th>陣風 km/h</th><th>天氣</th></tr>${rows}</table></div>
-    <div style="font-size:11px;color:var(--mut);margin-top:4px">Open-Meteo 預報，${age<1?'剛剛':Math.round(age)+' 小時前'}更新。每天：營地（最後一天為終點）＋當天最高點；預報只到 16 天內。氣溫已依該點海拔修正。</div>`;
+    <div style="font-size:11px;color:var(--mut);margin-top:4px">${src}，${age<1?'剛剛':Math.round(age)+' 小時前'}更新。每天：營地（最後一天為終點）＋當天最高點；預報只到 16 天內。氣溫已依該點海拔修正。</div>`;
 }
 $('#bWxRe').addEventListener('click',()=>{const L=S.route.loc;if(L&&L.src==='osm'&&!S.route.segs.some(g=>g.lat)){L.q=null;autoGeo();}else if(!L)autoGeo();else wxCheck(true);});
 $('#bWxSet').addEventListener('click',()=>{const m=($('#wxCoord').value||'').match(/(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)/);
@@ -3851,18 +3937,19 @@ function wxDiag(D,W){
   const age=(Date.now()-new Date(X.at).getTime())/3600e3;
   if(age>24)D.push(['i','天氣資料已超過 1 天','連上網路打開 App 會自動更新；出發前一天再確認一次。','']);
   const days=X.pts[0].daily.time.map((d,i)=>({d,i}));
-  const by=f=>days.filter(({i})=>X.pts.some(p=>f(p.daily,i)));
-  const rain=by((a,i)=>(a.precipitation_probability_max[i]||0)>=60||(a.precipitation_sum[i]||0)>=10);
-  if(rain.length)D.push([has('top_shell')&&has('bot_rain')?'y':'r',`預報 ${rain.map(x=>x.d.slice(5)).join('、')} 降雨機率高`,(has('top_shell')&&has('bot_rain')?'雨衣雨褲都有帶。':'<b>防水外套或雨褲還沒選</b>。')+'雨褲蓋在靴子外面；箭竹與泥濘路段會很濕，保暖層放防水袋。','Open-Meteo 預報']);
-  const th=by((a,i)=>a.weather_code[i]>=95);
-  if(th.length)D.push(['y',`預報 ${th.map(x=>x.d.slice(5)).join('、')} 有雷雨`,'稜線與山頂盡量中午前通過，聽到雷聲立刻離開稜線與孤立高點。','Open-Meteo 預報']);
+  const by=f=>days.filter(({d,i})=>X.pts.some(p=>p.daily.time[i]===d&&f(wxVal(p,d,i))));
+  const SRC=X.pts.some(p=>p.cwa)?'氣象署＋Open-Meteo 預報':'Open-Meteo 預報';
+  const rain=by(v=>(v.pop||0)>=60||(v.mm||0)>=10);
+  if(rain.length)D.push([has('top_shell')&&has('bot_rain')?'y':'r',`預報 ${rain.map(x=>x.d.slice(5)).join('、')} 降雨機率高`,(has('top_shell')&&has('bot_rain')?'雨衣雨褲都有帶。':'<b>防水外套或雨褲還沒選</b>。')+'雨褲蓋在靴子外面；箭竹與泥濘路段會很濕，保暖層放防水袋。',SRC]);
+  const th=by(v=>v.wc>=95);
+  if(th.length)D.push(['y',`預報 ${th.map(x=>x.d.slice(5)).join('、')} 有雷雨`,'稜線與山頂盡量中午前通過，聽到雷聲立刻離開稜線與孤立高點。',SRC]);
   const gmax=Math.max(...X.pts.flatMap(p=>(p.daily.wind_gusts_10m_max||[]).filter(v=>v!=null)));
-  if(gmax>=70)D.push(['r',`最大陣風約 ${Math.round(gmax)} km/h`,'這種風在稜線站不穩，背大背包更危險；考慮改期或改走避風路線。','Open-Meteo 預報']);
-  else if(gmax>=45)D.push(['y',`陣風約 ${Math.round(gmax)} km/h`,'稜線體感溫度會明顯下降，外掛物收進背包，防風層放在好拿的位置。','Open-Meteo 預報']);
-  const amin=Math.min(...X.pts.flatMap(p=>p.daily.apparent_temperature_min.filter(v=>v!=null)));
-  if(isFinite(amin)&&amin<S.tmin-2)D.push(['i',`體感最低約 ${Math.round(amin)}°C`,`風寒讓體感比氣溫低 ${Math.round(S.tmin-amin)}°C；營地保暖以體感溫度來準備。`,'Open-Meteo 預報']);
-  const snow=by((a,i)=>[71,73,75,77,85,86,66,67].includes(a.weather_code[i]));
-  if(snow.length)D.push([has('crampon')?'y':'r',`預報 ${snow.map(x=>x.d.slice(5)).join('、')} 可能降雪或凍雨`,(has('crampon')?'':'<b>沒有冰爪</b>，結冰路段不要上。')+'確認管理處是否有封路或攜帶冰爪規定。','Open-Meteo 預報']);
+  if(gmax>=70)D.push(['r',`最大陣風約 ${Math.round(gmax)} km/h`,'這種風在稜線站不穩，背大背包更危險；考慮改期或改走避風路線。',SRC]);
+  else if(gmax>=45)D.push(['y',`陣風約 ${Math.round(gmax)} km/h`,'稜線體感溫度會明顯下降，外掛物收進背包，防風層放在好拿的位置。',SRC]);
+  const amin=Math.min(...X.pts.flatMap(p=>p.daily.time.map((d,i)=>wxVal(p,d,i).amin).filter(v=>v!=null)));
+  if(isFinite(amin)&&amin<S.tmin-2)D.push(['i',`體感最低約 ${Math.round(amin)}°C`,`風寒讓體感比氣溫低 ${Math.round(S.tmin-amin)}°C；營地保暖以體感溫度來準備。`,SRC]);
+  const snow=by(v=>[71,73,75,77,85,86,66,67].includes(v.wc));
+  if(snow.length)D.push([has('crampon')?'y':'r',`預報 ${snow.map(x=>x.d.slice(5)).join('、')} 可能降雪或凍雨`,(has('crampon')?'':'<b>沒有冰爪</b>，結冰路段不要上。')+'確認管理處是否有封路或攜帶冰爪規定。',SRC]);
 }
 
 
@@ -4316,7 +4403,7 @@ function planText(){
       const ex=[d<days[days.length-1]&&o.water!=='u'?`營地水源：${WN[o.water]}`:'',o.sig!=='u'?`訊號：${SN[o.sig]}`:'',HZ.some(([k])=>o.hz[k]==='y')?`路況：${HZ.filter(([k])=>o.hz[k]==='y').map(h=>h[1]).join('、')}`:'',o.note?`撤退點／備註：${o.note}`:''].filter(Boolean);
       if(ex.length)L.push(ex.join('｜'));}
   });
-  if(S.wx&&S.wx.pts&&S.wx.pts.length&&S.wx.pts[S.wx.pts.length-1].daily.time.length){const p=S.wx.pts[S.wx.pts.length-1],a=p.daily;L.push('');L.push(`天氣（${p.label}，Open-Meteo）：`+a.time.map((t,i)=>`${t.slice(5).replace('-','/')} ${Math.round(a.temperature_2m_min[i])}～${Math.round(a.temperature_2m_max[i])}°C 降雨${a.precipitation_probability_max[i]??'–'}%`).join('；'));}
+  if(S.wx&&S.wx.pts&&S.wx.pts.length&&S.wx.pts[S.wx.pts.length-1].daily.time.length){const p=S.wx.pts[S.wx.pts.length-1],a=p.daily;L.push('');L.push(`天氣（${p.label}，${p.cwa?'氣象署＋':''}Open-Meteo）：`+a.time.map((t,i)=>{const v=wxVal(p,t,i);return `${t.slice(5).replace('-','/')} ${Math.round(v.tmin)}～${Math.round(v.tmax)}°C 降雨${v.pop??'–'}%`;}).join('；'));}
   return L.join('\n');
 }
 $('#bExpTxt').addEventListener('click',()=>{const t=planText();if(!t){toast('還沒有路段');return;}$('#expTxt').value=t;$('#expPanel').hidden=false;$('#txtPanel').hidden=true;$('#gpxPanel').hidden=true;});
@@ -4511,7 +4598,7 @@ function aiExport(){const c=C,strip=h=>String(h||'').replace(/<li>/g,'；').repl
     body:{kg:S.body,exp:S.exp},load:{packKg:+(c.pack/1000).toFixed(2),baseKg:+(c.base/1000).toFixed(2),wornKg:+(c.worn/1000).toFixed(2),ratioPct:+c.ratio.toFixed(1),waterL:+(c.waterG/1000).toFixed(1),foodKg:+(c.foodG/1000).toFixed(2)},
     gear:live().map(x=>({cat:CATN[x.cat],type:x.label,name:dispName(x),g:x.g,qty:x.qty,where:LOCN[x.loc],light:S.lt?(lightTake(x)?LOCN[ltLoc(x)]:'留營地'):undefined})),
     light:C.lt?{packKg:+(C.lt.pack/1000).toFixed(2),wornKg:+(C.lt.worn/1000).toFixed(2),waterL:waterMax(true)}:null,
-    weather:W?W.pts.map(p=>({place:p.label,days:p.daily.time.map((t,i)=>({date:t,min:p.daily.temperature_2m_min[i],max:p.daily.temperature_2m_max[i],feelsMin:p.daily.apparent_temperature_min[i],rainPct:p.daily.precipitation_probability_max[i],gustKmh:p.daily.wind_gusts_10m_max[i]}))})):null,
+    weather:W?W.pts.map(p=>({place:p.label,source:p.cwa?'氣象署 '+p.cwa.name+'（溫度/降雨）＋Open-Meteo':'Open-Meteo',days:p.daily.time.map((t,i)=>{const v=wxVal(p,t,i);return {date:t,min:v.tmin,max:v.tmax,feelsMin:v.amin,rainPct:v.pop,gustKmh:v.gu,weather:v.wx};})})):null,
     diagnosis:(c.diag||[]).map(([l,t,d])=>({level:{r:'重要',y:'注意',i:'參考',g:'正常'}[l]||l,title:t,detail:strip(d)}))};
   const Q=`你是台灣高山的登山裝備與行程顧問。下面 JSON 是我用「登山負重規劃師」排好的行程、裝備和 App 的自動診斷。請用繁體中文回答，依序：
 1. 最該處理的 3 件事（安全優先，其次減重）
@@ -4616,7 +4703,7 @@ function diagLight(){const LT=C.lt,D=[],tk=live().filter(lightTake),has=t=>tk.so
   if(!LS.length)D.push(['i','還沒有路段標輕裝','到路段把攻頂、往返營地那幾段的「背負」改成輕裝，才會算輕裝的時間和水。','']);
   LS.forEach(g=>{const t=SEGT.get(g.id),h=t?t.h:(g.hrs||0),rec=Math.max(0.5,Math.round(h*(S.tmax>20?0.6:0.5)*2)/2),w=segWater(g);
     if(h>0)D.push([w<rec*0.8?'y':'g',`${g.from||'?'} → ${g.to||'?'}：帶水 ${w}L / 建議約 ${rec}L`,`約 ${hm2(h)}，${w<rec*0.8?'水可能不夠，路段「這段帶水」調一下或確認沿途水源。':'夠用。'}`,EST2]);});
-  const W=S.wx;if(W&&LS.length){const d0=S.route.date||W.start;[...new Set(LS.map(g=>g.day))].forEach(d=>{const ds=addDays(d0,d-1);let pp=0,gu=0;W.pts.forEach(p=>{const i=p.daily.time.indexOf(ds);if(i>=0){pp=Math.max(pp,p.daily.precipitation_probability_max[i]||0);gu=Math.max(gu,p.daily.wind_gusts_10m_max[i]||0);}});
+  const W=S.wx;if(W&&LS.length){const d0=S.route.date||W.start;[...new Set(LS.map(g=>g.day))].forEach(d=>{const ds=addDays(d0,d-1);let pp=0,gu=0;W.pts.forEach(p=>{const i=p.daily.time.indexOf(ds);if(i>=0){const v=wxVal(p,ds,i);pp=Math.max(pp,v.pop||0);gu=Math.max(gu,v.gu||0);}});
     if(pp>=50&&!has('bot_rain'))D.push(['y',`第 ${d} 天降雨 ${pp}%：雨褲留在營地`,'輕裝那天預報會下雨，雨褲建議帶上去。','Open-Meteo 預報']);
     if(gu>=40&&!has('top_insul')&&!has('top_mid'))D.push(['y',`第 ${d} 天陣風 ${Math.round(gu)} km/h`,'稜線風大體感會掉很多，保暖層帶上去。','Open-Meteo 預報']);});}
   const order={r:0,y:1,i:2,g:3};D.sort((a,b)=>order[a[0]]-order[b[0]]);const DV=D.filter(x=>!(FBK[fbKey('dg',x[1])]&&FBK[fbKey('dg',x[1])].skip));
@@ -4819,7 +4906,7 @@ function planHTML(c){
   const RD=c.RD||[],r=S.route;if(!r.name&&!RD.length)return '';
   return `<div class="plan"><h2><span>登山計畫${r.name?'：'+esc(r.name):''}</span><span>${esc(r.date||'')}</span></h2>
     <div class="meta"><span>隊伍 ${r.team} 人</span><span>留守人 ${esc(r.keeper||'＿＿＿＿')}　${esc(r.tel||'')}</span>${r.permit?`<span>入山／入園 ${esc(r.permit)}</span>`:''}</div>
-    ${S.wx&&S.wx.pts.length?`<div class="meta">天氣（Open-Meteo，${new Date(S.wx.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 抓取）：${S.wx.pts[S.wx.pts.length-1].daily.time.map((d,i)=>{const a=S.wx.pts[S.wx.pts.length-1].daily;return `${d.slice(5)} ${Math.round(a.temperature_2m_min[i])}～${Math.round(a.temperature_2m_max[i])}°C 雨${a.precipitation_probability_max[i]??'–'}% 陣風${Math.round(a.wind_gusts_10m_max[i])}`;}).join('　')}</div>`:''}
+    ${S.wx&&S.wx.pts.length?`<div class="meta">天氣（${S.wx.pts[S.wx.pts.length-1].cwa?'氣象署＋':''}Open-Meteo，${new Date(S.wx.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 抓取）：${S.wx.pts[S.wx.pts.length-1].daily.time.map((d,i)=>{const v=wxVal(S.wx.pts[S.wx.pts.length-1],d,i);return `${d.slice(5)} ${Math.round(v.tmin)}～${Math.round(v.tmax)}°C 雨${v.pop??'–'}% 陣風${Math.round(v.gu)}`;}).join('　')}</div>`:''}
     ${RD.length?`<table><tr><th>天</th><th>路段</th><th>km</th><th>↑/↓ m</th><th>等效 km</th><th>體力度</th><th>營地 m</th><th>上河/計畫 h</th><th>營地水</th><th>訊號</th><th>路況</th><th>撤退點／備註</th></tr>${RD.map((d,i)=>`<tr><td>D${d.day}</td><td>${esc(d.from)} → ${esc(d.to)}</td><td>${+d.km.toFixed(1)}</td><td>${d.up}/${d.down}</td><td>${d.eq}</td><td>${(d.ci||0).toFixed(0)}</td><td>${d.camp||''}</td><td>${d.sh||'–'}/${d.plan||d.est.toFixed(1)}</td><td>${i===RD.length-1?'':WN[d.water]}</td><td>${SN[d.sig]}</td><td>${HZ.filter(([k])=>d.hz[k]==='y').map(h=>h[1]).join('、')}${HZ.some(([k])=>d.hz[k]==='u')?'（部分未確認）':''}</td><td>${esc(d.note)}</td></tr>`).join('')}</table>`:''}</div>`;
 }
 $('#bPrint').addEventListener('click',()=>{

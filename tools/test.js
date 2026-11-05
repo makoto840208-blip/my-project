@@ -413,7 +413,7 @@ T('導航：圖層在畫面中間的大按鈕橫條、不被擋、點外面收�
     const vis = bs.filter(b => { const r = b.getBoundingClientRect(); return r.right > q.left + 4 && r.left < q.right - 4; }), top = vis.every(b => { const r = b.getBoundingClientRect(), x0 = Math.max(r.left, q.left) + 4, x1 = Math.min(r.right, q.right) - 4; return [[x0, r.top + 4], [x1, r.top + 4], [x0, r.bottom - 4], [x1, r.bottom - 4]].every(([x, y]) => { const el = document.elementFromPoint(x, y); return el && b.contains(el); }); });
     return { open: !m.hidden, t: document.getElementById('nsT').textContent, row: tops.size === 1, n: bs.length, h: Math.min(...bs.map(b => b.getBoundingClientRect().height)), mid: Math.abs((mq.top + mq.bottom) / 2 - np.top / 2) < 30, wide: mq.width > innerWidth * 0.85, top }; });
   ok(r.open && r.t === '地圖圖層' && r.n >= 8, '圖層橫條沒打開'); ok(r.row, '圖層選項沒排成一橫列'); ok(r.h >= 70, `圖層按鈕太扁（${r.h}px）`); ok(r.mid && r.wide, '圖層橫條不在畫面中間'); ok(r.top, '圖層選項被別的東西蓋住');
-  await p.click('#navStrip .nsi[data-lb=topo]'); await p.waitForTimeout(150); ok(await p.evaluate(() => window.__gp.fn('mapBaseKey')() === 'topo' && document.getElementById('navStrip').hidden), '點底圖沒切換或沒收起');
+  await p.click('#navStrip .nsi[data-lb=topo]'); await p.waitForTimeout(150); ok(await p.evaluate(() => window.__gp.fn('mapBaseKey')() === 'topo' && !document.getElementById('navStrip').hidden && document.querySelector('#navStrip .nsi[data-lb=topo]').classList.contains('on')), '點底圖沒切換，或圖層橫條收起了（v108 起選了不關）');
   await p.click('#navMode [data-nr=more]'); await p.mouse.click(Math.round(p.viewportSize().width / 2), 40); await p.waitForTimeout(150); ok(await p.evaluate(() => document.getElementById('navStrip').hidden), '點外面沒有收起來');
 });
 T('導航：左右「更多」橫條、長按固定（最多 3 個）、重開還在', async p => {
@@ -762,6 +762,108 @@ T('天氣：每個地點只列它那天，超出預報範圍的說哪天查得�
     G.fn('renderWx')(); return [...document.querySelectorAll('#wxOut tr')].slice(1).map(r => r.textContent); });
   ok(rows.length === 3, '列數不對：' + rows.join(' | '));
   ok(/11-16.*D1/.test(rows[0]) && /11-17.*D2/.test(rows[1]) && /11-18.*最高點.*還沒進入預報範圍（11-03 起查得到）/.test(rows[2]), '內容不對：' + rows.join(' | '));
+});
+/* 氣象署登山預報（v108）：假的週預報表（模仿 V8 MOD/Week 片段） */
+function cwaWeekHtml(o) { o = o || {}; const dates = o.dates || ['11/09', '11/10', '11/11', '11/12', '11/13', '11/14', '11/15'], night = !!o.startNight, n = dates.length * 2 - (night ? 1 : 0);
+  const lab = Array.from({ length: n }, (_, i) => ((i + (night ? 1 : 0)) % 2 ? '晚上' : '白天'));
+  const C = (c) => o.glued ? `<td>${c}${Math.round(c * 9 / 5 + 32)}</td>` : `<td><span class="tem-C is-active">${c}</span><span class="tem-F is-hidden">${Math.round(c * 9 / 5 + 32)}</span></td>`;
+  const tx = o.tx || Array.from({ length: n }, (_, i) => lab[i] === '白天' ? 12 : 6), tn = o.tn || Array.from({ length: n }, (_, i) => lab[i] === '白天' ? 5 : 2);
+  return `<table class="table"><thead><tr><th>日期</th>${dates.map((d, i) => `<th colspan="${i === 0 && night ? 1 : 2}">${d}<br>星期x</th>`).join('')}</tr></thead><tbody>
+<tr><th scope="row">時間</th>${lab.map(x => `<td>${x}</td>`).join('')}</tr>
+<tr><th scope="row">天氣狀況</th>${lab.map((x, i) => `<td><img src="x.svg" alt="${i === 2 ? '短暫陣雨或雷雨' : '多雲'}" title="${i === 2 ? '短暫陣雨或雷雨' : '多雲'}"></td>`).join('')}</tr>
+<tr><th scope="row">最高溫</th>${tx.map(C).join('')}</tr><tr><th scope="row">最低溫</th>${tn.map(C).join('')}</tr>
+<tr><th scope="row">降雨機率</th>${lab.map((x, i) => `<td>${i < 6 ? (i === 2 ? 70 : 20) + '%' : '-'}</td>`).join('')}</tr>
+<tr><th scope="row">體感最高溫</th>${tx.map(c => C(c - 1)).join('')}</tr><tr><th scope="row">體感最低溫</th>${tn.map(c => C(c - 3)).join('')}</tr>
+<tr><th scope="row">相對溼度</th>${lab.map(() => '<td>80%</td>').join('')}</tr></tbody></table>`.padEnd(400, ' '); }
+T('圖層（v108）：導航圖層橫條選底圖、開 3D 都不關，可以連續選', async p => {
+  await loadGpx(p); await openNav(p); await p.evaluate(() => { try { localStorage.setItem('gearPlanner.nav3dWarn', '1'); } catch (e) {} });
+  await p.click('#navMode [data-nr=more]'); await p.waitForTimeout(150); await p.click('#navStrip .nsi[data-nr=layers]'); await p.waitForTimeout(200);
+  const k = await p.evaluate(() => Object.keys(window.__gp.fn('BASES'))); await p.click(`#navStrip .nsi[data-lb=${k[1]}]`); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => !document.getElementById('navStrip').hidden), '選底圖後橫條不該關');
+  await p.click('#navStrip .nsi[data-l3d]'); await p.waitForTimeout(400);
+  const r = await p.evaluate(() => ({ open: !document.getElementById('navStrip').hidden, want: window.__gp.fn('M3D').navWant, lbl: document.querySelector('#navStrip [data-l3d]').textContent }));
+  ok(r.open && r.want && /開/.test(r.lbl), '開 3D 後橫條應該還在、按鈕顯示開：' + JSON.stringify(r));
+  await p.click('#navStrip .nsi[data-lpk]'); await p.waitForTimeout(150); ok(await p.evaluate(() => !document.getElementById('navStrip').hidden), '切山名後不該關');
+  await p.click('#navStrip .nsi[data-l3d]'); await p.waitForTimeout(400); ok(await p.evaluate(() => !window.__gp.fn('M3D').navWant), '再點一次要關 3D');
+});
+T('圖層（v108）：規劃地圖的圖層選單選了不關，點外面才關', async p => {
+  await loadGpx(p); await p.evaluate(() => document.querySelector('.lyrctl>button').click()); await p.waitForTimeout(150);
+  const k = await p.evaluate(() => Object.keys(window.__gp.fn('BASES'))); await p.evaluate(b => document.querySelector(`.lyrmenu [data-base=${b}]`).click(), k[1]); await p.waitForTimeout(150);
+  ok(await p.evaluate(() => !document.querySelector('.lyrctl .lyrmenu').hidden), '選底圖後選單不該關');
+  await p.evaluate(() => document.querySelector('.lyrmenu [data-pks]').click()); ok(await p.evaluate(() => !document.querySelector('.lyrctl .lyrmenu').hidden), '切山名後選單不該關');
+  await p.evaluate(() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))); ok(await p.evaluate(() => document.querySelector('.lyrctl .lyrmenu').hidden), '點外面要關');
+});
+T('網頁版（v108）：導航左邊「更多」在電腦上換行排，全部按得到；矮視窗可用滾輪上下捲', async p => {
+  await loadGpx(p); await openNav(p); await p.click('#navMode [data-nav=menu]'); await p.waitForTimeout(200); await shot(p, 'more');
+  const r = await p.evaluate(() => { const W = innerWidth, H = innerHeight, l = document.getElementById('nsL'), bs = [...l.querySelectorAll('.nsi')]; return { n: bs.length, out: bs.filter(b => { const q = b.getBoundingClientRect(); return q.left < 0 || q.right > W || q.bottom > H || q.top < 0; }).map(b => b.textContent.trim()), last: bs[bs.length - 1].textContent.trim() }; });
+  ok(r.n > 15 && r.out.length === 0, '有按鈕跑出畫面外（點不到）：' + r.out.join('、'));
+  await p.mouse.click(Math.round(r.n && 800), 120).catch(() => {});
+  await p.setViewportSize({ width: 1000, height: 560 }); await p.waitForTimeout(300); await p.click('#navMode [data-nav=menu]').catch(() => {}); await p.waitForTimeout(200);
+  if (await p.evaluate(() => document.getElementById('navStrip').hidden)) { await p.click('#navMode [data-nav=menu]'); await p.waitForTimeout(200); }
+  const L = await p.evaluate(() => { const l = document.getElementById('nsL'), b = l.getBoundingClientRect(); return { sh: l.scrollHeight, ch: l.clientHeight, x: b.x + b.width / 2, y: b.y + b.height / 2, bot: b.bottom, H: innerHeight }; });
+  ok(L.bot <= L.H, '橫條本身不能超出畫面：' + JSON.stringify(L));
+  if (L.sh > L.ch + 4) { await p.mouse.move(L.x, L.y); await p.mouse.wheel(0, 400); await p.waitForTimeout(200); ok(await p.evaluate(() => document.getElementById('nsL').scrollTop > 20), '矮視窗滾輪要能往下捲'); }
+}, { vp: '網頁' });
+T('3D 當機（v108）：繪圖被中斷→關 3D、恢復後不重開；上次開 3D 當掉→下次先關 3D', async p => {
+  await loadGpx(p); await p.evaluate(() => { window.__gp.fn('map3dSet')(true); }); await p.waitForTimeout(900);
+  ok(await p.evaluate(() => window.__gp.fn('M3D').on && !!localStorage.getItem('gearPlanner.gl3d')), '開 3D 時要留下記號');
+  const r = await p.evaluate(async () => { const m = window.__gp.MAP.m, gl = m.getCanvas().getContext('webgl2') || m.getCanvas().getContext('webgl'), x = gl && gl.getExtension('WEBGL_lose_context'); if (!x) return { skip: true };
+    x.loseContext(); await new Promise(r => setTimeout(r, 400)); const a = { want: window.__gp.fn('M3D').want, toast: document.getElementById('toast').textContent, lost: !!window.__gp.fn('GL3D').lost };
+    x.restoreContext(); await new Promise(r => setTimeout(r, 800)); a.lost2 = !!window.__gp.fn('GL3D').lost; return a; });
+  if (!r.skip) { ok(r.want === false && /中斷.*關掉 3D/.test(r.toast) && r.lost, '中斷時要關 3D 並提示：' + JSON.stringify(r)); ok(r.lost2 === false, '恢復後不該再重開：' + JSON.stringify(r)); }
+  if (r.skip) console.log('   （這個瀏覽器不能模擬繪圖中斷，略過那段）');
+  await p.evaluate(() => { localStorage.setItem('gearPlanner.map3d', '1'); const f = () => { localStorage.setItem('gearPlanner.map3d', '1'); localStorage.setItem('gearPlanner.gl3d', String(Date.now())); }; addEventListener('pagehide', f); document.addEventListener('visibilitychange', f); addEventListener('beforeunload', f); }); /* 真的當掉時不會有 pagehide；這裡在 App 清掉記號之後再補回去 */
+  await p.reload(); await p.waitForFunction(() => document.getElementById('state') && /已/.test(document.getElementById('state').textContent), null, { timeout: 20000 }); await p.waitForTimeout(1800);
+  const s = await p.evaluate(() => ({ want: window.__gp.fn('M3D').want, ls: localStorage.getItem('gearPlanner.map3d'), t: document.getElementById('toast').textContent }));
+  ok(s.want === false && s.ls === '0' && /上次開著 3D 時地圖當掉/.test(s.t), '當掉後重開應先關 3D 並說明：' + JSON.stringify(s));
+});
+T('3D 負擔（v108）：省電模式最多傾斜 60°、山名最多 12 個、移動時拿掉', async p => {
+  await loadGpx(p); await p.evaluate(() => { window.__gp.fn('pwrSet')(true); window.__gp.fn('map3dSet')(true); }); await p.waitForTimeout(1200);
+  const r = await p.evaluate(async () => { const m = window.__gp.MAP.m, PK = window.__gp.fn('PK'); PK.list = Array.from({ length: 60 }, (_, i) => ({ n: '測' + i, e: 2000 + i, la: 24.0 + (i % 8) * 0.012, lo: 121.25 + Math.floor(i / 8) * 0.012 })); window.__gp.fn('pkMarkers')();
+    const n0 = PK.mks.length; m.jumpTo({ pitch: 85 }); const pmax = m.getPitch(); let mid = -1; m.once('move', () => { mid = PK.mks.length; }); m.panBy([30, 0], { duration: 0 }); await new Promise(r => setTimeout(r, 600)); return { n0, pmax, mid, n1: PK.mks.length }; });
+  ok(r.pmax <= 60.01, '省電 3D 傾斜上限應 60°：' + r.pmax); ok(r.n0 <= 12 && r.n1 <= 12, '3D 山名最多 12：' + JSON.stringify(r)); ok(r.mid === 0, '移動中山名要先拿掉：' + JSON.stringify(r));
+});
+T('氣象署：週預報表解析（class 版／黏在一起版／晚上開頭）', async p => {
+  const H1 = cwaWeekHtml(), H2 = cwaWeekHtml({ glued: true, startNight: true, tn: Array.from({ length: 13 }, (_, i) => i === 0 ? -3 : 4), tx: Array.from({ length: 13 }, () => 11) });
+  const r = await p.evaluate(([a, b]) => { const f = window.__gp.fn('cwaParseWeek'), now = new Date('2026-11-05T08:00:00+08:00'); return [f(a, now), f(b, now)]; }, [H1, H2]);
+  const A = r[0], B = r[1];
+  ok(A['2026-11-09'] && A['2026-11-09'].tmax === 12 && A['2026-11-09'].tmin === 2 && A['2026-11-09'].amin === -1 && A['2026-11-09'].pop === 20, 'class 版第一天不對：' + JSON.stringify(A['2026-11-09']));
+  ok(A['2026-11-10'].pop === 70 && /雷/.test(A['2026-11-10'].wx), '第二天降雨／天氣不對：' + JSON.stringify(A['2026-11-10']));
+  ok(A['2026-11-13'].pop === null && Object.keys(A).length === 7, '3 天後應沒有降雨機率、共 7 天：' + JSON.stringify(A['2026-11-13']) + Object.keys(A).length);
+  ok(B['2026-11-09'] && B['2026-11-09'].tmin === -3 && B['2026-11-09'].tmax === 11 && B['2026-11-10'].tmin === 4, '黏在一起／晚上開頭不對：' + JSON.stringify(B));
+  const bad = await p.evaluate(() => { try { window.__gp.fn('cwaParseWeek')('<table><tr><th>日期</th><th>11/09</th></tr></table>'.padEnd(400, ' ')); return 'no error'; } catch (e) { return e.message; } });
+  ok(/格式變了|找不到/.test(bad), '格式不對時要丟錯誤（才會退回 Open-Meteo）：' + bad);
+});
+async function wxSetup(p, cwa, mtName) {
+  p._cwaHits = 0;
+  await p.route(/api\.open-meteo\.com\/v1\/forecast/, r => { const u = new URL(r.request().url()), s = u.searchParams.get('start_date'), e = u.searchParams.get('end_date'), T = []; for (let d = new Date(s); d <= new Date(e); d.setDate(d.getDate() + 1)) T.push(d.toISOString().slice(0, 10));
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify({ daily: { time: T, temperature_2m_max: T.map(() => 20), temperature_2m_min: T.map(() => 9), apparent_temperature_min: T.map(() => 7), precipitation_probability_max: T.map(() => 76), precipitation_sum: T.map(() => 1.2), wind_gusts_10m_max: T.map(() => 28), weather_code: T.map(() => 51) } }) }); });
+  await p.route(/cwa\.gov\.tw/, r => r.abort());
+  await p.route(/\/__cwa\//, r => { p._cwaHits++; const u = new URL(r.request().url()).pathname; if (!cwa) return r.fulfill({ status: 502, body: 'x' });
+    if (/Info_Mountain/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: 'var Info_Mountain=[' + [['D901', mtName || '北測主山南峰'], ['D902', '遠方山'], ...Array.from({ length: 25 }, (_, i) => ['D' + (300 + i), '填充山' + i])].map(([a, b]) => `{"PID":"${a}","CID":"66","TID":"1","Name":{"C":"${b}","E":"x"},"ShortName":{"C":"${b}","E":""}}`).join(',') + '];' });
+    if (/D901_Week/.test(u)) return r.fulfill({ contentType: 'text/html', body: cwaWeekHtml({ dates: Array.from({ length: 7 }, (_, i) => { const d = new Date(Date.now() + 8 * 3600e3 + i * 864e5); return (d.getUTCMonth() + 1 + '').padStart(2, '0') + '/' + (d.getUTCDate() + '').padStart(2, '0'); }) }) });
+    r.fulfill({ status: 404, body: '' }); });
+  return p.evaluate(async () => { const G = window.__gp, S = G.S, mk = G.fn('newSeg'); try { localStorage.removeItem('gearPlanner.cwaMt'); } catch (e) {} G.fn('CWA').mt = null;
+    const td = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); S.route.date = td; S.days = 1;
+    /* 營地就在「北測峰」（OSM，3200 m）旁邊、海拔 3000：氣象署「北測主山南峰」…名字對不上；改用 北測峰 */
+    S.route.segs = [Object.assign(mk(1), { from: '登山口', to: '北測營地', lat: 24.1150, lon: 121.2950, camp: 3000, slat: 24.10, slon: 121.29, start: 2000 })];
+    await G.fn('fetchWx')(); return [...document.querySelectorAll('#wxOut tr')].slice(1).map(r => r.textContent + '|' + r.dataset.wxsrc).concat([document.querySelector('#wxOut').textContent]); });
+}
+T('氣象署：營地附近有氣象署山頭就用它（海拔修正、標來源），雨量陣風仍用 Open-Meteo', async p => {
+  const R = await wxSetup(p, true, '北測峰');
+  ok(/氣象署・北測峰（低 200 m 已修正）/.test(R[0]) && /\|cwa$/.test(R[0]), '應標氣象署來源：' + R.join(' / '));
+  ok(/^\d\d-\d\d.*?3～13/.test(R[0]), '溫度應是氣象署 2～12 加 200 m 修正（約 3～13）：' + R[0]);
+  ok(/20%/.test(R[0]) && /1\.2/.test(R[0]) && /28/.test(R[0]), '降雨用氣象署、雨量陣風用 Open-Meteo：' + R[0]);
+  ok(/氣象署登山預報（北測峰/.test(R[R.length - 1]), '表下說明應寫來源：' + R[R.length - 1]);
+});
+T('氣象署：抓不到就退回 Open-Meteo，並說明原因', async p => {
+  const R = await wxSetup(p, false);
+  ok(/\|om$/.test(R[0]) && /9～20/.test(R[0]) && /76%/.test(R[0]), '應退回 Open-Meteo：' + R[0]);
+  ok(/Open-Meteo 預報（氣象署：連不到氣象署/.test(R[R.length - 1]), '要寫為什麼沒用氣象署：' + R[R.length - 1]);
+});
+T('氣象署：名字比對（主山／大山＋方位峰）', async p => {
+  const r = await p.evaluate(() => { const f = window.__gp.fn('cwaNorm'); return [f('奇萊主山南峰'), f('奇萊南峰'), f('南湖大山東峰'), f('南湖東峰'), f('合歡山東峰'), f('雪山'), f('雪山北峰')]; });
+  ok(r[0] === r[1] && r[2] === r[3] && r[4] === '合歡東峰' && r[5] === '雪山' && r[6] === '雪北峰', '比對規則不對：' + r.join(','));
 });
 T('天氣：每天一組（營地／終點＋當天最高點），最後一天有終點', async p => {
   const P = await p.evaluate(() => { const G = window.__gp, S = G.S, mk = G.fn('newSeg');
